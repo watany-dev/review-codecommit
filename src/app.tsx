@@ -90,14 +90,24 @@ export function App({ client, initialRepo }: AppProps) {
       setPrDifferences(detail.differences);
       setPrComments(detail.comments);
 
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const diff of detail.differences) {
+      // Parallelize blob content fetching for better performance
+      const blobFetches = detail.differences.map(async (diff) => {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-        const before = beforeBlobId ? await getBlobContent(client, selectedRepo, beforeBlobId) : "";
-        const after = afterBlobId ? await getBlobContent(client, selectedRepo, afterBlobId) : "";
-        texts.set(key, { before, after });
+
+        const [before, after] = await Promise.all([
+          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
+          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
+        ]);
+
+        return { key, before, after };
+      });
+
+      const blobResults = await Promise.all(blobFetches);
+      const texts = new Map<string, { before: string; after: string }>();
+      for (const result of blobResults) {
+        texts.set(result.key, { before: result.before, after: result.after });
       }
       setDiffTexts(texts);
     } catch (err) {
