@@ -15,6 +15,25 @@ vi.mock("./services/codecommit.js", () => ({
 
 import { parseArgs } from "./cli.js";
 
+describe("cli module-level execution", () => {
+  it("passes profile, region, and repoName when provided in argv", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--profile", "dev", "--region", "us-west-2", "my-repo"];
+    vi.resetModules();
+
+    const { render } = await import("ink");
+    const { createClient } = await import("./services/codecommit.js");
+    await import("./cli.js");
+
+    expect(createClient).toHaveBeenCalledWith(
+      expect.objectContaining({ profile: "dev", region: "us-west-2" }),
+    );
+    expect(render).toHaveBeenCalled();
+
+    process.argv = originalArgv;
+  });
+});
+
 describe("parseArgs", () => {
   it("parses --profile flag", () => {
     const result = parseArgs(["node", "cli", "--profile", "dev"]);
