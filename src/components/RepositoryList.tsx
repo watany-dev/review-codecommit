@@ -1,6 +1,7 @@
 import type { RepositoryNameIdPair } from "@aws-sdk/client-codecommit";
-import { Box, Text, useInput } from "ink";
-import React, { useState } from "react";
+import { Box, Text } from "ink";
+import React from "react";
+import { useListNavigation } from "../hooks/useListNavigation.js";
 
 interface Props {
   repositories: RepositoryNameIdPair[];
@@ -10,31 +11,15 @@ interface Props {
 }
 
 export function RepositoryList({ repositories, onSelect, onQuit, onHelp }: Props) {
-  const [cursor, setCursor] = useState(0);
-
-  useInput((input, key) => {
-    if (input === "q" || key.escape) {
-      onQuit();
-      return;
-    }
-    if (input === "?") {
-      onHelp();
-      return;
-    }
-    if (input === "j" || key.downArrow) {
-      setCursor((prev) => Math.min(prev + 1, repositories.length - 1));
-      return;
-    }
-    if (input === "k" || key.upArrow) {
-      setCursor((prev) => Math.max(prev - 1, 0));
-      return;
-    }
-    if (key.return) {
-      const repo = repositories[cursor];
+  const { cursor } = useListNavigation({
+    items: repositories,
+    onSelect: (repo) => {
       if (repo?.repositoryName) {
         onSelect(repo.repositoryName);
       }
-    }
+    },
+    onBack: onQuit,
+    onHelp,
   });
 
   return (
