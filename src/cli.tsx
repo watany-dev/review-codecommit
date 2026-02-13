@@ -8,7 +8,27 @@ interface ParsedArgs {
   repoName?: string;
   profile?: string;
   region?: string;
+  help?: boolean;
+  version?: boolean;
 }
+
+const VERSION = "0.0.1";
+
+const HELP_TEXT = `titmouse - A TUI tool for reviewing AWS CodeCommit pull requests
+
+Usage: titmouse [options] [repository]
+
+Options:
+  --profile <name>   AWS profile to use
+  --region <region>   AWS region to use
+  --help, -h          Show this help message
+  --version, -v       Show version number
+
+Navigation:
+  j/k or arrows       Move cursor
+  Enter               Select item
+  Esc/q               Go back / quit
+  ?                   Show help`;
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args = argv.slice(2);
@@ -17,7 +37,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     const nextArg = args[i + 1];
-    if (arg === "--profile" && nextArg) {
+    if (arg === "--help" || arg === "-h") {
+      result.help = true;
+    } else if (arg === "--version" || arg === "-v") {
+      result.version = true;
+    } else if (arg === "--profile" && nextArg) {
       result.profile = nextArg;
       i++;
     } else if (arg === "--region" && nextArg) {
@@ -32,6 +56,17 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 const parsed = parseArgs(process.argv);
+
+if (parsed.help) {
+  console.log(HELP_TEXT);
+  process.exit(0);
+}
+
+if (parsed.version) {
+  console.log(VERSION);
+  process.exit(0);
+}
+
 const client = createClient({
   ...(parsed.profile != null ? { profile: parsed.profile } : {}),
   ...(parsed.region != null ? { region: parsed.region } : {}),

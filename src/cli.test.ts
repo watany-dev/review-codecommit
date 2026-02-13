@@ -32,6 +32,42 @@ describe("cli module-level execution", () => {
 
     process.argv = originalArgv;
   });
+
+  it("exits with help text when --help is passed", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--help"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("exits with version when --version is passed", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--version"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith("0.0.1");
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
 });
 
 describe("parseArgs", () => {
@@ -85,6 +121,26 @@ describe("parseArgs", () => {
   it("ignores unknown flags", () => {
     const result = parseArgs(["node", "cli", "--unknown", "value"]);
     expect(result.repoName).toBe("value");
+  });
+
+  it("parses --help flag", () => {
+    const result = parseArgs(["node", "cli", "--help"]);
+    expect(result.help).toBe(true);
+  });
+
+  it("parses -h flag", () => {
+    const result = parseArgs(["node", "cli", "-h"]);
+    expect(result.help).toBe(true);
+  });
+
+  it("parses --version flag", () => {
+    const result = parseArgs(["node", "cli", "--version"]);
+    expect(result.version).toBe(true);
+  });
+
+  it("parses -v flag", () => {
+    const result = parseArgs(["node", "cli", "-v"]);
+    expect(result.version).toBe(true);
   });
 });
 
