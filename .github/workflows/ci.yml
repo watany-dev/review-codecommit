@@ -40,6 +40,24 @@ jobs:
       - name: Type check
         run: bun run check
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Dead code check
+        run: bun run dead-code
+
+      - name: Dependency audit
+        run: bun run audit
+
   test:
     runs-on: ubuntu-latest
     steps:

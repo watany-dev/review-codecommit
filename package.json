@@ -21,6 +21,9 @@
     "format": "biome check --write ./src",
     "format:check": "biome check ./src",
     "check": "tsc --noEmit",
+    "dead-code": "knip",
+    "audit": "bun audit",
+    "security": "bun run dead-code && bun run audit",
     "validate": "bun run check && bun run lint && bun run format:check && bun run test",
     "prepublishOnly": "bun run build"
   },
@@ -31,6 +34,7 @@
     "@vitest/coverage-v8": "^3.0.0",
     "fast-check": "^3.0.0",
     "ink-testing-library": "^4.0.0",
+    "knip": "^5.83.1",
     "oxlint": "^0.15.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
