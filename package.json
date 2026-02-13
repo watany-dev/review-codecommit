@@ -12,7 +12,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/cli.tsx --outdir ./dist --target node && bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
+    "build": "bun build ./src/cli.tsx --outdir ./dist --target node --external react-devtools-core && bun build ./src/index.ts --outdir ./dist --target node --external react-devtools-core && tsc --emitDeclarationOnly",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
