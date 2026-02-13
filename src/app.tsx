@@ -233,50 +233,66 @@ export function App({ client, initialRepo }: AppProps) {
   }
 }
 
-function formatCommentError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
+/**
+ * Unified error formatter with context-specific messages.
+ *
+ * @param err - The error to format
+ * @param context - Optional context ('comment' for comment-specific errors)
+ * @returns User-friendly error message
+ */
+function formatErrorMessage(err: unknown, context?: "comment"): string {
+  if (!(err instanceof Error)) {
+    return context === "comment" ? String(err) : "An unexpected error occurred.";
+  }
+
+  const name = err.name;
+
+  // Comment-specific errors
+  if (context === "comment") {
     if (name === "CommentContentRequiredException") {
       return "Comment cannot be empty.";
     }
     if (name === "CommentContentSizeLimitExceededException") {
       return "Comment exceeds the 10,240 character limit.";
     }
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-      return "Access denied. Check your IAM policy allows CodeCommit write access.";
-    }
     if (name === "PullRequestDoesNotExistException") {
       return "Pull request not found.";
     }
-    return err.message;
   }
-  return String(err);
+
+  // General AWS errors
+  if (name === "CredentialsProviderError" || name === "CredentialError") {
+    return "AWS authentication failed. Run `aws configure` to set up credentials.";
+  }
+  if (name === "RepositoryDoesNotExistException") {
+    return "Repository not found.";
+  }
+
+  // Access control errors (context-aware message)
+  if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+    const action = context === "comment" ? "write" : "";
+    return `Access denied. Check your IAM policy allows CodeCommit ${action} access.`.trim();
+  }
+
+  // Network errors
+  if (
+    name === "NetworkingError" ||
+    err.message.includes("ECONNREFUSED") ||
+    err.message.includes("ETIMEDOUT")
+  ) {
+    return "Network error. Check your connection.";
+  }
+
+  // Default: sanitize and return original message
+  const sanitized = err.message.replace(/arn:[^\s"')]+/gi, "[ARN]").replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  return context === "comment" ? err.message : sanitized;
+}
+
+// Backward-compatible wrappers
+function formatCommentError(err: unknown): string {
+  return formatErrorMessage(err, "comment");
 }
 
 function formatError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
-    if (name === "CredentialsProviderError" || name === "CredentialError") {
-      return "AWS authentication failed. Run `aws configure` to set up credentials.";
-    }
-    if (name === "RepositoryDoesNotExistException") {
-      return "Repository not found.";
-    }
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-      return "Access denied. Check your IAM policy allows CodeCommit access.";
-    }
-    if (
-      name === "NetworkingError" ||
-      err.message.includes("ECONNREFUSED") ||
-      err.message.includes("ETIMEDOUT")
-    ) {
-      return "Network error. Check your connection.";
-    }
-    return sanitizeErrorMessage(err.message);
-  }
-  return "An unexpected error occurred.";
-}
-
-function sanitizeErrorMessage(message: string): string {
-  return message.replace(/arn:[^\s"')]+/gi, "[ARN]").replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  return formatErrorMessage(err);
 }
