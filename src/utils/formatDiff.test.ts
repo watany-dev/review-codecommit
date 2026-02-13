@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import fc from "fast-check";
 import { computeUnifiedDiff, formatDiffForDisplay } from "./formatDiff.js";
 
 describe("computeUnifiedDiff", () => {
@@ -144,5 +145,127 @@ describe("formatDiffForDisplay", () => {
   it("handles empty sections", () => {
     const output = formatDiffForDisplay([]);
     expect(output).toBe("");
+  });
+});
+
+// --- Property-Based Tests ---
+
+const textLine = fc.stringOf(
+  fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789 _-=+"),
+  { minLength: 0, maxLength: 40 },
+);
+const textContent = fc.array(textLine, { minLength: 0, maxLength: 15 }).map((lines) => lines.join("\n"));
+
+describe("computeUnifiedDiff (property-based)", () => {
+  it("identical content always produces empty hunks", () => {
+    fc.assert(
+      fc.property(textContent, (content) => {
+        const result = computeUnifiedDiff(content, content, "test.ts");
+        expect(result.hunks).toHaveLength(0);
+      }),
+    );
+  });
+
+  it("delete lines only contain content from before", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        const beforeLines = before.split("\n");
+        const deleteContents = result.hunks
+          .flatMap((h) => h.lines)
+          .filter((l) => l.type === "delete")
+          .map((l) => l.content.slice(1));
+        for (const content of deleteContents) {
+          expect(beforeLines).toContainEqual(content);
+        }
+      }),
+    );
+  });
+
+  it("add lines only contain content from after", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        const afterLines = after.split("\n");
+        const addContents = result.hunks
+          .flatMap((h) => h.lines)
+          .filter((l) => l.type === "add")
+          .map((l) => l.content.slice(1));
+        for (const content of addContents) {
+          expect(afterLines).toContainEqual(content);
+        }
+      }),
+    );
+  });
+
+  it("different content always produces at least one hunk", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        fc.pre(before !== after);
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        expect(result.hunks.length).toBeGreaterThanOrEqual(1);
+      }),
+    );
+  });
+
+  it("swapping before/after swaps add and delete counts", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const forward = computeUnifiedDiff(before, after, "test.ts");
+        const backward = computeUnifiedDiff(after, before, "test.ts");
+        const fwdLines = forward.hunks.flatMap((h) => h.lines);
+        const bwdLines = backward.hunks.flatMap((h) => h.lines);
+        const fwdAdds = fwdLines.filter((l) => l.type === "add").length;
+        const fwdDels = fwdLines.filter((l) => l.type === "delete").length;
+        const bwdAdds = bwdLines.filter((l) => l.type === "add").length;
+        const bwdDels = bwdLines.filter((l) => l.type === "delete").length;
+        expect(fwdAdds).toBe(bwdDels);
+        expect(fwdDels).toBe(bwdAdds);
+      }),
+    );
+  });
+
+  it("hunk headers match @@ format", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        for (const hunk of result.hunks) {
+          expect(hunk.header).toMatch(/^@@ -\d+,\d+ \+\d+,\d+ @@$/);
+        }
+      }),
+    );
+  });
+
+  it("hunk header counts match actual line counts", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        for (const hunk of result.hunks) {
+          const match = hunk.header.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/);
+          if (!match) continue;
+          const delCount = parseInt(match[2], 10);
+          const addCount = parseInt(match[4], 10);
+          const actualDel = hunk.lines.filter((l) => l.type === "delete" || l.type === "context").length;
+          const actualAdd = hunk.lines.filter((l) => l.type === "add" || l.type === "context").length;
+          expect(actualDel).toBe(delCount);
+          expect(actualAdd).toBe(addCount);
+        }
+      }),
+    );
+  });
+
+  it("line content prefix matches line type", () => {
+    fc.assert(
+      fc.property(textContent, textContent, (before, after) => {
+        const result = computeUnifiedDiff(before, after, "test.ts");
+        for (const hunk of result.hunks) {
+          for (const line of hunk.lines) {
+            if (line.type === "add") expect(line.content[0]).toBe("+");
+            if (line.type === "delete") expect(line.content[0]).toBe("-");
+            if (line.type === "context") expect(line.content[0]).toBe(" ");
+          }
+        }
+      }),
+    );
   });
 });
