@@ -16,8 +16,8 @@ import {
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
-  postComment,
   type PullRequestSummary,
+  postComment,
 } from "./services/codecommit.js";
 
 type Screen = "repos" | "prs" | "detail";

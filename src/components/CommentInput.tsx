@@ -53,7 +53,7 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
         <Text>&gt; </Text>
         <TextInput value={value} onChange={setValue} onSubmit={handleSubmit} />
       </Box>
-      <Text dimColor>Enter submit  Esc cancel</Text>
+      <Text dimColor>Enter submit Esc cancel</Text>
     </Box>
   );
 }

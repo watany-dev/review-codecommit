@@ -115,9 +115,7 @@ export function PullRequestDetail({
         />
       )}
       <Box marginTop={1}>
-        <Text dimColor>
-          {isCommenting ? "" : "↑↓ scroll  c comment  q back  ? help"}
-        </Text>
+        <Text dimColor>{isCommenting ? "" : "↑↓ scroll  c comment  q back  ? help"}</Text>
       </Box>
     </Box>
   );
