@@ -48,6 +48,23 @@ export function App({ client, initialRepo }: AppProps) {
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
 
+  /**
+   * Wrapper for async operations with automatic loading/error state management.
+   * Eliminates repetitive try-catch-finally patterns.
+   */
+  async function withLoadingState<T>(operation: () => Promise<T>): Promise<T | undefined> {
+    setLoading(true);
+    setError(null);
+    try {
+      return await operation();
+    } catch (err) {
+      setError(formatError(err));
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (initialRepo) {
       loadPullRequests(initialRepo);
@@ -57,35 +74,21 @@ export function App({ client, initialRepo }: AppProps) {
   }, []);
 
   async function loadRepositories() {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const repos = await listRepositories(client);
       setRepositories(repos);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   async function loadPullRequests(repoName: string) {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const result = await listPullRequests(client, repoName);
       setPullRequests(result.pullRequests);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
@@ -111,11 +114,7 @@ export function App({ client, initialRepo }: AppProps) {
         texts.set(result.key, { before: result.before, after: result.after });
       }
       setDiffTexts(texts);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   function handleSelectRepo(repoName: string) {
