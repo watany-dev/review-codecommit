@@ -5,6 +5,7 @@ import {
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  postComment,
 } from "./codecommit.js";
 
 const mockSend = vi.fn();
@@ -233,6 +234,55 @@ describe("getPullRequestDetail edge cases", () => {
 
     const detail = await getPullRequestDetail(mockClient, "42", "my-service");
     expect(detail.comments).toHaveLength(0);
+  });
+});
+
+describe("postComment", () => {
+  it("posts a comment and returns the result", async () => {
+    const mockComment = {
+      commentId: "comment-1",
+      content: "Looks good!",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+      creationDate: new Date("2026-02-13T12:00:00Z"),
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockComment });
+
+    const result = await postComment(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      beforeCommitId: "def456",
+      afterCommitId: "abc123",
+      content: "Looks good!",
+    });
+
+    expect(result).toEqual(mockComment);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          repositoryName: "my-service",
+          beforeCommitId: "def456",
+          afterCommitId: "abc123",
+          content: "Looks good!",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("Access denied");
+    error.name = "AccessDeniedException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      postComment(mockClient, {
+        pullRequestId: "42",
+        repositoryName: "my-service",
+        beforeCommitId: "def456",
+        afterCommitId: "abc123",
+        content: "test",
+      }),
+    ).rejects.toThrow("Access denied");
   });
 });
 

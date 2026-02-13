@@ -12,6 +12,8 @@ describe("Help", () => {
     expect(output).toContain("k / ↑");
     expect(output).toContain("Enter");
     expect(output).toContain("Ctrl+C");
+    expect(output).toContain("c");
+    expect(output).toContain("Post comment");
   });
 
   it("renders help title", () => {

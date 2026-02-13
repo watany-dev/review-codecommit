@@ -14,6 +14,7 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 - Browse open pull requests
 - View PR details with color-coded unified diffs (green for additions, red for deletions)
 - Read PR comments inline
+- Post comments on pull requests (`c` key in PR detail view)
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
 
@@ -21,7 +22,7 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations
+- IAM permissions for CodeCommit read operations (and `codecommit:PostCommentForPullRequest` for comment posting)
 
 ## Installation
 
@@ -57,8 +58,9 @@ titmouse --region <region>
 |-----|--------|--------|
 | `j` / `↓` | Move cursor down | All |
 | `k` / `↑` | Move cursor up | All |
-| `Enter` | Select / confirm | List screens |
-| `q` / `Esc` | Go back | All |
+| `Enter` | Select / confirm / submit comment | List screens / Comment input |
+| `q` / `Esc` | Go back / cancel comment | All / Comment input |
+| `c` | Post comment | PR Detail |
 | `Ctrl+C` | Exit immediately | All |
 | `?` | Toggle help | All |
 
@@ -113,7 +115,8 @@ bun run build
 
 The following features are planned for future releases:
 
-- Post comments on pull requests
+- Inline comments on specific file lines
+- Comment editing and deletion
 - Approve / Revoke operations
 - Merge operations
 

@@ -22,6 +22,7 @@ npx titmouse --region <region>      # リージョン指定
 | AWS SDK | `@aws-sdk/client-codecommit` (v3) |
 | AWS認証 | SDK標準チェーン + `--profile` / `--region` オプション |
 | ビルド | bun build (既存構成を活用) |
+| テキスト入力 | `ink-text-input` (v0.2 コメント投稿) |
 | テスト | vitest |
 | リント | oxlint |
 
@@ -34,9 +35,19 @@ npx titmouse --region <region>      # リージョン指定
 | PR詳細 | タイトル、説明、差分(diff)の表示 |
 | コメント閲覧 | PR上のコメントを表示 |
 
+## 機能スコープ (v0.2)
+
+| 機能 | 内容 |
+|------|------|
+| コメント投稿 | PR詳細画面から `c` キーでコメント入力モードに遷移し、PR全体へのコメントを投稿 |
+| コメントリロード | 投稿成功後にコメント一覧を自動リロード |
+| 投稿エラーハンドリング | 文字数制限超過、権限不足等のエラーをユーザーに表示 |
+
 ### 今回やらないこと (将来対応)
 
-- コメント投稿
+- ファイル行単位のインラインコメント
+- コメントの編集・削除
+- コメントへの返信
 - Approve / Revoke
 - マージ操作
 
@@ -44,12 +55,13 @@ npx titmouse --region <region>      # リージョン指定
 
 | キー | 動作 | 画面 |
 |------|------|------|
-| `j` / `↓` | カーソル下移動 | 全画面 |
-| `k` / `↑` | カーソル上移動 | 全画面 |
-| `Enter` | 選択・決定 | リスト画面 |
-| `q` / `Esc` | 前の画面に戻る | 全画面 |
+| `j` / `↓` | カーソル下移動 | 全画面（コメント入力中は無効） |
+| `k` / `↑` | カーソル上移動 | 全画面（コメント入力中は無効） |
+| `Enter` | 選択・決定 / コメント送信 | リスト画面 / コメント入力 |
+| `q` / `Esc` | 前の画面に戻る / コメント入力キャンセル | 全画面 / コメント入力 |
 | `Ctrl+C` | 即座に終了 | 全画面 |
-| `?` | ヘルプ表示 | 全画面 |
+| `?` | ヘルプ表示 | 全画面（コメント入力中は無効） |
+| `c` | コメント入力モード開始 | PR詳細画面 |
 
 ## 画面フロー・遷移
 
@@ -118,7 +130,7 @@ npx titmouse --region <region>      # リージョン指定
 │  watany: タイムアウトを延長しました          │
 │  taro: LGTMです                              │
 │                                              │
-│  ↑↓ scroll  q back                           │
+│  ↑↓ scroll  c comment  q back  ? help          │
 └──────────────────────────────────────────────┘
 ```
 
@@ -144,6 +156,10 @@ npx titmouse --region <region>      # リージョン指定
 | リポジトリ不在 | 「Repository not found」と表示して終了 |
 | ネットワークエラー | 「Network error. Check your connection.」と表示 |
 | 権限不足 | 「Access denied」と表示し必要なIAMポリシーを案内 |
+| コメント空 | 「Comment cannot be empty.」と表示 |
+| コメント文字数超過 | 「Comment exceeds the 10,240 character limit.」と表示 |
+| コメント投稿権限不足 | 「Access denied. Check your IAM policy allows CodeCommit write access.」と表示 |
+| PR不在（投稿時） | 「Pull request not found.」と表示 |
 
 ## テスト戦略
 
