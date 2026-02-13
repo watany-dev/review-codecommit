@@ -13,6 +13,7 @@ import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
   getBlobContent,
+  getComments,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
@@ -152,8 +153,9 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function reloadComments(pullRequestId: string) {
-    const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
-    setPrComments(detail.comments);
+    // Optimized: fetch only comments instead of full PR detail
+    const comments = await getComments(client, pullRequestId, selectedRepo);
+    setPrComments(comments);
   }
 
   function handleBack() {

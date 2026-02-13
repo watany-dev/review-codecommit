@@ -121,6 +121,25 @@ export async function getPullRequestDetail(
   return { pullRequest, differences, comments };
 }
 
+export async function getComments(
+  client: CodeCommitClient,
+  pullRequestId: string,
+  repositoryName: string,
+): Promise<Comment[]> {
+  const comments: Comment[] = [];
+  const commentsCommand = new GetCommentsForPullRequestCommand({
+    pullRequestId,
+    repositoryName,
+  });
+  const commentsResponse = await client.send(commentsCommand);
+  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
+    for (const comment of thread.comments ?? []) {
+      comments.push(comment);
+    }
+  }
+  return comments;
+}
+
 export async function postComment(
   client: CodeCommitClient,
   params: {
