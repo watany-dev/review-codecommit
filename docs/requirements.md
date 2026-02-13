@@ -22,6 +22,7 @@ npx titmouse --region <region>      # リージョン指定
 | AWS SDK | `@aws-sdk/client-codecommit` (v3) |
 | AWS認証 | SDK標準チェーン + `--profile` / `--region` オプション |
 | ビルド | bun build (既存構成を活用) |
+| テキスト入力 | `ink-text-input` (v0.2 コメント投稿) |
 | テスト | vitest |
 | リント | oxlint |
 
