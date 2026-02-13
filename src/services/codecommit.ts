@@ -2,6 +2,8 @@ import {
   CodeCommitClient,
   type Comment,
   type Difference,
+  type Approval,
+  type Evaluation,
   GetBlobCommand,
   GetCommentsForPullRequestCommand,
   GetDifferencesCommand,
@@ -9,6 +11,9 @@ import {
   ListPullRequestsCommand,
   ListRepositoriesCommand,
   PostCommentForPullRequestCommand,
+  UpdatePullRequestApprovalStateCommand,
+  GetPullRequestApprovalStatesCommand,
+  EvaluatePullRequestApprovalRulesCommand,
   type PullRequest,
   type RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
@@ -145,6 +150,52 @@ export async function postComment(
   });
   const response = await client.send(command);
   return response.comment!;
+}
+
+export async function updateApprovalState(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    revisionId: string;
+    approvalState: "APPROVE" | "REVOKE";
+  },
+): Promise<void> {
+  const command = new UpdatePullRequestApprovalStateCommand({
+    pullRequestId: params.pullRequestId,
+    revisionId: params.revisionId,
+    approvalState: params.approvalState,
+  });
+  await client.send(command);
+}
+
+export async function getApprovalStates(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    revisionId: string;
+  },
+): Promise<Approval[]> {
+  const command = new GetPullRequestApprovalStatesCommand({
+    pullRequestId: params.pullRequestId,
+    revisionId: params.revisionId,
+  });
+  const response = await client.send(command);
+  return response.approvals ?? [];
+}
+
+export async function evaluateApprovalRules(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    revisionId: string;
+  },
+): Promise<Evaluation | null> {
+  const command = new EvaluatePullRequestApprovalRulesCommand({
+    pullRequestId: params.pullRequestId,
+    revisionId: params.revisionId,
+  });
+  const response = await client.send(command);
+  return response.evaluation ?? null;
 }
 
 export async function getBlobContent(
