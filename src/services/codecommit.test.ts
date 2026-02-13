@@ -165,6 +165,15 @@ describe("listPullRequests edge cases", () => {
 });
 
 describe("getPullRequestDetail edge cases", () => {
+  it("throws when pullRequest is missing from response", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: undefined,
+    });
+    await expect(getPullRequestDetail(mockClient, "42", "my-service")).rejects.toThrow(
+      "Pull request 42 not found.",
+    );
+  });
+
   it("handles pull request without targets", async () => {
     mockSend.mockResolvedValueOnce({
       pullRequest: {

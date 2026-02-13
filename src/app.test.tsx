@@ -150,11 +150,24 @@ describe("App", () => {
     });
   });
 
-  it("shows non-Error as string", async () => {
+  it("shows generic message for non-Error values", async () => {
     vi.mocked(listRepositories).mockRejectedValue("raw string error");
     const { lastFrame } = render(<App client={mockClient} />);
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("raw string error");
+      expect(lastFrame()).toContain("An unexpected error occurred");
+    });
+  });
+
+  it("sanitizes ARN from error message", async () => {
+    vi.mocked(listRepositories).mockRejectedValue(
+      new Error("Resource arn:aws:codecommit:us-east-1:123456789012:my-repo not available"),
+    );
+    const { lastFrame } = render(<App client={mockClient} />);
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toContain("[ARN]");
+      expect(frame).not.toContain("arn:aws:");
+      expect(frame).not.toContain("123456789012");
     });
   });
 

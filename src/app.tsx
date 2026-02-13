@@ -204,7 +204,13 @@ function formatError(err: unknown): string {
     ) {
       return "Network error. Check your connection.";
     }
-    return err.message;
+    return sanitizeErrorMessage(err.message);
   }
-  return String(err);
+  return "An unexpected error occurred.";
+}
+
+function sanitizeErrorMessage(message: string): string {
+  return message
+    .replace(/arn:[^\s"')]+/gi, "[ARN]")
+    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
 }

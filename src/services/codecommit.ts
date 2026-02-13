@@ -92,7 +92,10 @@ export async function getPullRequestDetail(
 ): Promise<PullRequestDetail> {
   const getCommand = new GetPullRequestCommand({ pullRequestId });
   const getResponse = await client.send(getCommand);
-  const pullRequest = getResponse.pullRequest!;
+  const pullRequest = getResponse.pullRequest;
+  if (!pullRequest) {
+    throw new Error(`Pull request ${pullRequestId} not found.`);
+  }
 
   const target = pullRequest.pullRequestTargets?.[0];
   const differences: Difference[] = [];
