@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import fc from "fast-check";
+import { describe, expect, it } from "vitest";
 import { computeUnifiedDiff, formatDiffForDisplay } from "./formatDiff.js";
 
 describe("computeUnifiedDiff", () => {
@@ -45,8 +45,12 @@ describe("computeUnifiedDiff", () => {
     const result = computeUnifiedDiff(before, after, "multi.ts");
     expect(result.hunks.length).toBeGreaterThanOrEqual(1);
     const allLines = result.hunks.flatMap((h) => h.lines);
-    expect(allLines.some((l) => l.type === "add" && l.content.includes("changed-line2"))).toBe(true);
-    expect(allLines.some((l) => l.type === "add" && l.content.includes("changed-line25"))).toBe(true);
+    expect(allLines.some((l) => l.type === "add" && l.content.includes("changed-line2"))).toBe(
+      true,
+    );
+    expect(allLines.some((l) => l.type === "add" && l.content.includes("changed-line25"))).toBe(
+      true,
+    );
   });
 
   it("includes context lines around changes", () => {
@@ -123,9 +127,7 @@ describe("computeUnifiedDiff", () => {
 
 describe("formatDiffForDisplay", () => {
   it("formats diff sections as text", () => {
-    const sections = [
-      computeUnifiedDiff("a\nb", "a\nc", "file.ts"),
-    ];
+    const sections = [computeUnifiedDiff("a\nb", "a\nc", "file.ts")];
     const output = formatDiffForDisplay(sections);
     expect(output).toContain("--- a/file.ts");
     expect(output).toContain("+++ b/file.ts");
@@ -150,11 +152,13 @@ describe("formatDiffForDisplay", () => {
 
 // --- Property-Based Tests ---
 
-const textLine = fc.stringOf(
-  fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789 _-=+"),
-  { minLength: 0, maxLength: 40 },
-);
-const textContent = fc.array(textLine, { minLength: 0, maxLength: 15 }).map((lines) => lines.join("\n"));
+const textLine = fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789 _-=+"), {
+  minLength: 0,
+  maxLength: 40,
+});
+const textContent = fc
+  .array(textLine, { minLength: 0, maxLength: 15 })
+  .map((lines) => lines.join("\n"));
 
 describe("computeUnifiedDiff (property-based)", () => {
   it("identical content always produces empty hunks", () => {
@@ -243,10 +247,14 @@ describe("computeUnifiedDiff (property-based)", () => {
         for (const hunk of result.hunks) {
           const match = hunk.header.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/);
           if (!match) continue;
-          const delCount = parseInt(match[2], 10);
-          const addCount = parseInt(match[4], 10);
-          const actualDel = hunk.lines.filter((l) => l.type === "delete" || l.type === "context").length;
-          const actualAdd = hunk.lines.filter((l) => l.type === "add" || l.type === "context").length;
+          const delCount = Number.parseInt(match[2], 10);
+          const addCount = Number.parseInt(match[4], 10);
+          const actualDel = hunk.lines.filter(
+            (l) => l.type === "delete" || l.type === "context",
+          ).length;
+          const actualAdd = hunk.lines.filter(
+            (l) => l.type === "add" || l.type === "context",
+          ).length;
           expect(actualDel).toBe(delCount);
           expect(actualAdd).toBe(addCount);
         }

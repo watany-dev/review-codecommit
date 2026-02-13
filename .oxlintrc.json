@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react", "unicorn", "typescript", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-await-in-loop": "off",
+    "no-unused-vars": "error",
+    "no-fallthrough": "error",
+    "eqeqeq": ["warn", { "null": "ignore" }],
+    "no-var": "error",
+    "prefer-const": "warn",
+    "no-shadow-restricted-names": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "warn",
+    "no-loss-of-precision": "error",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/prefer-as-const": "warn",
+    "react/jsx-no-duplicate-props": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/jsx-key": "error",
+    "unicorn/no-instanceof-array": "error",
+    "unicorn/no-typeof-undefined": "warn",
+    "unicorn/prefer-array-flat-map": "warn",
+    "unicorn/prefer-number-properties": "warn",
+    "import/no-duplicates": "warn",
+    "import/no-self-import": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**", "coverage/**"]
+}

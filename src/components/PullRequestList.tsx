@@ -1,7 +1,7 @@
-import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
+import React, { useState } from "react";
 import type { PullRequestSummary } from "../services/codecommit.js";
-import { formatRelativeDate, extractAuthorName } from "../utils/formatDate.js";
+import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 
 interface Props {
   repositoryName: string;
@@ -11,13 +11,7 @@ interface Props {
   onHelp: () => void;
 }
 
-export function PullRequestList({
-  repositoryName,
-  pullRequests,
-  onSelect,
-  onBack,
-  onHelp,
-}: Props) {
+export function PullRequestList({ repositoryName, pullRequests, onSelect, onBack, onHelp }: Props) {
   const [cursor, setCursor] = useState(0);
 
   useInput((input, key) => {
@@ -48,7 +42,9 @@ export function PullRequestList({
   return (
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
-        <Text bold color="cyan">titmouse</Text>
+        <Text bold color="cyan">
+          titmouse
+        </Text>
         <Text> — </Text>
         <Text bold>{repositoryName}</Text>
       </Box>
@@ -62,19 +58,18 @@ export function PullRequestList({
       ) : (
         pullRequests.map((pr, index) => (
           <Box key={pr.pullRequestId}>
-            <Text color={index === cursor ? "green" : undefined}>
-              {index === cursor ? "> " : "  "}
-              #{pr.pullRequestId}  {pr.title}
+            <Text {...(index === cursor ? { color: "green" as const } : {})}>
+              {index === cursor ? "> " : "  "}#{pr.pullRequestId} {pr.title}
               {"  "}
               <Text dimColor>
-                {extractAuthorName(pr.authorArn)}  {formatRelativeDate(pr.creationDate)}
+                {extractAuthorName(pr.authorArn)} {formatRelativeDate(pr.creationDate)}
               </Text>
             </Text>
           </Box>
         ))
       )}
       <Box marginTop={1}>
-        <Text dimColor>↑↓ navigate  Enter view  q back  ? help</Text>
+        <Text dimColor>↑↓ navigate Enter view q back ? help</Text>
       </Box>
     </Box>
   );

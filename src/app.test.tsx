@@ -1,6 +1,6 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "ink-testing-library";
+import React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./services/codecommit.js", () => ({
   listRepositories: vi.fn(),
@@ -11,10 +11,10 @@ vi.mock("./services/codecommit.js", () => ({
 
 import { App } from "./app.js";
 import {
-  listRepositories,
-  listPullRequests,
-  getPullRequestDetail,
   getBlobContent,
+  getPullRequestDetail,
+  listPullRequests,
+  listRepositories,
 } from "./services/codecommit.js";
 
 const mockClient = {} as any;
@@ -59,9 +59,7 @@ describe("App", () => {
         },
       ],
     });
-    const { lastFrame } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -92,9 +90,7 @@ describe("App", () => {
     const error = new Error("not found");
     error.name = "RepositoryDoesNotExistException";
     vi.mocked(listPullRequests).mockRejectedValue(error);
-    const { lastFrame } = render(
-      <App client={mockClient} initialRepo="missing" />,
-    );
+    const { lastFrame } = render(<App client={mockClient} initialRepo="missing" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Repository not found");
     });
@@ -131,9 +127,7 @@ describe("App", () => {
   });
 
   it("shows network error for ECONNREFUSED", async () => {
-    vi.mocked(listRepositories).mockRejectedValue(
-      new Error("connect ECONNREFUSED 127.0.0.1:443"),
-    );
+    vi.mocked(listRepositories).mockRejectedValue(new Error("connect ECONNREFUSED 127.0.0.1:443"));
     const { lastFrame } = render(<App client={mockClient} />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Network error");
@@ -141,9 +135,7 @@ describe("App", () => {
   });
 
   it("shows network error for ETIMEDOUT", async () => {
-    vi.mocked(listRepositories).mockRejectedValue(
-      new Error("connect ETIMEDOUT"),
-    );
+    vi.mocked(listRepositories).mockRejectedValue(new Error("connect ETIMEDOUT"));
     const { lastFrame } = render(<App client={mockClient} />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Network error");
@@ -151,9 +143,7 @@ describe("App", () => {
   });
 
   it("shows generic error message", async () => {
-    vi.mocked(listRepositories).mockRejectedValue(
-      new Error("something went wrong"),
-    );
+    vi.mocked(listRepositories).mockRejectedValue(new Error("something went wrong"));
     const { lastFrame } = render(<App client={mockClient} />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("something went wrong");
@@ -215,9 +205,7 @@ describe("App", () => {
       comments: [],
     });
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -249,9 +237,7 @@ describe("App", () => {
       comments: [],
     });
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -271,9 +257,7 @@ describe("App", () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [],
     });
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("No open pull requests");
     });
@@ -367,9 +351,7 @@ describe("App", () => {
       .mockResolvedValueOnce("const timeout = 3000;")
       .mockResolvedValueOnce("const timeout = 10000;");
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -407,9 +389,7 @@ describe("App", () => {
     });
     vi.mocked(getBlobContent).mockResolvedValueOnce("const x = 1;");
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("feat: new file");
     });
@@ -431,13 +411,9 @@ describe("App", () => {
         },
       ],
     });
-    vi.mocked(getPullRequestDetail).mockRejectedValue(
-      new Error("failed to load"),
-    );
+    vi.mocked(getPullRequestDetail).mockRejectedValue(new Error("failed to load"));
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -450,9 +426,7 @@ describe("App", () => {
 
   it("shows error when loading PRs fails", async () => {
     vi.mocked(listPullRequests).mockRejectedValue(new Error("load failed"));
-    const { lastFrame } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("load failed");
     });
@@ -485,9 +459,7 @@ describe("App", () => {
     });
     vi.mocked(getBlobContent).mockResolvedValueOnce("old content");
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("chore: remove old");
     });
@@ -509,9 +481,7 @@ describe("App", () => {
         },
       ],
     });
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });
@@ -543,9 +513,7 @@ describe("App", () => {
       comments: [],
     });
 
-    const { lastFrame, stdin } = render(
-      <App client={mockClient} initialRepo="my-service" />,
-    );
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("fix: login");
     });

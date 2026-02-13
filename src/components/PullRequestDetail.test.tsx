@@ -1,6 +1,6 @@
-import React from "react";
-import { describe, it, expect, vi } from "vitest";
 import { render } from "ink-testing-library";
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
 import { PullRequestDetail } from "./PullRequestDetail.js";
 
 describe("PullRequestDetail", () => {
@@ -189,12 +189,14 @@ describe("PullRequestDetail", () => {
     const { lastFrame } = render(
       <PullRequestDetail
         pullRequest={pullRequest as any}
-        differences={[
-          {
-            beforeBlob: { blobId: "x1", path: "src/other.ts" },
-            afterBlob: { blobId: "x2", path: "src/other.ts" },
-          },
-        ] as any}
+        differences={
+          [
+            {
+              beforeBlob: { blobId: "x1", path: "src/other.ts" },
+              afterBlob: { blobId: "x2", path: "src/other.ts" },
+            },
+          ] as any
+        }
         comments={[]}
         diffTexts={new Map()}
         onBack={vi.fn()}
