@@ -210,7 +210,5 @@ function formatError(err: unknown): string {
 }
 
 function sanitizeErrorMessage(message: string): string {
-  return message
-    .replace(/arn:[^\s"')]+/gi, "[ARN]")
-    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  return message.replace(/arn:[^\s"')]+/gi, "[ARN]").replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
 }
