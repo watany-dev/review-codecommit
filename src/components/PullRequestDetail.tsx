@@ -217,15 +217,7 @@ export function PullRequestDetail({
 }
 
 interface DisplayLine {
-  type:
-    | "header"
-    | "separator"
-    | "add"
-    | "delete"
-    | "context"
-    | "hunk"
-    | "comment-header"
-    | "comment";
+  type: "header" | "separator" | "add" | "delete" | "context" | "comment-header" | "comment";
   text: string;
 }
 
@@ -324,13 +316,9 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
       return <Text color="red">{line.text}</Text>;
     case "context":
       return <Text>{line.text}</Text>;
-    case "hunk":
-      return <Text color="cyan">{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
       return <Text> {line.text}</Text>;
-    default:
-      return <Text>{line.text}</Text>;
   }
 }

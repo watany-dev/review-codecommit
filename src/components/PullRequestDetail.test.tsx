@@ -924,6 +924,93 @@ describe("PullRequestDetail", () => {
     expect(lastFrame()).toContain("Press any key to return");
   });
 
+  it("clears error and closes approval prompt on key press during error", async () => {
+    const onClearApprovalError = vi.fn();
+    const { rerender, lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={onClearApprovalError}
+      />,
+    );
+    // Enter approve mode
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    // Show error state
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError="Some error"
+        onClearApprovalError={onClearApprovalError}
+      />,
+    );
+    expect(lastFrame()).toContain("Some error");
+
+    // Press any key to clear error
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(onClearApprovalError).toHaveBeenCalled();
+    });
+  });
+
+  it("cancels approval prompt on n key", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Approve this pull request?");
+      expect(lastFrame()).toContain("a approve");
+    });
+  });
+
   it("does not open approval prompt when in comment mode", async () => {
     const { stdin, lastFrame } = render(
       <PullRequestDetail
