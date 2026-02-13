@@ -15,6 +15,8 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 - View PR details with color-coded unified diffs (green for additions, red for deletions)
 - Read PR comments inline
 - Post comments on pull requests (`c` key in PR detail view)
+- Approve / revoke pull requests (`a`/`r` keys with confirmation prompt)
+- View approval status and approval rule evaluation
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
 
@@ -22,7 +24,7 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations (and `codecommit:PostCommentForPullRequest` for comment posting)
+- IAM permissions for CodeCommit read operations, `codecommit:PostCommentForPullRequest` for comment posting, and `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations
 
 ## Installation
 
@@ -59,8 +61,10 @@ titmouse --region <region>
 | `j` / `↓` | Move cursor down | All |
 | `k` / `↑` | Move cursor up | All |
 | `Enter` | Select / confirm / submit comment | List screens / Comment input |
-| `q` / `Esc` | Go back / cancel comment | All / Comment input |
+| `q` / `Esc` | Go back / cancel | All / Comment input / Confirm prompt |
 | `c` | Post comment | PR Detail |
+| `a` | Approve PR (with confirmation) | PR Detail |
+| `r` | Revoke approval (with confirmation) | PR Detail |
 | `Ctrl+C` | Exit immediately | All |
 | `?` | Toggle help | All |
 
@@ -117,7 +121,7 @@ bun run build
 |---------|---------|--------|
 | v0.1 | Browse repositories, PRs, diffs, and comments | ✅ Released |
 | v0.2 | Post comments on pull requests | ✅ Released |
-| v0.3 | Approve / Revoke operations | Planned |
+| v0.3 | Approve / Revoke operations | ✅ Released |
 | v0.4 | Inline comments (file-line specific) | Planned |
 | v0.5 | Comment replies (threads) | Planned |
 | v0.6 | Merge operations | Planned |
