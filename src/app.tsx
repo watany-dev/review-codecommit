@@ -1,7 +1,9 @@
 import type {
+  Approval,
   CodeCommitClient,
   Comment,
   Difference,
+  Evaluation,
   PullRequest,
   RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
@@ -12,12 +14,15 @@ import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
+  evaluateApprovalRules,
+  getApprovalStates,
   getBlobContent,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
   type PullRequestSummary,
   postComment,
+  updateApprovalState,
 } from "./services/codecommit.js";
 
 type Screen = "repos" | "prs" | "detail";
@@ -46,6 +51,11 @@ export function App({ client, initialRepo }: AppProps) {
 
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialRepo) {
@@ -89,6 +99,17 @@ export function App({ client, initialRepo }: AppProps) {
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
       setPrComments(detail.comments);
+
+      // v0.3: 承認状態を取得
+      const revisionId = detail.pullRequest.revisionId;
+      if (revisionId) {
+        const [approvalStates, evaluation] = await Promise.all([
+          getApprovalStates(client, { pullRequestId, revisionId }),
+          evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+        ]);
+        setApprovals(approvalStates);
+        setApprovalEvaluation(evaluation);
+      }
 
       const texts = new Map<string, { before: string; after: string }>();
       for (const diff of detail.differences) {
@@ -144,6 +165,53 @@ export function App({ client, initialRepo }: AppProps) {
   async function reloadComments(pullRequestId: string) {
     const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
     setPrComments(detail.comments);
+  }
+
+  async function handleApprove() {
+    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
+
+    setIsApproving(true);
+    setApprovalError(null);
+    try {
+      await updateApprovalState(client, {
+        pullRequestId: prDetail.pullRequestId,
+        revisionId: prDetail.revisionId,
+        approvalState: "APPROVE",
+      });
+      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+    } catch (err) {
+      setApprovalError(formatApprovalError(err));
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleRevoke() {
+    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
+
+    setIsApproving(true);
+    setApprovalError(null);
+    try {
+      await updateApprovalState(client, {
+        pullRequestId: prDetail.pullRequestId,
+        revisionId: prDetail.revisionId,
+        approvalState: "REVOKE",
+      });
+      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+    } catch (err) {
+      setApprovalError(formatApprovalError(err));
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function reloadApprovals(pullRequestId: string, revisionId: string) {
+    const [approvalStates, evaluation] = await Promise.all([
+      getApprovalStates(client, { pullRequestId, revisionId }),
+      evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+    ]);
+    setApprovals(approvalStates);
+    setApprovalEvaluation(evaluation);
   }
 
   function handleBack() {
@@ -216,9 +284,42 @@ export function App({ client, initialRepo }: AppProps) {
           isPostingComment={isPostingComment}
           commentError={commentError}
           onClearCommentError={() => setCommentError(null)}
+          approvals={approvals}
+          approvalEvaluation={approvalEvaluation}
+          onApprove={handleApprove}
+          onRevoke={handleRevoke}
+          isApproving={isApproving}
+          approvalError={approvalError}
+          onClearApprovalError={() => setApprovalError(null)}
         />
       );
   }
+}
+
+function formatApprovalError(err: unknown): string {
+  if (err instanceof Error) {
+    const name = err.name;
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+    if (name === "RevisionIdRequiredException" || name === "InvalidRevisionIdException") {
+      return "Invalid revision. The PR may have been updated. Go back and reopen.";
+    }
+    if (name === "PullRequestCannotBeApprovedByAuthorException") {
+      return "Cannot approve your own pull request.";
+    }
+    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+      return "Access denied. Check your IAM policy.";
+    }
+    if (name === "PullRequestAlreadyClosedException") {
+      return "Pull request is already closed.";
+    }
+    if (name === "EncryptionKeyAccessDeniedException") {
+      return "Encryption key access denied.";
+    }
+    return err.message;
+  }
+  return String(err);
 }
 
 function formatCommentError(err: unknown): string {
