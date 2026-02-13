@@ -113,12 +113,18 @@ bun run build
 
 ## Roadmap
 
-The following features are planned for future releases:
+| Version | Feature | Status |
+|---------|---------|--------|
+| v0.1 | Browse repositories, PRs, diffs, and comments | ✅ Released |
+| v0.2 | Post comments on pull requests | ✅ Released |
+| v0.3 | Approve / Revoke operations | Planned |
+| v0.4 | Inline comments (file-line specific) | Planned |
+| v0.5 | Comment replies (threads) | Planned |
+| v0.6 | Merge operations | Planned |
+| v0.7 | Comment edit / delete | Planned |
+| v0.8 | PR status filter and search | Planned |
 
-- Inline comments on specific file lines
-- Comment editing and deletion
-- Approve / Revoke operations
-- Merge operations
+See [docs/roadmap.md](docs/roadmap.md) for details.
 
 ## License
 
