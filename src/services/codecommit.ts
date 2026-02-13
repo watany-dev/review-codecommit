@@ -31,11 +31,6 @@ export interface PullRequestDetail {
   comments: Comment[];
 }
 
-export interface FileDiff {
-  filePath: string;
-  content: string;
-}
-
 export function createClient(config: CodeCommitConfig): CodeCommitClient {
   const options: { region?: string; profile?: string } = {};
   if (config.region) options.region = config.region;
