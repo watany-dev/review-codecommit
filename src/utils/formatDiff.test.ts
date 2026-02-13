@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { computeUnifiedDiff, formatDiffForDisplay } from "./formatDiff.js";
+import { computeUnifiedDiff } from "./formatDiff.js";
 
 describe("computeUnifiedDiff", () => {
   it("detects added lines", () => {
@@ -122,31 +122,6 @@ describe("computeUnifiedDiff", () => {
     const result = computeUnifiedDiff(before, after, "close.ts");
     // Changes are close enough to be in 1 hunk
     expect(result.hunks.length).toBe(1);
-  });
-});
-
-describe("formatDiffForDisplay", () => {
-  it("formats diff sections as text", () => {
-    const sections = [computeUnifiedDiff("a\nb", "a\nc", "file.ts")];
-    const output = formatDiffForDisplay(sections);
-    expect(output).toContain("--- a/file.ts");
-    expect(output).toContain("+++ b/file.ts");
-    expect(output).toContain("@@");
-  });
-
-  it("formats multiple sections", () => {
-    const sections = [
-      computeUnifiedDiff("a", "b", "first.ts"),
-      computeUnifiedDiff("x", "y", "second.ts"),
-    ];
-    const output = formatDiffForDisplay(sections);
-    expect(output).toContain("first.ts");
-    expect(output).toContain("second.ts");
-  });
-
-  it("handles empty sections", () => {
-    const output = formatDiffForDisplay([]);
-    expect(output).toBe("");
   });
 });
 
