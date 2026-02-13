@@ -29,7 +29,14 @@
     "unicorn/prefer-array-flat-map": "warn",
     "unicorn/prefer-number-properties": "warn",
     "import/no-duplicates": "warn",
-    "import/no-self-import": "error"
+    "import/no-self-import": "error",
+    "no-new-func": "error",
+    "no-script-url": "error",
+    "no-proto": "error",
+    "no-implied-eval": "error",
+    "no-prototype-builtins": "warn",
+    "react/no-danger": "warn",
+    "react/jsx-no-script-url": "error"
   },
   "overrides": [
     {
