@@ -51,6 +51,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     const output = lastFrame();
@@ -67,6 +71,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     const output = lastFrame();
@@ -83,6 +91,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     const output = lastFrame();
@@ -99,6 +111,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).toContain("src/auth.ts");
@@ -113,6 +129,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     const output = lastFrame();
@@ -128,6 +148,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     const output = lastFrame();
@@ -144,6 +168,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).not.toContain("Comments");
@@ -166,6 +194,10 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).toContain("(no title)");
@@ -180,6 +212,10 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).toContain("(unknown file)");
@@ -201,6 +237,10 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).toContain("src/other.ts");
@@ -215,6 +255,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     expect(lastFrame()).toContain("scroll");
@@ -232,6 +276,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     stdin.write("q");
@@ -248,6 +296,10 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={onHelp}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     stdin.write("?");
@@ -275,6 +327,10 @@ describe("PullRequestDetail", () => {
         diffTexts={texts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     stdin.write("j");
@@ -291,9 +347,170 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
       />,
     );
     stdin.write("k"); // should stay at 0
     // Just verify no crash
+  });
+
+  it("shows CommentInput when c key is pressed", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+  });
+
+  it("does not scroll when in comment mode", async () => {
+    const onBack = vi.fn();
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={onBack}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    // j/k/q should not trigger normal keybinds
+    stdin.write("j");
+    stdin.write("q");
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("shows c comment in footer hint", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("c comment");
+  });
+
+  it("auto-closes comment mode on successful post", () => {
+    const { rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={true}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    // Simulate posting complete (isPostingComment: true -> false, no error)
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    // Comment mode should be closed
+    expect(lastFrame()).not.toContain("New Comment:");
+    expect(lastFrame()).not.toContain("Posting comment...");
+  });
+
+  it("keeps comment mode open on post error", async () => {
+    const { stdin, rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    // Enter comment mode
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+
+    // Simulate posting start
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={true}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("Posting comment...");
+
+    // Simulate posting failed
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={comments as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError="Comment exceeds the 10,240 character limit."
+        onClearCommentError={vi.fn()}
+      />,
+    );
+    // Error should be shown, comment mode still open
+    expect(lastFrame()).toContain("Failed to post comment:");
   });
 });

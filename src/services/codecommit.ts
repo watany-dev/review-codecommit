@@ -8,6 +8,7 @@ import {
   GetPullRequestCommand,
   ListPullRequestsCommand,
   ListRepositoriesCommand,
+  PostCommentForPullRequestCommand,
   type PullRequest,
   type RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
@@ -120,6 +121,27 @@ export async function getPullRequestDetail(
   }
 
   return { pullRequest, differences, comments };
+}
+
+export async function postComment(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    repositoryName: string;
+    beforeCommitId: string;
+    afterCommitId: string;
+    content: string;
+  },
+): Promise<Comment> {
+  const command = new PostCommentForPullRequestCommand({
+    pullRequestId: params.pullRequestId,
+    repositoryName: params.repositoryName,
+    beforeCommitId: params.beforeCommitId,
+    afterCommitId: params.afterCommitId,
+    content: params.content,
+  });
+  const response = await client.send(command);
+  return response.comment!;
 }
 
 export async function getBlobContent(

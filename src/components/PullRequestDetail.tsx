@@ -1,7 +1,8 @@
 import type { Comment, Difference, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
+import { CommentInput } from "./CommentInput.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -10,6 +11,10 @@ interface Props {
   diffTexts: Map<string, { before: string; after: string }>;
   onBack: () => void;
   onHelp: () => void;
+  onPostComment: (content: string) => void;
+  isPostingComment: boolean;
+  commentError: string | null;
+  onClearCommentError: () => void;
 }
 
 export function PullRequestDetail({
@@ -19,8 +24,25 @@ export function PullRequestDetail({
   diffTexts,
   onBack,
   onHelp,
+  onPostComment,
+  isPostingComment,
+  commentError,
+  onClearCommentError,
 }: Props) {
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [isCommenting, setIsCommenting] = useState(false);
+  const [wasPosting, setWasPosting] = useState(false);
+
+  useEffect(() => {
+    if (isPostingComment) {
+      setWasPosting(true);
+    } else if (wasPosting && !commentError) {
+      setIsCommenting(false);
+      setWasPosting(false);
+    } else {
+      setWasPosting(false);
+    }
+  }, [isPostingComment, commentError]);
 
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
@@ -34,6 +56,8 @@ export function PullRequestDetail({
   const lines = buildDisplayLines(differences, diffTexts, comments);
 
   useInput((input, key) => {
+    if (isCommenting) return;
+
     if (input === "q" || key.escape) {
       onBack();
       return;
@@ -50,9 +74,14 @@ export function PullRequestDetail({
       setScrollOffset((prev) => Math.max(prev - 1, 0));
       return;
     }
+    if (input === "c") {
+      setIsCommenting(true);
+      return;
+    }
   });
 
-  const visibleLines = lines.slice(scrollOffset, scrollOffset + 30);
+  const visibleLineCount = isCommenting ? 20 : 30;
+  const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -76,8 +105,19 @@ export function PullRequestDetail({
           <Box key={scrollOffset + index}>{renderDiffLine(line)}</Box>
         ))}
       </Box>
+      {isCommenting && (
+        <CommentInput
+          onSubmit={onPostComment}
+          onCancel={() => setIsCommenting(false)}
+          isPosting={isPostingComment}
+          error={commentError}
+          onClearError={onClearCommentError}
+        />
+      )}
       <Box marginTop={1}>
-        <Text dimColor>↑↓ scroll q back ? help</Text>
+        <Text dimColor>
+          {isCommenting ? "" : "↑↓ scroll  c comment  q back  ? help"}
+        </Text>
       </Box>
     </Box>
   );

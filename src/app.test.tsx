@@ -7,6 +7,7 @@ vi.mock("./services/codecommit.js", () => ({
   listPullRequests: vi.fn(),
   getPullRequestDetail: vi.fn(),
   getBlobContent: vi.fn(),
+  postComment: vi.fn(),
 }));
 
 import { App } from "./app.js";
@@ -15,6 +16,7 @@ import {
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  postComment,
 } from "./services/codecommit.js";
 
 const mockClient = {} as any;
@@ -25,6 +27,7 @@ describe("App", () => {
     vi.mocked(listPullRequests).mockReset();
     vi.mocked(getPullRequestDetail).mockReset();
     vi.mocked(getBlobContent).mockReset();
+    vi.mocked(postComment).mockReset();
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
   });
 
@@ -527,5 +530,432 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Key Bindings");
     });
+  });
+
+  it("posts comment successfully and reloads comments", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(postComment).mockResolvedValue({
+      commentId: "c1",
+      content: "Looks good!",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Enter comment mode and submit
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+
+    // Mock reload after post
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [
+        {
+          commentId: "c1",
+          content: "Looks good!",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    stdin.write("Looks good!");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(postComment).toHaveBeenCalled();
+    });
+  });
+
+  it("shows error when comment post fails", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(postComment).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+
+    stdin.write("test comment");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Failed to post comment:");
+      expect(lastFrame()).toContain("Access denied");
+    });
+  });
+
+  it("shows comment error for CommentContentRequiredException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("empty");
+    err.name = "CommentContentRequiredException";
+    vi.mocked(postComment).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Comment cannot be empty.");
+    });
+  });
+
+  it("shows comment error for CommentContentSizeLimitExceededException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("too long");
+    err.name = "CommentContentSizeLimitExceededException";
+    vi.mocked(postComment).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Comment exceeds the 10,240 character limit.");
+    });
+  });
+
+  it("shows comment error for PullRequestDoesNotExistException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("gone");
+    err.name = "PullRequestDoesNotExistException";
+    vi.mocked(postComment).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Pull request not found.");
+    });
+  });
+
+  it("shows generic comment error message", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(postComment).mockRejectedValue(new Error("something broke"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("something broke");
+    });
+  });
+
+  it("shows non-Error comment error as string", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(postComment).mockRejectedValue("raw error string");
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("raw error string");
+    });
+  });
+
+  it("does not call postComment when pullRequestTargets is empty", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+
+    stdin.write("test");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+    });
+
+    // Give time for any async operations
+    await new Promise((r) => setTimeout(r, 50));
+    expect(postComment).not.toHaveBeenCalled();
   });
 });

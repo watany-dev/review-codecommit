@@ -26,6 +26,7 @@ export function Help({ onClose }: Props) {
         <Text> Enter Select / confirm</Text>
         <Text> q / Esc Back / quit</Text>
         <Text> Ctrl+C Exit immediately</Text>
+        <Text> c Post comment (PR Detail)</Text>
         <Text> ? Toggle this help</Text>
       </Box>
       <Box marginTop={1}>

@@ -16,6 +16,7 @@ import {
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  postComment,
   type PullRequestSummary,
 } from "./services/codecommit.js";
 
@@ -42,6 +43,9 @@ export function App({ client, initialRepo }: AppProps) {
   const [diffTexts, setDiffTexts] = useState<Map<string, { before: string; after: string }>>(
     new Map(),
   );
+
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialRepo) {
@@ -114,6 +118,34 @@ export function App({ client, initialRepo }: AppProps) {
     loadPullRequestDetail(pullRequestId);
   }
 
+  async function handlePostComment(content: string) {
+    if (!prDetail) return;
+    const target = prDetail.pullRequestTargets?.[0];
+    if (!target?.destinationCommit || !target?.sourceCommit) return;
+
+    setIsPostingComment(true);
+    setCommentError(null);
+    try {
+      await postComment(client, {
+        pullRequestId: prDetail.pullRequestId!,
+        repositoryName: selectedRepo,
+        beforeCommitId: target.destinationCommit,
+        afterCommitId: target.sourceCommit,
+        content,
+      });
+      await reloadComments(prDetail.pullRequestId!);
+    } catch (err) {
+      setCommentError(formatCommentError(err));
+    } finally {
+      setIsPostingComment(false);
+    }
+  }
+
+  async function reloadComments(pullRequestId: string) {
+    const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
+    setPrComments(detail.comments);
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -180,9 +212,33 @@ export function App({ client, initialRepo }: AppProps) {
           diffTexts={diffTexts}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
+          onPostComment={handlePostComment}
+          isPostingComment={isPostingComment}
+          commentError={commentError}
+          onClearCommentError={() => setCommentError(null)}
         />
       );
   }
+}
+
+function formatCommentError(err: unknown): string {
+  if (err instanceof Error) {
+    const name = err.name;
+    if (name === "CommentContentRequiredException") {
+      return "Comment cannot be empty.";
+    }
+    if (name === "CommentContentSizeLimitExceededException") {
+      return "Comment exceeds the 10,240 character limit.";
+    }
+    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+      return "Access denied. Check your IAM policy allows CodeCommit write access.";
+    }
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+    return err.message;
+  }
+  return String(err);
 }
 
 function formatError(err: unknown): string {
