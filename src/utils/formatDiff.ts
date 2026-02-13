@@ -1,14 +1,14 @@
-export interface DiffHunk {
+interface DiffHunk {
   header: string;
   lines: DiffLine[];
 }
 
-export interface DiffLine {
+interface DiffLine {
   type: "add" | "delete" | "context";
   content: string;
 }
 
-export interface FileDiffSection {
+interface FileDiffSection {
   filePath: string;
   hunks: DiffHunk[];
 }
