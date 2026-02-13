@@ -16,11 +16,16 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "oxlint ./src",
+    "lint": "oxlint -c .oxlintrc.json --tsconfig ./tsconfig.json --import-plugin --deny-warnings ./src",
+    "lint:fix": "oxlint -c .oxlintrc.json --tsconfig ./tsconfig.json --import-plugin --fix ./src",
+    "format": "biome check --write ./src",
+    "format:check": "biome check ./src",
     "check": "tsc --noEmit",
+    "validate": "bun run check && bun run lint && bun run format:check && bun run test",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.15",
     "@types/bun": "^1.2.0",
     "@types/react": "^19.2.14",
     "@vitest/coverage-v8": "^3.0.0",

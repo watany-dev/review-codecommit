@@ -33,17 +33,23 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
   let li = 0;
 
   while (bi < beforeLines.length || ai < afterLines.length) {
-    if (li < lcs.length && bi < beforeLines.length && ai < afterLines.length && beforeLines[bi] === lcs[li] && afterLines[ai] === lcs[li]) {
-      lines.push({ type: "context", content: ` ${beforeLines[bi]}` });
+    if (
+      li < lcs.length &&
+      bi < beforeLines.length &&
+      ai < afterLines.length &&
+      beforeLines[bi] === lcs[li] &&
+      afterLines[ai] === lcs[li]
+    ) {
+      lines.push({ type: "context", content: ` ${beforeLines[bi]!}` });
       bi++;
       ai++;
       li++;
     } else {
       if (bi < beforeLines.length && (li >= lcs.length || beforeLines[bi] !== lcs[li])) {
-        lines.push({ type: "delete", content: `-${beforeLines[bi]}` });
+        lines.push({ type: "delete", content: `-${beforeLines[bi]!}` });
         bi++;
       } else if (ai < afterLines.length && (li >= lcs.length || afterLines[ai] !== lcs[li])) {
-        lines.push({ type: "add", content: `+${afterLines[ai]}` });
+        lines.push({ type: "add", content: `+${afterLines[ai]!}` });
         ai++;
       }
     }
@@ -60,12 +66,13 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
   let hunkLines: DiffLine[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].type !== "context") {
+    const line = lines[i]!;
+    if (line.type !== "context") {
       const start = Math.max(0, i - contextSize);
       if (hunkStart === -1) {
         hunkStart = start;
         for (let j = start; j < i; j++) {
-          hunkLines.push(lines[j]);
+          hunkLines.push(lines[j]!);
         }
       } else if (start > hunkLines.length + hunkStart) {
         hunks.push({
@@ -75,18 +82,18 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
         hunkStart = start;
         hunkLines = [];
         for (let j = start; j < i; j++) {
-          hunkLines.push(lines[j]);
+          hunkLines.push(lines[j]!);
         }
       }
-      hunkLines.push(lines[i]);
+      hunkLines.push(line);
     } else if (hunkStart !== -1) {
       const distToNext = findNextChange(lines, i);
       if (distToNext <= contextSize * 2) {
-        hunkLines.push(lines[i]);
+        hunkLines.push(line);
       } else if (hunkLines.length > 0) {
         const end = Math.min(i + contextSize, lines.length);
         for (let j = i; j < end; j++) {
-          hunkLines.push(lines[j]);
+          hunkLines.push(lines[j]!);
         }
         hunks.push({
           header: formatHunkHeader(hunkStart, hunkLines),
@@ -110,16 +117,16 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
 
 function findNextChange(lines: DiffLine[], fromIndex: number): number {
   for (let i = fromIndex; i < lines.length; i++) {
-    if (lines[i].type !== "context") {
+    if (lines[i]!.type !== "context") {
       return i - fromIndex;
     }
   }
-  return Infinity;
+  return Number.POSITIVE_INFINITY;
 }
 
 function formatHunkHeader(start: number, lines: DiffLine[]): string {
-  let delStart = start + 1;
-  let addStart = start + 1;
+  const delStart = start + 1;
+  const addStart = start + 1;
   let delCount = 0;
   let addCount = 0;
 
@@ -145,9 +152,9 @@ function longestCommonSubsequence(a: string[], b: string[]): string[] {
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       if (a[i - 1] === b[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
+        dp[i]![j] = dp[i - 1]![j - 1]! + 1;
       } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
       }
     }
   }
@@ -157,10 +164,10 @@ function longestCommonSubsequence(a: string[], b: string[]): string[] {
   let j = n;
   while (i > 0 && j > 0) {
     if (a[i - 1] === b[j - 1]) {
-      result.unshift(a[i - 1]);
+      result.unshift(a[i - 1]!);
       i--;
       j--;
-    } else if (dp[i - 1][j] > dp[i][j - 1]) {
+    } else if (dp[i - 1]![j]! > dp[i]![j - 1]!) {
       i--;
     } else {
       j--;

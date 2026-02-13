@@ -1,6 +1,6 @@
-import React from "react";
-import { describe, it, expect, vi } from "vitest";
 import { render } from "ink-testing-library";
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
 import { PullRequestList } from "./PullRequestList.js";
 
 describe("PullRequestList", () => {

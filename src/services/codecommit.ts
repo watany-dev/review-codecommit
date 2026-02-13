@@ -1,15 +1,15 @@
 import {
   CodeCommitClient,
-  ListRepositoriesCommand,
-  ListPullRequestsCommand,
-  GetPullRequestCommand,
-  GetDifferencesCommand,
+  type Comment,
+  type Difference,
   GetBlobCommand,
   GetCommentsForPullRequestCommand,
-  type RepositoryNameIdPair,
+  GetDifferencesCommand,
+  GetPullRequestCommand,
+  ListPullRequestsCommand,
+  ListRepositoriesCommand,
   type PullRequest,
-  type Difference,
-  type Comment,
+  type RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
 
 export interface CodeCommitConfig {
@@ -36,18 +36,13 @@ export interface FileDiff {
 }
 
 export function createClient(config: CodeCommitConfig): CodeCommitClient {
-  return new CodeCommitClient({
-    ...(config.region && { region: config.region }),
-    ...(config.profile && {
-      credentials: undefined,
-      profile: config.profile,
-    }),
-  });
+  const options: { region?: string; profile?: string } = {};
+  if (config.region) options.region = config.region;
+  if (config.profile) options.profile = config.profile;
+  return new CodeCommitClient(options);
 }
 
-export async function listRepositories(
-  client: CodeCommitClient,
-): Promise<RepositoryNameIdPair[]> {
+export async function listRepositories(client: CodeCommitClient): Promise<RepositoryNameIdPair[]> {
   const command = new ListRepositoriesCommand({
     sortBy: "lastModifiedDate",
     order: "descending",
@@ -85,10 +80,9 @@ export async function listPullRequests(
     }
   }
 
-  return {
-    pullRequests,
-    nextToken: listResponse.nextToken,
-  };
+  const result: { pullRequests: PullRequestSummary[]; nextToken?: string } = { pullRequests };
+  if (listResponse.nextToken != null) result.nextToken = listResponse.nextToken;
+  return result;
 }
 
 export async function getPullRequestDetail(

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import React from "react";
 import { render } from "ink";
+import React from "react";
 import { App } from "./app.js";
 import { createClient } from "./services/codecommit.js";
 
@@ -15,14 +15,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const result: ParsedArgs = {};
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--profile" && args[i + 1]) {
-      result.profile = args[i + 1];
+    const arg = args[i];
+    const nextArg = args[i + 1];
+    if (arg === "--profile" && nextArg) {
+      result.profile = nextArg;
       i++;
-    } else if (args[i] === "--region" && args[i + 1]) {
-      result.region = args[i + 1];
+    } else if (arg === "--region" && nextArg) {
+      result.region = nextArg;
       i++;
-    } else if (!args[i].startsWith("-")) {
-      result.repoName = args[i];
+    } else if (arg && !arg.startsWith("-")) {
+      result.repoName = arg;
     }
   }
 
@@ -31,8 +33,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
 const parsed = parseArgs(process.argv);
 const client = createClient({
-  profile: parsed.profile,
-  region: parsed.region,
+  ...(parsed.profile != null ? { profile: parsed.profile } : {}),
+  ...(parsed.region != null ? { region: parsed.region } : {}),
 });
 
-render(<App client={client} initialRepo={parsed.repoName} />);
+render(
+  <App client={client} {...(parsed.repoName != null ? { initialRepo: parsed.repoName } : {})} />,
+);

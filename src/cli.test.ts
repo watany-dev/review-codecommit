@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("ink", () => ({
   render: vi.fn(),
@@ -14,6 +14,25 @@ vi.mock("./services/codecommit.js", () => ({
 }));
 
 import { parseArgs } from "./cli.js";
+
+describe("cli module-level execution", () => {
+  it("passes profile, region, and repoName when provided in argv", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--profile", "dev", "--region", "us-west-2", "my-repo"];
+    vi.resetModules();
+
+    const { render } = await import("ink");
+    const { createClient } = await import("./services/codecommit.js");
+    await import("./cli.js");
+
+    expect(createClient).toHaveBeenCalledWith(
+      expect.objectContaining({ profile: "dev", region: "us-west-2" }),
+    );
+    expect(render).toHaveBeenCalled();
+
+    process.argv = originalArgv;
+  });
+});
 
 describe("parseArgs", () => {
   it("parses --profile flag", () => {
@@ -71,7 +90,10 @@ describe("parseArgs", () => {
 
 // --- Property-Based Tests ---
 
-const argWord = fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789-_"), { minLength: 1, maxLength: 20 });
+const argWord = fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789-_"), {
+  minLength: 1,
+  maxLength: 20,
+});
 
 describe("parseArgs (property-based)", () => {
   it("never throws on arbitrary string arrays", () => {
@@ -87,31 +109,25 @@ describe("parseArgs (property-based)", () => {
 
   it("profile value comes from the input array", () => {
     fc.assert(
-      fc.property(
-        fc.array(argWord, { minLength: 0, maxLength: 5 }),
-        (extraArgs) => {
-          const argv = ["node", "cli", ...extraArgs];
-          const result = parseArgs(argv);
-          if (result.profile !== undefined) {
-            expect(argv).toContain(result.profile);
-          }
-        },
-      ),
+      fc.property(fc.array(argWord, { minLength: 0, maxLength: 5 }), (extraArgs) => {
+        const argv = ["node", "cli", ...extraArgs];
+        const result = parseArgs(argv);
+        if (result.profile !== undefined) {
+          expect(argv).toContain(result.profile);
+        }
+      }),
     );
   });
 
   it("region value comes from the input array", () => {
     fc.assert(
-      fc.property(
-        fc.array(argWord, { minLength: 0, maxLength: 5 }),
-        (extraArgs) => {
-          const argv = ["node", "cli", ...extraArgs];
-          const result = parseArgs(argv);
-          if (result.region !== undefined) {
-            expect(argv).toContain(result.region);
-          }
-        },
-      ),
+      fc.property(fc.array(argWord, { minLength: 0, maxLength: 5 }), (extraArgs) => {
+        const argv = ["node", "cli", ...extraArgs];
+        const result = parseArgs(argv);
+        if (result.region !== undefined) {
+          expect(argv).toContain(result.region);
+        }
+      }),
     );
   });
 

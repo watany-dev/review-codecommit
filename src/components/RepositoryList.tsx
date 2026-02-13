@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Box, Text, useInput } from "ink";
 import type { RepositoryNameIdPair } from "@aws-sdk/client-codecommit";
+import { Box, Text, useInput } from "ink";
+import React, { useState } from "react";
 
 interface Props {
   repositories: RepositoryNameIdPair[];
@@ -40,21 +40,23 @@ export function RepositoryList({ repositories, onSelect, onQuit, onHelp }: Props
   return (
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
-        <Text bold color="cyan">titmouse</Text>
+        <Text bold color="cyan">
+          titmouse
+        </Text>
       </Box>
       <Box marginBottom={1}>
         <Text bold>Select Repository:</Text>
       </Box>
       {repositories.map((repo, index) => (
         <Box key={repo.repositoryId ?? index}>
-          <Text color={index === cursor ? "green" : undefined}>
+          <Text {...(index === cursor ? { color: "green" as const } : {})}>
             {index === cursor ? "> " : "  "}
             {repo.repositoryName}
           </Text>
         </Box>
       ))}
       <Box marginTop={1}>
-        <Text dimColor>↑↓ navigate  Enter select  q quit  ? help</Text>
+        <Text dimColor>↑↓ navigate Enter select q quit ? help</Text>
       </Box>
     </Box>
   );

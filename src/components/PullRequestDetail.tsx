@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import type { Comment, Difference, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import type { PullRequest, Difference, Comment } from "@aws-sdk/client-codecommit";
-import { formatRelativeDate, extractAuthorName } from "../utils/formatDate.js";
+import React, { useState } from "react";
+import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -27,9 +27,7 @@ export function PullRequestDetail({
   const prId = pullRequest.pullRequestId ?? "";
   const author = extractAuthorName(pullRequest.authorArn ?? "unknown");
   const status = pullRequest.pullRequestStatus ?? "OPEN";
-  const creationDate = pullRequest.creationDate
-    ? formatRelativeDate(pullRequest.creationDate)
-    : "";
+  const creationDate = pullRequest.creationDate ? formatRelativeDate(pullRequest.creationDate) : "";
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
@@ -59,30 +57,42 @@ export function PullRequestDetail({
   return (
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={0}>
-        <Text bold color="cyan">PR #{prId}: {title}</Text>
+        <Text bold color="cyan">
+          PR #{prId}: {title}
+        </Text>
       </Box>
       <Box>
-        <Text>Author: {author}  Status: {status}  {creationDate}</Text>
+        <Text>
+          Author: {author} Status: {status} {creationDate}
+        </Text>
       </Box>
       <Box marginBottom={1}>
-        <Text dimColor>{destRef} ← {sourceRef}</Text>
+        <Text dimColor>
+          {destRef} ← {sourceRef}
+        </Text>
       </Box>
       <Box flexDirection="column">
         {visibleLines.map((line, index) => (
-          <Box key={scrollOffset + index}>
-            {renderDiffLine(line)}
-          </Box>
+          <Box key={scrollOffset + index}>{renderDiffLine(line)}</Box>
         ))}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>↑↓ scroll  q back  ? help</Text>
+        <Text dimColor>↑↓ scroll q back ? help</Text>
       </Box>
     </Box>
   );
 }
 
 interface DisplayLine {
-  type: "header" | "separator" | "add" | "delete" | "context" | "hunk" | "comment-header" | "comment";
+  type:
+    | "header"
+    | "separator"
+    | "add"
+    | "delete"
+    | "context"
+    | "hunk"
+    | "comment-header"
+    | "comment";
   text: string;
 }
 
@@ -94,8 +104,7 @@ function buildDisplayLines(
   const lines: DisplayLine[] = [];
 
   for (const diff of differences) {
-    const filePath =
-      diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
+    const filePath = diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
     lines.push({ type: "header", text: filePath });
     lines.push({ type: "separator", text: "─".repeat(50) });
 
@@ -133,21 +142,31 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
   let ai = 0;
 
   while (bi < beforeLines.length || ai < afterLines.length) {
-    if (bi < beforeLines.length && ai < afterLines.length && beforeLines[bi] === afterLines[ai]) {
-      result.push({ type: "context", text: ` ${beforeLines[bi]}` });
+    const beforeLine = beforeLines[bi];
+    const afterLine = afterLines[ai];
+    if (bi < beforeLines.length && ai < afterLines.length && beforeLine === afterLine) {
+      result.push({ type: "context", text: ` ${beforeLine}` });
       bi++;
       ai++;
     } else {
-      while (bi < beforeLines.length && (ai >= afterLines.length || beforeLines[bi] !== afterLines[ai])) {
-        const nextMatch = afterLines.indexOf(beforeLines[bi], ai);
+      while (
+        bi < beforeLines.length &&
+        (ai >= afterLines.length || beforeLines[bi] !== afterLines[ai])
+      ) {
+        const bl = beforeLines[bi]!;
+        const nextMatch = afterLines.indexOf(bl, ai);
         if (nextMatch !== -1 && nextMatch - ai < 5) break;
-        result.push({ type: "delete", text: `-${beforeLines[bi]}` });
+        result.push({ type: "delete", text: `-${bl}` });
         bi++;
       }
-      while (ai < afterLines.length && (bi >= beforeLines.length || afterLines[ai] !== beforeLines[bi])) {
-        const nextMatch = beforeLines.indexOf(afterLines[ai], bi);
+      while (
+        ai < afterLines.length &&
+        (bi >= beforeLines.length || afterLines[ai] !== beforeLines[bi])
+      ) {
+        const al = afterLines[ai]!;
+        const nextMatch = beforeLines.indexOf(al, bi);
         if (nextMatch !== -1 && nextMatch - bi < 5) break;
-        result.push({ type: "add", text: `+${afterLines[ai]}` });
+        result.push({ type: "add", text: `+${al}` });
         ai++;
       }
     }
@@ -159,7 +178,11 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
 function renderDiffLine(line: DisplayLine): React.ReactNode {
   switch (line.type) {
     case "header":
-      return <Text bold color="yellow">{line.text}</Text>;
+      return (
+        <Text bold color="yellow">
+          {line.text}
+        </Text>
+      );
     case "separator":
       return <Text dimColor>{line.text}</Text>;
     case "add":
@@ -173,7 +196,7 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
-      return <Text>  {line.text}</Text>;
+      return <Text> {line.text}</Text>;
     default:
       return <Text>{line.text}</Text>;
   }

@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from "react";
+import type {
+  CodeCommitClient,
+  Comment,
+  Difference,
+  PullRequest,
+  RepositoryNameIdPair,
+} from "@aws-sdk/client-codecommit";
 import { Box, Text } from "ink";
-import type { CodeCommitClient } from "@aws-sdk/client-codecommit";
-import type { RepositoryNameIdPair, PullRequest, Difference, Comment } from "@aws-sdk/client-codecommit";
+import React, { useEffect, useState } from "react";
+import { Help } from "./components/Help.js";
+import { PullRequestDetail } from "./components/PullRequestDetail.js";
+import { PullRequestList } from "./components/PullRequestList.js";
+import { RepositoryList } from "./components/RepositoryList.js";
 import {
-  listRepositories,
-  listPullRequests,
-  getPullRequestDetail,
   getBlobContent,
+  getPullRequestDetail,
+  listPullRequests,
+  listRepositories,
   type PullRequestSummary,
 } from "./services/codecommit.js";
-import { RepositoryList } from "./components/RepositoryList.js";
-import { PullRequestList } from "./components/PullRequestList.js";
-import { PullRequestDetail } from "./components/PullRequestDetail.js";
-import { Help } from "./components/Help.js";
 
 type Screen = "repos" | "prs" | "detail";
 
@@ -34,7 +39,9 @@ export function App({ client, initialRepo }: AppProps) {
   const [prDetail, setPrDetail] = useState<PullRequest | null>(null);
   const [prDifferences, setPrDifferences] = useState<Difference[]>([]);
   const [prComments, setPrComments] = useState<Comment[]>([]);
-  const [diffTexts, setDiffTexts] = useState<Map<string, { before: string; after: string }>>(new Map());
+  const [diffTexts, setDiffTexts] = useState<Map<string, { before: string; after: string }>>(
+    new Map(),
+  );
 
   useEffect(() => {
     if (initialRepo) {
@@ -84,12 +91,8 @@ export function App({ client, initialRepo }: AppProps) {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-        const before = beforeBlobId
-          ? await getBlobContent(client, selectedRepo, beforeBlobId)
-          : "";
-        const after = afterBlobId
-          ? await getBlobContent(client, selectedRepo, afterBlobId)
-          : "";
+        const before = beforeBlobId ? await getBlobContent(client, selectedRepo, beforeBlobId) : "";
+        const after = afterBlobId ? await getBlobContent(client, selectedRepo, afterBlobId) : "";
         texts.set(key, { before, after });
       }
       setDiffTexts(texts);
@@ -131,7 +134,9 @@ export function App({ client, initialRepo }: AppProps) {
   if (error) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text color="red" bold>Error: {error}</Text>
+        <Text color="red" bold>
+          Error: {error}
+        </Text>
         <Text dimColor>Press Ctrl+C to exit.</Text>
       </Box>
     );
@@ -192,7 +197,11 @@ function formatError(err: unknown): string {
     if (name === "AccessDeniedException" || name === "UnauthorizedException") {
       return "Access denied. Check your IAM policy allows CodeCommit access.";
     }
-    if (name === "NetworkingError" || err.message.includes("ECONNREFUSED") || err.message.includes("ETIMEDOUT")) {
+    if (
+      name === "NetworkingError" ||
+      err.message.includes("ECONNREFUSED") ||
+      err.message.includes("ETIMEDOUT")
+    ) {
       return "Network error. Check your connection.";
     }
     return err.message;
