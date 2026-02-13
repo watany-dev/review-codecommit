@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  createClient,
   listRepositories,
   listPullRequests,
   getPullRequestDetail,
@@ -14,6 +15,28 @@ const mockClient = {
 
 beforeEach(() => {
   mockSend.mockReset();
+});
+
+describe("createClient", () => {
+  it("creates client without options", () => {
+    const client = createClient({});
+    expect(client).toBeDefined();
+  });
+
+  it("creates client with profile", () => {
+    const client = createClient({ profile: "dev" });
+    expect(client).toBeDefined();
+  });
+
+  it("creates client with region", () => {
+    const client = createClient({ region: "us-east-1" });
+    expect(client).toBeDefined();
+  });
+
+  it("creates client with all options", () => {
+    const client = createClient({ profile: "prod", region: "ap-northeast-1" });
+    expect(client).toBeDefined();
+  });
 });
 
 describe("listRepositories", () => {
@@ -96,6 +119,120 @@ describe("getPullRequestDetail", () => {
     expect(detail.differences).toHaveLength(1);
     expect(detail.comments).toHaveLength(1);
     expect(detail.comments[0].content).toBe("LGTM");
+  });
+});
+
+describe("listPullRequests edge cases", () => {
+  it("returns empty array when no PR IDs", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: undefined,
+      nextToken: undefined,
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.pullRequests).toHaveLength(0);
+  });
+
+  it("handles PR without full data", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: ["99"],
+      nextToken: "token123",
+    });
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: undefined,
+        title: undefined,
+        authorArn: undefined,
+        creationDate: undefined,
+      },
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.pullRequests).toHaveLength(1);
+    expect(result.pullRequests[0].title).toBe("(no title)");
+    expect(result.nextToken).toBe("token123");
+  });
+
+  it("skips when pullRequest is undefined in response", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: ["99"],
+      nextToken: undefined,
+    });
+    mockSend.mockResolvedValueOnce({
+      pullRequest: undefined,
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.pullRequests).toHaveLength(0);
+  });
+});
+
+describe("getPullRequestDetail edge cases", () => {
+  it("handles pull request without targets", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: something",
+        pullRequestTargets: [],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [],
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.differences).toHaveLength(0);
+    expect(detail.comments).toHaveLength(0);
+  });
+
+  it("handles undefined differences in response", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [
+          {
+            sourceCommit: "abc",
+            destinationCommit: "def",
+          },
+        ],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      differences: undefined,
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [],
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.differences).toHaveLength(0);
+  });
+
+  it("handles empty comments data", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: undefined,
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.comments).toHaveLength(0);
+  });
+
+  it("handles thread with no comments", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [{ comments: undefined }],
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.comments).toHaveLength(0);
   });
 });
 

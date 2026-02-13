@@ -10,7 +10,7 @@ interface ParsedArgs {
   region?: string;
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const args = argv.slice(2);
   const result: ParsedArgs = {};
 

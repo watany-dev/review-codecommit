@@ -19,4 +19,25 @@ describe("Help", () => {
     expect(lastFrame()).toContain("titmouse");
     expect(lastFrame()).toContain("Help");
   });
+
+  it("calls onClose on ? key", () => {
+    const onClose = vi.fn();
+    const { stdin } = render(<Help onClose={onClose} />);
+    stdin.write("?");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("calls onClose on q key", () => {
+    const onClose = vi.fn();
+    const { stdin } = render(<Help onClose={onClose} />);
+    stdin.write("q");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("calls onClose on enter key", () => {
+    const onClose = vi.fn();
+    const { stdin } = render(<Help onClose={onClose} />);
+    stdin.write("\r");
+    expect(onClose).toHaveBeenCalled();
+  });
 });
