@@ -141,9 +141,9 @@ bun run build
 | v0.4 | Inline comments (file-line specific) | ✅ Released |
 | v0.5 | Comment replies (threads) | ✅ Released |
 | v0.6 | Merge operations | ✅ Released |
-| v0.7 | Commit-level review | ✅ Released |
-| v0.8 | Comment edit / delete | Planned |
-| v0.9 | PR status filter and search | Planned |
+| v0.6.1 | Commit-level review | ✅ Released |
+| v0.7 | Comment edit / delete | Planned |
+| v0.8 | PR status filter and search | Planned |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 
