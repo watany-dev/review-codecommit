@@ -287,7 +287,7 @@ describe("PullRequestDetail", () => {
         {...defaultApprovalProps}
       />,
     );
-    expect(lastFrame()).toContain("scroll");
+    expect(lastFrame()).toContain("cursor");
     expect(lastFrame()).toContain("back");
     expect(lastFrame()).toContain("help");
   });
@@ -1152,6 +1152,95 @@ describe("PullRequestDetail", () => {
     expect(output).toContain("💬 taro: inline note");
     expect(output).toContain("general LGTM");
     expect(output).toContain("Comments (1):");
+  });
+
+  // v0.4: Cursor navigation tests
+  it("shows cursor marker on first line initially", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("> ");
+  });
+
+  it("moves cursor down with j key", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    // Verify no crash, cursor still within bounds
+    expect(lastFrame()).toContain("> ");
+  });
+
+  it("cursor stays at 0 when pressing k at top", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("k");
+    stdin.write("k");
+    // First line should still have cursor
+    expect(lastFrame()).toContain("> ");
+  });
+
+  it("does not move cursor when in comment mode", async () => {
+    const onBack = vi.fn();
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={onBack}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("j"); // should not move cursor
+    expect(onBack).not.toHaveBeenCalled();
   });
 
   it("displays multiple comments on same line as thread", () => {

@@ -5,7 +5,7 @@ import type {
   PullRequest,
 } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { CommentThread } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
@@ -50,7 +50,7 @@ export function PullRequestDetail({
   approvalError,
   onClearApprovalError,
 }: Props) {
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [wasPosting, setWasPosting] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
@@ -101,11 +101,11 @@ export function PullRequestDetail({
       return;
     }
     if (input === "j" || key.downArrow) {
-      setScrollOffset((prev) => Math.min(prev + 1, Math.max(0, lines.length - 10)));
+      setCursorIndex((prev) => Math.min(prev + 1, lines.length - 1));
       return;
     }
     if (input === "k" || key.upArrow) {
-      setScrollOffset((prev) => Math.max(prev - 1, 0));
+      setCursorIndex((prev) => Math.max(prev - 1, 0));
       return;
     }
     if (input === "c") {
@@ -123,6 +123,12 @@ export function PullRequestDetail({
   });
 
   const visibleLineCount = isCommenting || approvalAction ? 20 : 30;
+  const scrollOffset = useMemo(() => {
+    const halfVisible = Math.floor(visibleLineCount / 2);
+    const maxOffset = Math.max(0, lines.length - visibleLineCount);
+    const idealOffset = cursorIndex - halfVisible;
+    return Math.max(0, Math.min(idealOffset, maxOffset));
+  }, [cursorIndex, lines.length, visibleLineCount]);
   const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
 
   return (
@@ -169,9 +175,16 @@ export function PullRequestDetail({
           </Box>
         )}
       <Box flexDirection="column">
-        {visibleLines.map((line, index) => (
-          <Box key={scrollOffset + index}>{renderDiffLine(line)}</Box>
-        ))}
+        {visibleLines.map((line, index) => {
+          const globalIndex = scrollOffset + index;
+          const isCursor = globalIndex === cursorIndex;
+          return (
+            <Box key={globalIndex}>
+              <Text>{isCursor ? "> " : "  "}</Text>
+              {renderDiffLine(line, isCursor)}
+            </Box>
+          );
+        })}
       </Box>
       {isCommenting && (
         <CommentInput
@@ -205,7 +218,7 @@ export function PullRequestDetail({
         <Text dimColor>
           {isCommenting || approvalAction
             ? ""
-            : "↑↓ scroll  c comment  a approve  r revoke  q back  ? help"}
+            : "↑↓ cursor  c comment  a approve  r revoke  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -404,7 +417,8 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
   return result;
 }
 
-function renderDiffLine(line: DisplayLine): React.ReactNode {
+function renderDiffLine(line: DisplayLine, isCursor?: boolean): React.ReactNode {
+  const bold = isCursor ?? false;
   switch (line.type) {
     case "header":
       return (
@@ -415,11 +429,11 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
     case "separator":
       return <Text dimColor>{line.text}</Text>;
     case "add":
-      return <Text color="green">{line.text}</Text>;
+      return <Text color="green" bold={bold}>{line.text}</Text>;
     case "delete":
-      return <Text color="red">{line.text}</Text>;
+      return <Text color="red" bold={bold}>{line.text}</Text>;
     case "context":
-      return <Text>{line.text}</Text>;
+      return <Text bold={bold}>{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
