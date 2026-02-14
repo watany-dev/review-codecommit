@@ -1,7 +1,9 @@
 import type {
+  Approval,
   CodeCommitClient,
   Comment,
   Difference,
+  Evaluation,
   PullRequest,
   RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
@@ -12,6 +14,8 @@ import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
+  evaluateApprovalRules,
+  getApprovalStates,
   getBlobContent,
   getComments,
   getPullRequestDetail,
@@ -19,6 +23,7 @@ import {
   listRepositories,
   type PullRequestSummary,
   postComment,
+  updateApprovalState,
 } from "./services/codecommit.js";
 
 type Screen = "repos" | "prs" | "detail";
@@ -47,6 +52,11 @@ export function App({ client, initialRepo }: AppProps) {
 
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
 
   /**
    * Wrapper for async operations with automatic loading/error state management.
@@ -93,6 +103,17 @@ export function App({ client, initialRepo }: AppProps) {
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
       setPrComments(detail.comments);
+
+      // v0.3: 承認状態を取得
+      const revisionId = detail.pullRequest.revisionId;
+      if (revisionId) {
+        const [approvalStates, evaluation] = await Promise.all([
+          getApprovalStates(client, { pullRequestId, revisionId }),
+          evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+        ]);
+        setApprovals(approvalStates);
+        setApprovalEvaluation(evaluation);
+      }
 
       // Parallelize blob content fetching for better performance
       const blobFetches = detail.differences.map(async (diff) => {
@@ -155,6 +176,53 @@ export function App({ client, initialRepo }: AppProps) {
     // Optimized: fetch only comments instead of full PR detail
     const comments = await getComments(client, pullRequestId, selectedRepo);
     setPrComments(comments);
+  }
+
+  async function handleApprove() {
+    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
+
+    setIsApproving(true);
+    setApprovalError(null);
+    try {
+      await updateApprovalState(client, {
+        pullRequestId: prDetail.pullRequestId,
+        revisionId: prDetail.revisionId,
+        approvalState: "APPROVE",
+      });
+      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+    } catch (err) {
+      setApprovalError(formatApprovalError(err));
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleRevoke() {
+    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
+
+    setIsApproving(true);
+    setApprovalError(null);
+    try {
+      await updateApprovalState(client, {
+        pullRequestId: prDetail.pullRequestId,
+        revisionId: prDetail.revisionId,
+        approvalState: "REVOKE",
+      });
+      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+    } catch (err) {
+      setApprovalError(formatApprovalError(err));
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function reloadApprovals(pullRequestId: string, revisionId: string) {
+    const [approvalStates, evaluation] = await Promise.all([
+      getApprovalStates(client, { pullRequestId, revisionId }),
+      evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+    ]);
+    setApprovals(approvalStates);
+    setApprovalEvaluation(evaluation);
   }
 
   function handleBack() {
@@ -227,6 +295,13 @@ export function App({ client, initialRepo }: AppProps) {
           isPostingComment={isPostingComment}
           commentError={commentError}
           onClearCommentError={() => setCommentError(null)}
+          approvals={approvals}
+          approvalEvaluation={approvalEvaluation}
+          onApprove={handleApprove}
+          onRevoke={handleRevoke}
+          isApproving={isApproving}
+          approvalError={approvalError}
+          onClearApprovalError={() => setApprovalError(null)}
         />
       );
   }
@@ -236,12 +311,12 @@ export function App({ client, initialRepo }: AppProps) {
  * Unified error formatter with context-specific messages.
  *
  * @param err - The error to format
- * @param context - Optional context ('comment' for comment-specific errors)
+ * @param context - Optional context ('comment' or 'approval' for specific errors)
  * @returns User-friendly error message
  */
-function formatErrorMessage(err: unknown, context?: "comment"): string {
+function formatErrorMessage(err: unknown, context?: "comment" | "approval"): string {
   if (!(err instanceof Error)) {
-    return context === "comment" ? String(err) : "An unexpected error occurred.";
+    return context ? String(err) : "An unexpected error occurred.";
   }
 
   const name = err.name;
@@ -259,6 +334,25 @@ function formatErrorMessage(err: unknown, context?: "comment"): string {
     }
   }
 
+  // Approval-specific errors
+  if (context === "approval") {
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+    if (name === "RevisionIdRequiredException" || name === "InvalidRevisionIdException") {
+      return "Invalid revision. The PR may have been updated. Go back and reopen.";
+    }
+    if (name === "PullRequestCannotBeApprovedByAuthorException") {
+      return "Cannot approve your own pull request.";
+    }
+    if (name === "PullRequestAlreadyClosedException") {
+      return "Pull request is already closed.";
+    }
+    if (name === "EncryptionKeyAccessDeniedException") {
+      return "Encryption key access denied.";
+    }
+  }
+
   // General AWS errors
   if (name === "CredentialsProviderError" || name === "CredentialError") {
     return "AWS authentication failed. Run `aws configure` to set up credentials.";
@@ -269,8 +363,10 @@ function formatErrorMessage(err: unknown, context?: "comment"): string {
 
   // Access control errors (context-aware message)
   if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-    const action = context === "comment" ? "write" : "";
-    return `Access denied. Check your IAM policy allows CodeCommit ${action} access.`.trim();
+    if (context === "comment") {
+      return "Access denied. Check your IAM policy allows CodeCommit write access.";
+    }
+    return "Access denied. Check your IAM policy.";
   }
 
   // Network errors
@@ -286,12 +382,16 @@ function formatErrorMessage(err: unknown, context?: "comment"): string {
   const sanitized = err.message
     .replace(/arn:[^\s"')]+/gi, "[ARN]")
     .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
-  return context === "comment" ? err.message : sanitized;
+  return context ? err.message : sanitized;
 }
 
-// Backward-compatible wrappers
+// Context-specific wrappers
 function formatCommentError(err: unknown): string {
   return formatErrorMessage(err, "comment");
+}
+
+function formatApprovalError(err: unknown): string {
+  return formatErrorMessage(err, "approval");
 }
 
 function formatError(err: unknown): string {

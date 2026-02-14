@@ -42,6 +42,16 @@ describe("PullRequestDetail", () => {
     },
   ];
 
+  const defaultApprovalProps = {
+    approvals: [] as any[],
+    approvalEvaluation: null,
+    onApprove: vi.fn(),
+    onRevoke: vi.fn(),
+    isApproving: false,
+    approvalError: null as string | null,
+    onClearApprovalError: vi.fn(),
+  };
+
   it("renders PR title and ID", () => {
     const { lastFrame } = render(
       <PullRequestDetail
@@ -55,6 +65,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
@@ -75,6 +86,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
@@ -95,6 +107,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
@@ -115,6 +128,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("src/auth.ts");
@@ -133,6 +147,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
@@ -152,6 +167,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
@@ -172,6 +188,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).not.toContain("Comments");
@@ -198,6 +215,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("(no title)");
@@ -216,6 +234,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("(unknown file)");
@@ -241,6 +260,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("src/other.ts");
@@ -259,6 +279,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("scroll");
@@ -280,6 +301,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("q");
@@ -300,6 +322,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("?");
@@ -331,6 +354,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("j");
@@ -351,6 +375,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("k"); // should stay at 0
@@ -370,6 +395,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("c");
@@ -392,6 +418,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     stdin.write("c");
@@ -417,6 +444,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("c comment");
@@ -435,6 +463,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={true}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     // Simulate posting complete (isPostingComment: true -> false, no error)
@@ -450,6 +479,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     // Comment mode should be closed
@@ -470,6 +500,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     // Enter comment mode
@@ -491,6 +522,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={true}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     expect(lastFrame()).toContain("Posting comment...");
@@ -508,9 +540,495 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError="Comment exceeds the 10,240 character limit."
         onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
       />,
     );
     // Error should be shown, comment mode still open
     expect(lastFrame()).toContain("Failed to post comment:");
+  });
+
+  // v0.3: Approval display tests
+  it("shows approvals with approver names when approvals exist", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("Approvals:");
+    expect(output).toContain("taro");
+    expect(output).toContain("✓");
+  });
+
+  it("shows (none) when no approvals", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("Approvals:");
+    expect(lastFrame()).toContain("(none)");
+  });
+
+  it("shows rules satisfied when approval evaluation exists", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={{
+          approved: true,
+          overridden: false,
+          approvalRulesSatisfied: ["RequireOneApproval"],
+          approvalRulesNotSatisfied: [],
+        }}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("Rules:");
+    expect(output).toContain("✓");
+    expect(output).toContain("Approved");
+    expect(output).toContain("1/1 rules satisfied");
+  });
+
+  it("shows rules not satisfied", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={{
+          approved: false,
+          overridden: false,
+          approvalRulesSatisfied: [],
+          approvalRulesNotSatisfied: ["RequireOneApproval"],
+        }}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("Rules:");
+    expect(output).toContain("✗");
+    expect(output).toContain("Not approved");
+    expect(output).toContain("0/1 rules satisfied");
+  });
+
+  it("does not show rules when no approval rules exist", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).not.toContain("Rules:");
+  });
+
+  // v0.3: ConfirmPrompt integration tests
+  it("shows approve confirm prompt on a key", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request? (y/n)");
+    });
+  });
+
+  it("shows revoke confirm prompt on r key", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Revoke your approval? (y/n)");
+    });
+  });
+
+  it("does not scroll when in approval prompt mode", async () => {
+    const onBack = vi.fn();
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={onBack}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("j"); // should not scroll
+    stdin.write("q"); // should not go back (q doesn't cancel prompt)
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("shows a approve r revoke in footer", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("a approve");
+    expect(lastFrame()).toContain("r revoke");
+  });
+
+  it("auto-closes approval prompt on successful approve", async () => {
+    const { rerender, lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Enter approve mode
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    // Simulate approving (isApproving: true)
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={true}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approving...");
+    });
+
+    // Simulate approve success (isApproving: true -> false, no error)
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[{ userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" }]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    // Prompt should be closed, approval state updated
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Approve this pull request?");
+      expect(lastFrame()).not.toContain("Approving...");
+    });
+  });
+
+  it("keeps approval prompt open on error", () => {
+    const { rerender, lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Enter approve mode
+    stdin.write("a");
+
+    // Simulate approving
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={true}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+
+    // Simulate approve failure
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError="Access denied. Check your IAM policy."
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    // Error should be displayed in prompt
+    expect(lastFrame()).toContain("Access denied. Check your IAM policy.");
+    expect(lastFrame()).toContain("Press any key to return");
+  });
+
+  it("clears error and closes approval prompt on key press during error", async () => {
+    const onClearApprovalError = vi.fn();
+    const { rerender, lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={onClearApprovalError}
+      />,
+    );
+    // Enter approve mode
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    // Show error state
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        approvals={[]}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError="Some error"
+        onClearApprovalError={onClearApprovalError}
+      />,
+    );
+    expect(lastFrame()).toContain("Some error");
+
+    // Press any key to clear error
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(onClearApprovalError).toHaveBeenCalled();
+    });
+  });
+
+  it("cancels approval prompt on n key", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Approve this pull request?");
+      expect(lastFrame()).toContain("a approve");
+    });
+  });
+
+  it("does not open approval prompt when in comment mode", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        comments={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    stdin.write("a");
+    // Should not show approval prompt
+    expect(lastFrame()).not.toContain("Approve this pull request?");
   });
 });

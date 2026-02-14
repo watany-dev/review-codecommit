@@ -8,15 +8,21 @@ vi.mock("./services/codecommit.js", () => ({
   getPullRequestDetail: vi.fn(),
   getBlobContent: vi.fn(),
   postComment: vi.fn(),
+  getApprovalStates: vi.fn(),
+  evaluateApprovalRules: vi.fn(),
+  updateApprovalState: vi.fn(),
 }));
 
 import { App } from "./app.js";
 import {
+  evaluateApprovalRules,
+  getApprovalStates,
   getBlobContent,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
   postComment,
+  updateApprovalState,
 } from "./services/codecommit.js";
 
 const mockClient = {} as any;
@@ -28,6 +34,12 @@ describe("App", () => {
     vi.mocked(getPullRequestDetail).mockReset();
     vi.mocked(getBlobContent).mockReset();
     vi.mocked(postComment).mockReset();
+    vi.mocked(getApprovalStates).mockReset();
+    vi.mocked(evaluateApprovalRules).mockReset();
+    vi.mocked(updateApprovalState).mockReset();
+    // Default: no approvals, no rules
+    vi.mocked(getApprovalStates).mockResolvedValue([]);
+    vi.mocked(evaluateApprovalRules).mockResolvedValue(null);
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
   });
 
@@ -970,5 +982,709 @@ describe("App", () => {
     // Give time for any async operations
     await new Promise((r) => setTimeout(r, 50));
     expect(postComment).not.toHaveBeenCalled();
+  });
+
+  // v0.3: Approval integration tests
+  it("loads approval states when opening PR detail", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(getApprovalStates).mockResolvedValue([
+      { userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" },
+    ]);
+    vi.mocked(evaluateApprovalRules).mockResolvedValue({
+      approved: true,
+      overridden: false,
+      approvalRulesSatisfied: ["RequireOne"],
+      approvalRulesNotSatisfied: [],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+      expect(lastFrame()).toContain("taro");
+      expect(lastFrame()).toContain("Approved");
+    });
+  });
+
+  it("approves PR successfully and reloads approval states", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(updateApprovalState).mockResolvedValue(undefined);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Press 'a' to start approve
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    // Mock reload after approve
+    vi.mocked(getApprovalStates).mockResolvedValue([
+      { userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" },
+    ]);
+
+    // Confirm with 'y'
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(updateApprovalState).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ approvalState: "APPROVE" }),
+      );
+    });
+  });
+
+  it("revokes approval successfully", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(updateApprovalState).mockResolvedValue(undefined);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Revoke your approval?");
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(updateApprovalState).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ approvalState: "REVOKE" }),
+      );
+    });
+  });
+
+  it("shows approval error on failure", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(updateApprovalState).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Access denied. Check your IAM policy.");
+    });
+  });
+
+  it("does not call updateApprovalState when revisionId is missing", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: undefined,
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    stdin.write("y");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(updateApprovalState).not.toHaveBeenCalled();
+  });
+
+  it("handles evaluateApprovalRules failure gracefully", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(evaluateApprovalRules).mockRejectedValue(new Error("no rules configured"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      // Should still load PR detail without Rules line
+      expect(lastFrame()).toContain("PR #42");
+      expect(lastFrame()).not.toContain("Rules:");
+    });
+  });
+
+  // formatApprovalError edge cases
+  it("shows PullRequestCannotBeApprovedByAuthorException error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("cannot approve own");
+    err.name = "PullRequestCannotBeApprovedByAuthorException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot approve your own pull request.");
+    });
+  });
+
+  it("shows InvalidRevisionIdException error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("invalid");
+    err.name = "InvalidRevisionIdException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Invalid revision. The PR may have been updated.");
+    });
+  });
+
+  it("shows PullRequestAlreadyClosedException error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("closed");
+    err.name = "PullRequestAlreadyClosedException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request is already closed.");
+    });
+  });
+
+  it("shows EncryptionKeyAccessDeniedException error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("key denied");
+    err.name = "EncryptionKeyAccessDeniedException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Encryption key access denied.");
+    });
+  });
+
+  it("shows generic approval error message", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(updateApprovalState).mockRejectedValue(new Error("unknown error occurred"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("unknown error occurred");
+    });
+  });
+
+  it("shows PullRequestDoesNotExistException approval error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("not found");
+    err.name = "PullRequestDoesNotExistException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request not found.");
+    });
+  });
+
+  it("shows RevisionIdRequiredException approval error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const err = new Error("required");
+    err.name = "RevisionIdRequiredException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Invalid revision. The PR may have been updated.");
+    });
+  });
+
+  it("clears approval error and returns to normal mode", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(updateApprovalState).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Access denied. Check your IAM policy.");
+    });
+
+    // Press any key to clear error and return to normal mode
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Access denied");
+      expect(lastFrame()).toContain("a approve");
+    });
+  });
+
+  it("shows revoke approval error on failure", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(updateApprovalState).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Revoke your approval?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Access denied. Check your IAM policy.");
+    });
+  });
+
+  it("shows non-Error approval error as string", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      comments: [],
+    });
+    vi.mocked(updateApprovalState).mockRejectedValue("raw string error");
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("raw string error");
+    });
   });
 });

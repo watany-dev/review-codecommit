@@ -1,8 +1,15 @@
-import type { Comment, Difference, PullRequest } from "@aws-sdk/client-codecommit";
+import type {
+  Approval,
+  Comment,
+  Difference,
+  Evaluation,
+  PullRequest,
+} from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useState } from "react";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
+import { ConfirmPrompt } from "./ConfirmPrompt.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -15,6 +22,13 @@ interface Props {
   isPostingComment: boolean;
   commentError: string | null;
   onClearCommentError: () => void;
+  approvals: Approval[];
+  approvalEvaluation: Evaluation | null;
+  onApprove: () => void;
+  onRevoke: () => void;
+  isApproving: boolean;
+  approvalError: string | null;
+  onClearApprovalError: () => void;
 }
 
 export function PullRequestDetail({
@@ -28,10 +42,19 @@ export function PullRequestDetail({
   isPostingComment,
   commentError,
   onClearCommentError,
+  approvals,
+  approvalEvaluation,
+  onApprove,
+  onRevoke,
+  isApproving,
+  approvalError,
+  onClearApprovalError,
 }: Props) {
   const [scrollOffset, setScrollOffset] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [wasPosting, setWasPosting] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
+  const [wasApproving, setWasApproving] = useState(false);
 
   useEffect(() => {
     if (isPostingComment) {
@@ -43,6 +66,17 @@ export function PullRequestDetail({
       setWasPosting(false);
     }
   }, [isPostingComment, commentError]);
+
+  useEffect(() => {
+    if (isApproving) {
+      setWasApproving(true);
+    } else if (wasApproving && !approvalError) {
+      setApprovalAction(null);
+      setWasApproving(false);
+    } else {
+      setWasApproving(false);
+    }
+  }, [isApproving, approvalError]);
 
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
@@ -56,7 +90,7 @@ export function PullRequestDetail({
   const lines = buildDisplayLines(differences, diffTexts, comments);
 
   useInput((input, key) => {
-    if (isCommenting) return;
+    if (isCommenting || approvalAction) return;
 
     if (input === "q" || key.escape) {
       onBack();
@@ -78,9 +112,17 @@ export function PullRequestDetail({
       setIsCommenting(true);
       return;
     }
+    if (input === "a") {
+      setApprovalAction("approve");
+      return;
+    }
+    if (input === "r") {
+      setApprovalAction("revoke");
+      return;
+    }
   });
 
-  const visibleLineCount = isCommenting ? 20 : 30;
+  const visibleLineCount = isCommenting || approvalAction ? 20 : 30;
   const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
 
   return (
@@ -100,6 +142,32 @@ export function PullRequestDetail({
           {destRef} ← {sourceRef}
         </Text>
       </Box>
+      <Box>
+        <Text>
+          Approvals:{" "}
+          {approvals.filter((a) => a.approvalState === "APPROVE").length > 0
+            ? `${approvals
+                .filter((a) => a.approvalState === "APPROVE")
+                .map((a) => extractAuthorName(a.userArn ?? ""))
+                .join(", ")} ✓`
+            : "(none)"}
+        </Text>
+      </Box>
+      {approvalEvaluation &&
+        (approvalEvaluation.approvalRulesSatisfied?.length ?? 0) +
+          (approvalEvaluation.approvalRulesNotSatisfied?.length ?? 0) >
+          0 && (
+          <Box marginBottom={1}>
+            <Text>
+              Rules: {approvalEvaluation.approved ? "✓" : "✗"}{" "}
+              {approvalEvaluation.approved ? "Approved" : "Not approved"} (
+              {approvalEvaluation.approvalRulesSatisfied?.length ?? 0}/
+              {(approvalEvaluation.approvalRulesSatisfied?.length ?? 0) +
+                (approvalEvaluation.approvalRulesNotSatisfied?.length ?? 0)}{" "}
+              rules satisfied)
+            </Text>
+          </Box>
+        )}
       <Box flexDirection="column">
         {visibleLines.map((line, index) => (
           <Box key={scrollOffset + index}>{renderDiffLine(line)}</Box>
@@ -114,23 +182,38 @@ export function PullRequestDetail({
           onClearError={onClearCommentError}
         />
       )}
+      {approvalAction && (
+        <ConfirmPrompt
+          message={
+            approvalAction === "approve" ? "Approve this pull request?" : "Revoke your approval?"
+          }
+          onConfirm={approvalAction === "approve" ? onApprove : onRevoke}
+          onCancel={() => {
+            setApprovalAction(null);
+            onClearApprovalError();
+          }}
+          isProcessing={isApproving}
+          processingMessage={approvalAction === "approve" ? "Approving..." : "Revoking approval..."}
+          error={approvalError}
+          onClearError={() => {
+            onClearApprovalError();
+            setApprovalAction(null);
+          }}
+        />
+      )}
       <Box marginTop={1}>
-        <Text dimColor>{isCommenting ? "" : "↑↓ scroll  c comment  q back  ? help"}</Text>
+        <Text dimColor>
+          {isCommenting || approvalAction
+            ? ""
+            : "↑↓ scroll  c comment  a approve  r revoke  q back  ? help"}
+        </Text>
       </Box>
     </Box>
   );
 }
 
 interface DisplayLine {
-  type:
-    | "header"
-    | "separator"
-    | "add"
-    | "delete"
-    | "context"
-    | "hunk"
-    | "comment-header"
-    | "comment";
+  type: "header" | "separator" | "add" | "delete" | "context" | "comment-header" | "comment";
   text: string;
 }
 
@@ -253,13 +336,9 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
       return <Text color="red">{line.text}</Text>;
     case "context":
       return <Text>{line.text}</Text>;
-    case "hunk":
-      return <Text color="cyan">{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
       return <Text> {line.text}</Text>;
-    default:
-      return <Text>{line.text}</Text>;
   }
 }
