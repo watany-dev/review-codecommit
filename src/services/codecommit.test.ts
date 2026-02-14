@@ -594,6 +594,35 @@ describe("getComments", () => {
     expect(callInput.afterCommitId).toBeUndefined();
     expect(callInput.beforeCommitId).toBeUndefined();
   });
+
+  it("sorts comments so root comment comes before replies", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [
+            {
+              commentId: "reply-1",
+              inReplyTo: "root-1",
+              content: "This is a reply",
+              authorArn: "arn:aws:iam::123456789012:user/bob",
+            },
+            {
+              commentId: "root-1",
+              content: "This is the root comment",
+              authorArn: "arn:aws:iam::123456789012:user/alice",
+            },
+          ],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].comments[0].commentId).toBe("root-1");
+    expect(threads[0].comments[0].inReplyTo).toBeUndefined();
+    expect(threads[0].comments[1].commentId).toBe("reply-1");
+    expect(threads[0].comments[1].inReplyTo).toBe("root-1");
+  });
 });
 
 describe("postCommentReply", () => {

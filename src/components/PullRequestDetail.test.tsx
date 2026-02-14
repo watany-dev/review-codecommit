@@ -2064,6 +2064,92 @@ describe("PullRequestDetail", () => {
     expect(output).not.toContain("└");
   });
 
+  it("displays root before reply even when comments array has reply first", () => {
+    const outOfOrderThread = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "reply",
+          },
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "comment",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={outOfOrderThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame()!;
+    const rootIdx = output.indexOf("taro: comment");
+    const replyIdx = output.indexOf("└ watany: reply");
+    expect(rootIdx).toBeGreaterThan(-1);
+    expect(replyIdx).toBeGreaterThan(-1);
+    expect(rootIdx).toBeLessThan(replyIdx);
+  });
+
+  it("treats first comment as root when all comments have inReplyTo", () => {
+    const allRepliesThread = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            inReplyTo: "deleted",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "orphan1",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "deleted",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "orphan2",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={allRepliesThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame()!;
+    expect(output).toContain("taro: orphan1");
+    expect(output).toContain("└ watany: orphan2");
+  });
+
   // v0.5: Thread folding tests
   it("auto-folds threads with 4+ comments on initial render", () => {
     const longThread = [

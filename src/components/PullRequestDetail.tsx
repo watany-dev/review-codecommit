@@ -417,8 +417,8 @@ function appendThreadLines(
   const comments = thread.comments;
   if (comments.length === 0) return;
 
-  const rootComment = comments[0]!;
-  const replies = comments.slice(1);
+  const rootComment = comments.find((c) => !c.inReplyTo) ?? comments[0]!;
+  const replies = comments.filter((c) => c !== rootComment);
   const isCollapsed = collapsedThreads.has(threadIndex);
   const shouldFold = comments.length >= FOLD_THRESHOLD;
 
