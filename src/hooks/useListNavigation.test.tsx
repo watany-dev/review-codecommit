@@ -22,21 +22,36 @@ function TestComponent({
 describe("useListNavigation", () => {
   it("initializes cursor at 0", () => {
     const { lastFrame } = render(
-      <TestComponent items={["a", "b", "c"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={vi.fn()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
     );
     expect(lastFrame()).toBe("cursor: 0");
   });
 
   it("handles j key", () => {
     const { stdin } = render(
-      <TestComponent items={["a", "b", "c"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={vi.fn()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
     );
     stdin.write("j");
   });
 
   it("handles k key", () => {
     const { stdin } = render(
-      <TestComponent items={["a", "b", "c"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={vi.fn()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
     );
     stdin.write("k");
   });
@@ -62,7 +77,12 @@ describe("useListNavigation", () => {
   it("calls onSelect when return is pressed", () => {
     const onSelect = vi.fn();
     const { stdin } = render(
-      <TestComponent items={["a", "b", "c"]} onSelect={onSelect} onBack={vi.fn()} onHelp={vi.fn()} />,
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={onSelect}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
     );
     stdin.write("\r");
     expect(onSelect).toHaveBeenCalled();

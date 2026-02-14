@@ -18,7 +18,12 @@ interface UseListNavigationOptions<T> {
  * - q/Escape: Go back
  * - ?: Show help
  */
-export function useListNavigation<T>({ items, onSelect, onBack, onHelp }: UseListNavigationOptions<T>) {
+export function useListNavigation<T>({
+  items,
+  onSelect,
+  onBack,
+  onHelp,
+}: UseListNavigationOptions<T>) {
   const [cursor, setCursor] = useState(0);
 
   useInput((input, key) => {

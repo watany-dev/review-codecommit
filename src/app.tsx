@@ -283,7 +283,9 @@ function formatErrorMessage(err: unknown, context?: "comment"): string {
   }
 
   // Default: sanitize and return original message
-  const sanitized = err.message.replace(/arn:[^\s"')]+/gi, "[ARN]").replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  const sanitized = err.message
+    .replace(/arn:[^\s"')]+/gi, "[ARN]")
+    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
   return context === "comment" ? err.message : sanitized;
 }
 
