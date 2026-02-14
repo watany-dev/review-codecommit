@@ -1,9 +1,4 @@
-import type {
-  Approval,
-  Difference,
-  Evaluation,
-  PullRequest,
-} from "@aws-sdk/client-codecommit";
+import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useState } from "react";
 import type { CommentThread } from "../services/codecommit.js";
@@ -415,14 +410,7 @@ function getLocationFromLine(line: DisplayLine): {
       relativeFileVersion: "BEFORE",
     };
   }
-  if (line.type === "add" && line.afterLineNumber) {
-    return {
-      filePath: line.filePath,
-      filePosition: line.afterLineNumber,
-      relativeFileVersion: "AFTER",
-    };
-  }
-  if (line.type === "context" && line.afterLineNumber) {
+  if ((line.type === "add" || line.type === "context") && line.afterLineNumber) {
     return {
       filePath: line.filePath,
       filePosition: line.afterLineNumber,
@@ -509,8 +497,8 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
   return result;
 }
 
-function renderDiffLine(line: DisplayLine, isCursor?: boolean): React.ReactNode {
-  const bold = isCursor ?? false;
+function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
+  const bold = isCursor;
   switch (line.type) {
     case "header":
       return (
@@ -521,9 +509,17 @@ function renderDiffLine(line: DisplayLine, isCursor?: boolean): React.ReactNode 
     case "separator":
       return <Text dimColor>{line.text}</Text>;
     case "add":
-      return <Text color="green" bold={bold}>{line.text}</Text>;
+      return (
+        <Text color="green" bold={bold}>
+          {line.text}
+        </Text>
+      );
     case "delete":
-      return <Text color="red" bold={bold}>{line.text}</Text>;
+      return (
+        <Text color="red" bold={bold}>
+          {line.text}
+        </Text>
+      );
     case "context":
       return <Text bold={bold}>{line.text}</Text>;
     case "comment-header":
@@ -531,6 +527,6 @@ function renderDiffLine(line: DisplayLine, isCursor?: boolean): React.ReactNode 
     case "comment":
       return <Text> {line.text}</Text>;
     case "inline-comment":
-      return <Text color="magenta">  {line.text}</Text>;
+      return <Text color="magenta"> {line.text}</Text>;
   }
 }

@@ -1697,6 +1697,74 @@ describe("App", () => {
   });
 
   // v0.4: Inline comment integration tests
+  it("shows inline comment error on failure", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockResolvedValueOnce("const timeout = 10000;");
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(postComment).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*const timeout = 3000/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    stdin.write("test inline");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Failed to post comment:");
+      expect(lastFrame()).toContain("Access denied");
+    });
+  });
+
   it("posts inline comment successfully and reloads comments", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [

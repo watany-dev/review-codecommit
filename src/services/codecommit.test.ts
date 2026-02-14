@@ -250,6 +250,63 @@ describe("getPullRequestDetail edge cases", () => {
     expect(detail.commentThreads).toHaveLength(1);
     expect(detail.commentThreads[0].comments).toHaveLength(0);
   });
+
+  it("defaults filePosition and relativeFileVersion in getPullRequestDetail", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          location: {
+            filePath: "src/x.ts",
+            filePosition: undefined,
+            relativeFileVersion: undefined,
+          },
+          comments: [{ commentId: "c1", content: "test" }],
+        },
+      ],
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.commentThreads[0].location).toEqual({
+      filePath: "src/x.ts",
+      filePosition: 0,
+      relativeFileVersion: "AFTER",
+    });
+  });
+
+  it("preserves inline comment location in threads", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [],
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          location: {
+            filePath: "src/index.ts",
+            filePosition: 5,
+            relativeFileVersion: "BEFORE",
+          },
+          comments: [{ commentId: "c1", content: "fix this" }],
+        },
+      ],
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.commentThreads).toHaveLength(1);
+    expect(detail.commentThreads[0].location).toEqual({
+      filePath: "src/index.ts",
+      filePosition: 5,
+      relativeFileVersion: "BEFORE",
+    });
+  });
 });
 
 describe("postComment", () => {
@@ -429,14 +486,10 @@ describe("getComments", () => {
             filePosition: 10,
             relativeFileVersion: "AFTER",
           },
-          comments: [
-            { commentId: "c1", content: "inline comment" },
-          ],
+          comments: [{ commentId: "c1", content: "inline comment" }],
         },
         {
-          comments: [
-            { commentId: "c2", content: "general comment" },
-          ],
+          comments: [{ commentId: "c2", content: "general comment" }],
         },
       ],
     });
@@ -449,6 +502,29 @@ describe("getComments", () => {
       relativeFileVersion: "AFTER",
     });
     expect(threads[1].location).toBeNull();
+  });
+
+  it("defaults filePosition and relativeFileVersion when missing", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          location: {
+            filePath: "src/app.ts",
+            filePosition: undefined,
+            relativeFileVersion: undefined,
+          },
+          comments: [{ commentId: "c1", content: "inline" }],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].location).toEqual({
+      filePath: "src/app.ts",
+      filePosition: 0,
+      relativeFileVersion: "AFTER",
+    });
   });
 
   it("treats location without filePath as general comment", async () => {

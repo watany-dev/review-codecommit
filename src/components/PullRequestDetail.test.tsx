@@ -1354,6 +1354,325 @@ describe("PullRequestDetail", () => {
     expect(lastFrame()).not.toContain("Inline comment on");
   });
 
+  it("opens inline comment on add line with C key", async () => {
+    const diffTextsAddOnly = new Map([
+      [
+        "b1:b2",
+        {
+          before: "keep",
+          after: "keep\nnew line 1",
+        },
+      ],
+    ]);
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTextsAddOnly}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move to add line (header=0, separator=1, context=2, add=3)
+    stdin.write("j");
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*new line 1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+  });
+
+  it("opens inline comment on delete line with C key", async () => {
+    const diffTextsDeleteOnly = new Map([
+      [
+        "b1:b2",
+        {
+          before: "keep\nold line 1",
+          after: "keep",
+        },
+      ],
+    ]);
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTextsDeleteOnly}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move to delete line (header=0, separator=1, context=2, delete=3)
+    stdin.write("j");
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*old line 1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+  });
+
+  it("cancels inline comment mode on Esc", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+    // Cancel with Esc
+    stdin.write("\x1B");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Inline comment on");
+      expect(lastFrame()).toContain("C inline");
+    });
+  });
+
+  it("does not open inline comment on separator line", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move to separator line (index 1)
+    stdin.write("j");
+    stdin.write("C");
+    expect(lastFrame()).not.toContain("Inline comment on");
+  });
+
+  it("does not move cursor when in inline comment mode", async () => {
+    const onBack = vi.fn();
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={onBack}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move to diff line and open inline comment
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+    // Try to move cursor — should be blocked
+    stdin.write("j");
+    expect(lastFrame()).toContain("Inline comment on");
+    // q should not trigger back
+    stdin.write("q");
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("displays BEFORE inline comments on context lines", () => {
+    const inlineThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "BEFORE" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "before-context comment",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={inlineThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("💬 taro: before-context comment");
+  });
+
+  it("keeps inline comment mode open on post error", async () => {
+    const { stdin, rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Simulate posting start
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        onPostInlineComment={vi.fn()}
+        isPostingInlineComment={true}
+        inlineCommentError={null}
+        onClearInlineCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Simulate post error
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        onPostInlineComment={vi.fn()}
+        isPostingInlineComment={false}
+        inlineCommentError="Access denied"
+        onClearInlineCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Should stay open with error shown
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+      expect(lastFrame()).toContain("Access denied");
+    });
+  });
+
+  it("does not open inline comment on comment-header line", async () => {
+    const threadWithGeneral = [
+      {
+        location: null,
+        comments: [{ authorArn: "arn:aws:iam::123456789012:user/bob", content: "general" }],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threadWithGeneral as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Navigate past all diff lines to comment section
+    // header=0, sep=1, ctx=2, del=3, add=4, ctx=5, add=6, sep(empty)=7, sep(line)=8, comment-header=9
+    for (let i = 0; i < 9; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*Comments/);
+    });
+    stdin.write("C");
+    expect(lastFrame()).not.toContain("Inline comment on");
+  });
+
   it("shows C inline in footer", () => {
     const { lastFrame } = render(
       <PullRequestDetail
@@ -1449,6 +1768,134 @@ describe("PullRequestDetail", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).not.toContain("Inline comment on");
     });
+  });
+
+  it("does not show rules when evaluation has zero rules", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        approvals={[]}
+        approvalEvaluation={
+          {
+            approved: false,
+            approvalRulesSatisfied: [],
+            approvalRulesNotSatisfied: [],
+          } as any
+        }
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).not.toContain("Rules:");
+  });
+
+  it("handles approvals with missing userArn", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        approvals={[{ approvalState: "APPROVE" }] as any}
+        approvalEvaluation={null}
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    const output = lastFrame();
+    // Should handle missing userArn gracefully
+    expect(output).toContain("Approvals:");
+  });
+
+  it("handles rules with undefined arrays", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        approvals={[]}
+        approvalEvaluation={
+          {
+            approved: true,
+            approvalRulesSatisfied: undefined,
+            approvalRulesNotSatisfied: [{ approvalRuleName: "rule1" }],
+          } as any
+        }
+        onApprove={vi.fn()}
+        onRevoke={vi.fn()}
+        isApproving={false}
+        approvalError={null}
+        onClearApprovalError={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("Rules:");
+  });
+
+  it("handles comments with missing authorArn and content", () => {
+    const mixedThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [{ commentId: "c1" }],
+      },
+      {
+        location: null,
+        comments: [{ commentId: "c2" }],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={mixedThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    // Should render without error, showing "unknown" for missing author
+    expect(output).toContain("unknown");
   });
 
   it("displays multiple comments on same line as thread", () => {
