@@ -79,7 +79,11 @@ export function PullRequestDetail({
   } | null>(null);
   const [wasPostingInline, setWasPostingInline] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
-  const [replyTarget, setReplyTarget] = useState<{ commentId: string; author: string; content: string } | null>(null);
+  const [replyTarget, setReplyTarget] = useState<{
+    commentId: string;
+    author: string;
+    content: string;
+  } | null>(null);
   const [wasPostingReply, setWasPostingReply] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
@@ -216,7 +220,8 @@ export function PullRequestDetail({
     }
   });
 
-  const visibleLineCount = isCommenting || isInlineCommenting || isReplying || approvalAction ? 20 : 30;
+  const visibleLineCount =
+    isCommenting || isInlineCommenting || isReplying || approvalAction ? 20 : 30;
   const scrollOffset = useMemo(() => {
     const halfVisible = Math.floor(visibleLineCount / 2);
     const maxOffset = Math.max(0, lines.length - visibleLineCount);
@@ -372,8 +377,8 @@ interface DisplayLine {
   filePath?: string;
   beforeLineNumber?: number;
   afterLineNumber?: number;
-  threadIndex?: number;
-  commentId?: string;
+  threadIndex?: number | undefined;
+  commentId?: string | undefined;
 }
 
 function getReplyTargetFromLine(
@@ -696,10 +701,25 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
     case "inline-comment":
       return <Text color="magenta"> {line.text}</Text>;
     case "inline-reply":
-      return <Text color="magenta">    {line.text}</Text>;
+      return (
+        <Text color="magenta">
+          {"   "}
+          {line.text}
+        </Text>
+      );
     case "comment-reply":
-      return <Text>   {line.text}</Text>;
+      return (
+        <Text>
+          {"   "}
+          {line.text}
+        </Text>
+      );
     case "fold-indicator":
-      return <Text dimColor>    {line.text}</Text>;
+      return (
+        <Text dimColor>
+          {"   "}
+          {line.text}
+        </Text>
+      );
   }
 }

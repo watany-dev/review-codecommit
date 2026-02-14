@@ -2071,9 +2071,24 @@ describe("PullRequestDetail", () => {
         location: null,
         comments: [
           { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
-          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
-          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
-          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
         ],
       },
     ];
@@ -2106,8 +2121,18 @@ describe("PullRequestDetail", () => {
         location: null,
         comments: [
           { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
-          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
-          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
         ],
       },
     ];
@@ -2141,9 +2166,24 @@ describe("PullRequestDetail", () => {
         location: null,
         comments: [
           { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
-          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
-          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
-          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
         ],
       },
     ];
@@ -2190,9 +2230,24 @@ describe("PullRequestDetail", () => {
         location: null,
         comments: [
           { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
-          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
-          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
-          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
         ],
       },
     ];

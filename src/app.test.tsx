@@ -2050,4 +2050,150 @@ describe("App", () => {
       );
     });
   });
+
+  it("shows reply size limit error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+      nextToken: undefined,
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
+        creationDate: new Date("2026-02-13T10:00:00Z"),
+        revisionId: "rev-1",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+            destinationCommit: "abc",
+            sourceCommit: "def",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Fix it",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getBlobContent).mockResolvedValue("");
+
+    const sizeError = new Error("size limit");
+    sizeError.name = "CommentContentSizeLimitExceededException";
+    vi.mocked(postCommentReply).mockRejectedValue(sizeError);
+
+    const { stdin, lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Fix it/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("long reply");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Reply exceeds the 10,240 character limit.");
+    });
+  });
+
+  it("shows invalid comment ID error", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+      nextToken: undefined,
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
+        creationDate: new Date("2026-02-13T10:00:00Z"),
+        revisionId: "rev-1",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+            destinationCommit: "abc",
+            sourceCommit: "def",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Fix it",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getBlobContent).mockResolvedValue("");
+
+    const idError = new Error("invalid id");
+    idError.name = "InvalidCommentIdException";
+    vi.mocked(postCommentReply).mockRejectedValue(idError);
+
+    const { stdin, lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Fix it/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("reply");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Invalid comment ID format.");
+    });
+  });
 });
