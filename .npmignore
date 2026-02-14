@@ -1,0 +1,27 @@
+# Source files
+src/
+*.test.ts
+*.test.tsx
+
+# Development files
+.github/
+.claude/
+docs/
+coverage/
+.oxlintrc.json
+biome.json
+knip.json
+lefthook.yml
+tsconfig.json
+vitest.config.ts
+bun.lock
+
+# Environment and IDE
+.env
+.env.*
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

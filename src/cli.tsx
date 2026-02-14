@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { render } from "ink";
 import React from "react";
+import packageJson from "../package.json";
 import { App } from "./app.js";
 import { createClient } from "./services/codecommit.js";
 
@@ -12,11 +13,11 @@ interface ParsedArgs {
   version?: boolean;
 }
 
-const VERSION = "0.0.1";
+const VERSION = packageJson.version;
 
-const HELP_TEXT = `titmouse - A TUI tool for reviewing AWS CodeCommit pull requests
+const HELP_TEXT = `review-codecommit - A TUI tool for reviewing AWS CodeCommit pull requests
 
-Usage: titmouse [options] [repository]
+Usage: review-codecommit [options] [repository]
 
 Options:
   --profile <name>   AWS profile to use

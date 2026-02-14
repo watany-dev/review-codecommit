@@ -1,5 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it, vi } from "vitest";
+import packageJson from "../package.json";
 
 vi.mock("ink", () => ({
   render: vi.fn(),
@@ -43,7 +44,7 @@ describe("cli module-level execution", () => {
 
     await import("./cli.js");
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("review-codecommit"));
     expect(exitSpy).toHaveBeenCalledWith(0);
 
     logSpy.mockRestore();
@@ -61,7 +62,7 @@ describe("cli module-level execution", () => {
 
     await import("./cli.js");
 
-    expect(logSpy).toHaveBeenCalledWith("0.0.1");
+    expect(logSpy).toHaveBeenCalledWith(packageJson.version);
     expect(exitSpy).toHaveBeenCalledWith(0);
 
     logSpy.mockRestore();

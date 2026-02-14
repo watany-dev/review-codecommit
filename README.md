@@ -32,29 +32,29 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 ## Installation
 
 ```bash
-bun install -g titmouse
+bun install -g review-codecommit
 ```
 
 Or run directly:
 
 ```bash
-npx titmouse
+npx review-codecommit
 ```
 
 ## Usage
 
 ```bash
 # Interactive repository selection
-titmouse
+review-codecommit
 
 # Jump directly to a repository's PR list
-titmouse <repo-name>
+review-codecommit <repo-name>
 
 # Specify AWS profile
-titmouse --profile <profile-name>
+review-codecommit --profile <profile-name>
 
 # Specify AWS region
-titmouse --region <region>
+review-codecommit --region <region>
 ```
 
 ## Keybindings

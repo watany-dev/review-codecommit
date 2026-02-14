@@ -1,10 +1,16 @@
 {
-  "name": "titmouse",
+  "name": "review-codecommit",
   "version": "0.0.1",
   "description": "A TUI tool for reviewing AWS CodeCommit pull requests in the terminal",
   "type": "module",
   "bin": {
-    "titmouse": "./dist/cli.js"
+    "review-codecommit": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +18,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/cli.tsx --outdir ./dist --target node --external react-devtools-core && bun build ./src/index.ts --outdir ./dist --target node --external react-devtools-core && tsc --emitDeclarationOnly",
+    "build": "bun build ./src/cli.tsx --outdir ./dist --target node --packages external && bun build ./src/index.ts --outdir ./dist --target node --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -42,7 +48,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/watany-dev/titmouse.git"
+    "url": "git+https://github.com/watany-dev/titmouse.git"
   },
   "homepage": "https://github.com/watany-dev/titmouse#readme",
   "bugs": {
