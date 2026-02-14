@@ -21,6 +21,9 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 - Fold/unfold long comment threads (`o` key, auto-folds 4+ comments)
 - Approve / revoke pull requests (`a`/`r` keys with confirmation prompt)
 - View approval status and approval rule evaluation
+- Merge PRs with strategy selection (Fast-forward / Squash / Three-way) (`m` key)
+- Pre-merge conflict detection and display
+- Close PRs without merging (`x` key)
 - Cursor-based diff navigation with `>` marker
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
@@ -29,7 +32,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations, `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, and `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations
+- IAM permissions for CodeCommit read operations, `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
 
 ## Installation
 
@@ -73,6 +76,8 @@ review-codecommit --region <region>
 | `o` | Toggle thread fold/unfold | PR Detail |
 | `a` | Approve PR (with confirmation) | PR Detail |
 | `r` | Revoke approval (with confirmation) | PR Detail |
+| `m` | Merge PR (strategy selection) | PR Detail |
+| `x` | Close PR without merge | PR Detail |
 | `Ctrl+C` | Exit immediately | All |
 | `?` | Toggle help | All |
 
@@ -132,7 +137,7 @@ bun run build
 | v0.3 | Approve / Revoke operations | ✅ Released |
 | v0.4 | Inline comments (file-line specific) | ✅ Released |
 | v0.5 | Comment replies (threads) | ✅ Released |
-| v0.6 | Merge operations | Planned |
+| v0.6 | Merge operations | ✅ Released |
 | v0.7 | Comment edit / delete | Planned |
 | v0.8 | PR status filter and search | Planned |
 
