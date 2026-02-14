@@ -44,9 +44,19 @@ npx titmouse --region <region>      # リージョン指定
 | ローディング | 投稿中の状態表示 |
 | エラーハンドリング | 文字数制限超過、権限不足等のエラー対応 |
 
+## 機能スコープ (v0.3) ✅
+
+| 機能 | 内容 |
+|------|------|
+| Approve | PR を承認する（`a` キー → 確認プロンプト → `y` で実行） |
+| Revoke | 承認を取り消す（`r` キー → 確認プロンプト → `y` で実行） |
+| 承認状態表示 | PR 詳細画面に承認者一覧と承認状態を表示 |
+| 承認ルール評価表示 | 承認ルールの satisfied / not satisfied を表示（ルール未設定時は非表示） |
+| 確認プロンプト | 操作前に確認メッセージを表示（誤操作防止） |
+| エラーハンドリング | 権限不足、自分のPR承認不可、リビジョン不整合等のエラー対応 |
+
 ### 将来対応
 
-- Approve / Revoke → v0.3
 - インラインコメント → v0.4
 - コメント返信 → v0.5
 - マージ操作 → v0.6
@@ -59,13 +69,15 @@ npx titmouse --region <region>      # リージョン指定
 
 | キー | 動作 | 画面 |
 |------|------|------|
-| `j` / `↓` | カーソル下移動 | 全画面（コメント入力中は無効） |
-| `k` / `↑` | カーソル上移動 | 全画面（コメント入力中は無効） |
+| `j` / `↓` | カーソル下移動 | 全画面（コメント入力中・確認プロンプト中は無効） |
+| `k` / `↑` | カーソル上移動 | 全画面（コメント入力中・確認プロンプト中は無効） |
 | `Enter` | 選択・決定 / コメント送信 | リスト画面 / コメント入力 |
 | `q` / `Esc` | 前の画面に戻る / コメント入力キャンセル | 全画面 / コメント入力 |
 | `Ctrl+C` | 即座に終了 | 全画面 |
-| `?` | ヘルプ表示 | 全画面（コメント入力中は無効） |
+| `?` | ヘルプ表示 | 全画面（コメント入力中・確認プロンプト中は無効） |
 | `c` | コメント入力モード開始 | PR詳細画面 |
+| `a` | PR を承認（確認プロンプト表示） | PR詳細画面 |
+| `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
 
 ## 画面フロー・遷移
 
@@ -120,6 +132,8 @@ npx titmouse --region <region>      # リージョン指定
 ┌─ PR #42: fix: login timeout ────────────────┐
 │  Author: watany  Status: OPEN   2h ago       │
 │  main ← feature/fix-login                    │
+│  Approvals: taro ✓                           │
+│  Rules: ✓ Approved (1/1 rules satisfied)     │
 │──────────────────────────────────────────────│
 │  src/auth.ts                                 │
 │                                              │
@@ -134,7 +148,8 @@ npx titmouse --region <region>      # リージョン指定
 │  watany: タイムアウトを延長しました          │
 │  taro: LGTMです                              │
 │                                              │
-│  ↑↓ scroll  c comment  q back  ? help          │
+│  ↑↓ scroll  c comment  a approve  r revoke   │
+│  q back  ? help                              │
 └──────────────────────────────────────────────┘
 ```
 
@@ -164,6 +179,12 @@ npx titmouse --region <region>      # リージョン指定
 | コメント文字数超過 | 「Comment exceeds the 10,240 character limit.」と表示 |
 | コメント投稿権限不足 | 「Access denied. Check your IAM policy allows CodeCommit write access.」と表示 |
 | PR不在（投稿時） | 「Pull request not found.」と表示 |
+| 承認権限不足 | 「Access denied. Check your IAM policy.」と表示 |
+| 自分のPR承認不可 | 「Cannot approve your own pull request.」と表示 |
+| リビジョン不整合 | 「Invalid revision. The PR may have been updated. Go back and reopen.」と表示 |
+| PR既にクローズ（承認時） | 「Pull request is already closed.」と表示 |
+| 暗号化キーアクセス拒否 | 「Encryption key access denied.」と表示 |
+| PR不在（承認時） | 「Pull request not found.」と表示 |
 
 ## テスト戦略
 

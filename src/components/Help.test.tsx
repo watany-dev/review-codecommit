@@ -14,6 +14,10 @@ describe("Help", () => {
     expect(output).toContain("Ctrl+C");
     expect(output).toContain("c");
     expect(output).toContain("Post comment");
+    expect(output).toContain("a");
+    expect(output).toContain("Approve PR");
+    expect(output).toContain("r");
+    expect(output).toContain("Revoke approval");
   });
 
   it("renders help title", () => {

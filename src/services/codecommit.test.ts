@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createClient,
+  evaluateApprovalRules,
+  getApprovalStates,
   getBlobContent,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
   postComment,
+  updateApprovalState,
 } from "./codecommit.js";
 
 const mockSend = vi.fn();
@@ -292,6 +295,149 @@ describe("postComment", () => {
         content: "test",
       }),
     ).rejects.toThrow("Access denied");
+  });
+});
+
+describe("updateApprovalState", () => {
+  it("sends Approve command with correct parameters", async () => {
+    mockSend.mockResolvedValueOnce({});
+    await updateApprovalState(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+      approvalState: "APPROVE",
+    });
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          revisionId: "rev-1",
+          approvalState: "APPROVE",
+        },
+      }),
+    );
+  });
+
+  it("sends Revoke command with correct parameters", async () => {
+    mockSend.mockResolvedValueOnce({});
+    await updateApprovalState(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+      approvalState: "REVOKE",
+    });
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          revisionId: "rev-1",
+          approvalState: "REVOKE",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("Access denied");
+    error.name = "AccessDeniedException";
+    mockSend.mockRejectedValueOnce(error);
+    await expect(
+      updateApprovalState(mockClient, {
+        pullRequestId: "42",
+        revisionId: "rev-1",
+        approvalState: "APPROVE",
+      }),
+    ).rejects.toThrow("Access denied");
+  });
+});
+
+describe("getApprovalStates", () => {
+  it("returns approval list when approvals exist", async () => {
+    mockSend.mockResolvedValueOnce({
+      approvals: [{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }],
+    });
+    const result = await getApprovalStates(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].approvalState).toBe("APPROVE");
+  });
+
+  it("returns empty array when no approvals", async () => {
+    mockSend.mockResolvedValueOnce({ approvals: undefined });
+    const result = await getApprovalStates(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+    });
+    expect(result).toHaveLength(0);
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("not found");
+    error.name = "PullRequestDoesNotExistException";
+    mockSend.mockRejectedValueOnce(error);
+    await expect(
+      getApprovalStates(mockClient, {
+        pullRequestId: "42",
+        revisionId: "rev-1",
+      }),
+    ).rejects.toThrow("not found");
+  });
+});
+
+describe("evaluateApprovalRules", () => {
+  it("returns evaluation when rules are satisfied", async () => {
+    mockSend.mockResolvedValueOnce({
+      evaluation: {
+        approved: true,
+        overridden: false,
+        approvalRulesSatisfied: ["RequireOneApproval"],
+        approvalRulesNotSatisfied: [],
+      },
+    });
+    const result = await evaluateApprovalRules(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.approved).toBe(true);
+    expect(result!.approvalRulesSatisfied).toHaveLength(1);
+  });
+
+  it("returns evaluation when rules are not satisfied", async () => {
+    mockSend.mockResolvedValueOnce({
+      evaluation: {
+        approved: false,
+        overridden: false,
+        approvalRulesSatisfied: [],
+        approvalRulesNotSatisfied: ["RequireOneApproval"],
+      },
+    });
+    const result = await evaluateApprovalRules(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.approved).toBe(false);
+  });
+
+  it("returns null when evaluation is undefined", async () => {
+    mockSend.mockResolvedValueOnce({ evaluation: undefined });
+    const result = await evaluateApprovalRules(mockClient, {
+      pullRequestId: "42",
+      revisionId: "rev-1",
+    });
+    expect(result).toBeNull();
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("no rules");
+    mockSend.mockRejectedValueOnce(error);
+    await expect(
+      evaluateApprovalRules(mockClient, {
+        pullRequestId: "42",
+        revisionId: "rev-1",
+      }),
+    ).rejects.toThrow("no rules");
   });
 });
 
