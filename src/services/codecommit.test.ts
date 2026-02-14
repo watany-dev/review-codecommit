@@ -437,7 +437,7 @@ describe("getComments", () => {
       ],
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(1);
     expect(threads[0].location).toBeNull();
     expect(threads[0].comments).toHaveLength(2);
@@ -450,7 +450,7 @@ describe("getComments", () => {
       commentsForPullRequestData: undefined,
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(0);
   });
 
@@ -459,7 +459,7 @@ describe("getComments", () => {
       commentsForPullRequestData: [{ comments: undefined }],
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(1);
     expect(threads[0].comments).toHaveLength(0);
   });
@@ -481,7 +481,7 @@ describe("getComments", () => {
       ],
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(2);
     expect(threads[0].location).toEqual({
       filePath: "src/auth.ts",
@@ -505,7 +505,7 @@ describe("getComments", () => {
       ],
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(1);
     expect(threads[0].location).toEqual({
       filePath: "src/app.ts",
@@ -524,7 +524,7 @@ describe("getComments", () => {
       ],
     });
 
-    const threads = await getComments(mockClient, "42", "my-service");
+    const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(1);
     expect(threads[0].location).toBeNull();
   });

@@ -124,7 +124,6 @@ export async function getPullRequestDetail(
   const commentThreads: CommentThread[] = [];
   const commentsCommand = new GetCommentsForPullRequestCommand({
     pullRequestId,
-    repositoryName,
   });
   const commentsResponse = await client.send(commentsCommand);
   for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
@@ -148,12 +147,10 @@ export async function getPullRequestDetail(
 export async function getComments(
   client: CodeCommitClient,
   pullRequestId: string,
-  repositoryName: string,
 ): Promise<CommentThread[]> {
   const commentThreads: CommentThread[] = [];
   const commentsCommand = new GetCommentsForPullRequestCommand({
     pullRequestId,
-    repositoryName,
   });
   const commentsResponse = await client.send(commentsCommand);
   for (const thread of commentsResponse.commentsForPullRequestData ?? []) {

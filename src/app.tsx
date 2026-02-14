@@ -181,7 +181,7 @@ export function App({ client, initialRepo }: AppProps) {
 
   async function reloadComments(pullRequestId: string) {
     // Optimized: fetch only comments instead of full PR detail
-    const threads = await getComments(client, pullRequestId, selectedRepo);
+    const threads = await getComments(client, pullRequestId);
     setCommentThreads(threads);
   }
 
