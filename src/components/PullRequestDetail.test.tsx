@@ -103,6 +103,10 @@ describe("PullRequestDetail", () => {
     deleteCommentError: null as string | null,
     onClearDeleteCommentError: vi.fn(),
     reactionsByComment: new Map() as any,
+    onReact: vi.fn(),
+    isReacting: false,
+    reactionError: null as string | null,
+    onClearReactionError: vi.fn(),
   };
 
   it("renders PR title and ID", () => {
@@ -390,8 +394,8 @@ describe("PullRequestDetail", () => {
         {...defaultEditDeleteProps}
       />,
     );
-    expect(lastFrame()).toContain("cursor");
-    expect(lastFrame()).toContain("back");
+    expect(lastFrame()).toContain("↑↓");
+    expect(lastFrame()).toContain("q");
     expect(lastFrame()).toContain("help");
   });
 
@@ -914,8 +918,7 @@ describe("PullRequestDetail", () => {
         {...defaultEditDeleteProps}
       />,
     );
-    expect(lastFrame()).toContain("a approve");
-    expect(lastFrame()).toContain("r revoke");
+    expect(lastFrame()).toContain("a/r approve");
   });
 
   it("auto-closes approval prompt on successful approve", async () => {
@@ -1180,7 +1183,7 @@ describe("PullRequestDetail", () => {
     stdin.write("n");
     await vi.waitFor(() => {
       expect(lastFrame()).not.toContain("Approve this pull request?");
-      expect(lastFrame()).toContain("a approve");
+      expect(lastFrame()).toContain("a/r approve");
     });
   });
 
@@ -3809,7 +3812,7 @@ describe("PullRequestDetail", () => {
     );
     expect(lastFrame()).toContain("m merge");
     expect(lastFrame()).toContain("close");
-    expect(lastFrame()).toContain("q back");
+    expect(lastFrame()).toContain("g react");
   });
 
   it("shows merging indicator", async () => {
@@ -4611,7 +4614,7 @@ describe("PullRequestDetail", () => {
           commits={sampleCommits}
         />,
       );
-      expect(lastFrame()).toContain("Tab switch view");
+      expect(lastFrame()).toContain("Tab view");
     });
 
     it("shows Tab next S-Tab prev in commit view", async () => {
@@ -4826,9 +4829,9 @@ describe("PullRequestDetail", () => {
         expect(lastFrame()).toContain("taro");
       });
       // Navigate to the comment line
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("e");
       await vi.waitFor(() => {
@@ -4884,9 +4887,9 @@ describe("PullRequestDetail", () => {
           onUpdateComment={onUpdateComment}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("e");
       await vi.waitFor(() => {
@@ -4917,9 +4920,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("e");
       await vi.waitFor(() => {
@@ -5007,9 +5010,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("d");
       await vi.waitFor(() => {
@@ -5065,9 +5068,9 @@ describe("PullRequestDetail", () => {
           onDeleteComment={onDeleteComment}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("d");
       await vi.waitFor(() => {
@@ -5098,9 +5101,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("d");
       await vi.waitFor(() => {
@@ -5189,9 +5192,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("e");
       await vi.waitFor(() => {
@@ -5222,9 +5225,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("d");
       await vi.waitFor(() => {
@@ -5256,7 +5259,7 @@ describe("PullRequestDetail", () => {
         />,
       );
       expect(lastFrame()).toContain("e edit");
-      expect(lastFrame()).toContain("d delete");
+      expect(lastFrame()).toContain("d del");
     });
 
     it("edits comment with missing commentId in threads (uses empty content)", async () => {
@@ -5471,9 +5474,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("e");
       await vi.waitFor(() => {
@@ -5547,9 +5550,9 @@ describe("PullRequestDetail", () => {
           {...defaultEditDeleteProps}
         />,
       );
-      for (let i = 0; i < 15; i++) stdin.write("j");
+      for (let i = 0; i < 10; i++) stdin.write("j");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain(">  taro");
+        expect(lastFrame()).toContain(">  taro: LGTM");
       });
       stdin.write("d");
       await vi.waitFor(() => {
@@ -5716,6 +5719,135 @@ describe("PullRequestDetail", () => {
       );
       const output = lastFrame() ?? "";
       expect(output).not.toContain("×");
+    });
+
+    it("opens ReactionPicker when g is pressed on a comment line", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      // Navigate to the comment line (scroll down to find it)
+      for (let i = 0; i < 10; i++) stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro: LGTM");
+      });
+      stdin.write("g");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("React to comment:");
+      });
+    });
+
+    it("does not open ReactionPicker on non-comment lines", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      // Stay on the first line (a header/diff line)
+      stdin.write("g");
+      const output = lastFrame() ?? "";
+      expect(output).not.toContain("React to comment:");
+    });
+
+    it("calls onReact when emoji is selected", async () => {
+      const onReact = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onReact={onReact}
+        />,
+      );
+      for (let i = 0; i < 10; i++) stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro: LGTM");
+      });
+      stdin.write("g");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("React to comment:");
+      });
+      stdin.write("\r"); // select first emoji (thumbsup)
+      expect(onReact).toHaveBeenCalledWith("comment-r1", ":thumbsup:");
+    });
+
+    it("closes ReactionPicker when q is pressed", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      for (let i = 0; i < 10; i++) stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro: LGTM");
+      });
+      stdin.write("g");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("React to comment:");
+      });
+      stdin.write("q");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("React to comment:");
+      });
     });
   });
 });

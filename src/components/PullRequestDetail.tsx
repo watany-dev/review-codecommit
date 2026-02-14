@@ -13,6 +13,7 @@ import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
+import { ReactionPicker } from "./ReactionPicker.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -70,6 +71,10 @@ interface Props {
   deleteCommentError: string | null;
   onClearDeleteCommentError: () => void;
   reactionsByComment: ReactionsByComment;
+  onReact: (commentId: string, reactionValue: string) => void;
+  isReacting: boolean;
+  reactionError: string | null;
+  onClearReactionError: () => void;
 }
 
 export function PullRequestDetail({
@@ -121,6 +126,10 @@ export function PullRequestDetail({
   deleteCommentError,
   onClearDeleteCommentError,
   reactionsByComment,
+  onReact,
+  isReacting,
+  reactionError,
+  onClearReactionError,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -169,6 +178,9 @@ export function PullRequestDetail({
     commentId: string;
   } | null>(null);
   const [wasDeleting, setWasDeleting] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionTarget, setReactionTarget] = useState<string | null>(null);
+  const [wasReacting, setWasReacting] = useState(false);
 
   useEffect(() => {
     if (isPostingComment) {
@@ -262,6 +274,18 @@ export function PullRequestDetail({
     }
   }, [isDeletingComment, deleteCommentError]);
 
+  useEffect(() => {
+    if (isReacting) {
+      setWasReacting(true);
+    } else if (wasReacting && !reactionError) {
+      setShowReactionPicker(false);
+      setReactionTarget(null);
+      setWasReacting(false);
+    } else {
+      setWasReacting(false);
+    }
+  }, [isReacting, reactionError]);
+
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
   const prId = pullRequest.pullRequestId ?? "";
@@ -315,7 +339,8 @@ export function PullRequestDetail({
       isDeleting ||
       approvalAction ||
       mergeStep ||
-      isClosing
+      isClosing ||
+      showReactionPicker
     )
       return;
 
@@ -426,6 +451,17 @@ export function PullRequestDetail({
       setIsDeleting(true);
       return;
     }
+    if (input === "g") {
+      if (viewIndex >= 0) return;
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
+      if (!commentTypes.includes(currentLine.type)) return;
+      if (!currentLine.commentId) return;
+      setReactionTarget(currentLine.commentId);
+      setShowReactionPicker(true);
+      return;
+    }
   });
 
   const visibleLineCount =
@@ -436,7 +472,8 @@ export function PullRequestDetail({
     isDeleting ||
     approvalAction ||
     mergeStep ||
-    isClosing
+    isClosing ||
+    showReactionPicker
       ? 20
       : 30;
   const scrollOffset = useMemo(() => {
@@ -697,6 +734,24 @@ export function PullRequestDetail({
           }}
         />
       )}
+      {showReactionPicker && reactionTarget && (
+        <ReactionPicker
+          onSelect={(shortCode) => onReact(reactionTarget, shortCode)}
+          onCancel={() => {
+            setShowReactionPicker(false);
+            setReactionTarget(null);
+            onClearReactionError();
+          }}
+          isProcessing={isReacting}
+          error={reactionError}
+          onClearError={() => {
+            onClearReactionError();
+            setShowReactionPicker(false);
+            setReactionTarget(null);
+          }}
+          currentReactions={reactionsByComment.get(reactionTarget) ?? []}
+        />
+      )}
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
@@ -706,13 +761,14 @@ export function PullRequestDetail({
           isDeleting ||
           approvalAction ||
           mergeStep ||
-          isClosing
+          isClosing ||
+          showReactionPicker
             ? ""
             : viewIndex === -1 && commits.length > 0
-              ? "Tab switch view  ↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
+              ? "Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"
               : viewIndex >= 0
-                ? "Tab next  S-Tab prev  ↑↓ cursor  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
-                : "↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"}
+                ? "Tab next S-Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
+                : "↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"}
         </Text>
       </Box>
     </Box>
