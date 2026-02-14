@@ -1309,6 +1309,49 @@ describe("App", () => {
     });
   });
 
+  it("shows PullRequestCannotBeApprovedByAuthorException error on revoke", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("cannot approve own");
+    err.name = "PullRequestCannotBeApprovedByAuthorException";
+    vi.mocked(updateApprovalState).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Revoke your approval?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot revoke approval on your own pull request.");
+    });
+  });
+
   it("shows InvalidRevisionIdException error", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
