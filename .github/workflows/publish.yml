@@ -82,16 +82,8 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Verify NPM_TOKEN is set
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN secret is not set. Add it in GitHub repo Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Install latest npm for OIDC support
+        run: npm install -g npm@latest
 
-      - name: Publish to npm
+      - name: Publish to npm (OIDC Trusted Publishing)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
