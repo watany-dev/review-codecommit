@@ -8,12 +8,26 @@ interface Props {
   isPosting: boolean;
   error: string | null;
   onClearError: () => void;
+  initialValue?: string;
+  label?: string;
+  postingMessage?: string;
+  errorPrefix?: string;
 }
 
 export const COMMENT_MAX_LENGTH = 10240;
 
-export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearError }: Props) {
-  const [value, setValue] = useState("");
+export function CommentInput({
+  onSubmit,
+  onCancel,
+  isPosting,
+  error,
+  onClearError,
+  initialValue = "",
+  label = "New Comment:",
+  postingMessage = "Posting comment...",
+  errorPrefix = "Failed to post comment:",
+}: Props) {
+  const [value, setValue] = useState(initialValue);
 
   useInput((_input, key) => {
     if (error) {
@@ -40,7 +54,7 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
   if (isPosting) {
     return (
       <Box flexDirection="column">
-        <Text color="cyan">Posting comment...</Text>
+        <Text color="cyan">{postingMessage}</Text>
       </Box>
     );
   }
@@ -48,7 +62,7 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
   if (error) {
     return (
       <Box flexDirection="column">
-        <Text color="red">Failed to post comment: {error}</Text>
+        <Text color="red">{errorPrefix} {error}</Text>
         <Text dimColor>Press any key to return</Text>
       </Box>
     );
@@ -56,7 +70,7 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
 
   return (
     <Box flexDirection="column">
-      <Text bold>New Comment:</Text>
+      <Text bold>{label}</Text>
       <Box>
         <Text>&gt; </Text>
         <TextInput value={value} onChange={handleChange} onSubmit={handleSubmit} />

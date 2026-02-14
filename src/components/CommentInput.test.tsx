@@ -138,4 +138,100 @@ describe("CommentInput", () => {
     stdin.write("x");
     expect(onClearError).toHaveBeenCalled();
   });
+
+  it("shows default label when label is not specified", () => {
+    const { lastFrame } = render(
+      <CommentInput
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error={null}
+        onClearError={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("New Comment:");
+  });
+
+  it("shows custom label when label is specified", () => {
+    const { lastFrame } = render(
+      <CommentInput
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error={null}
+        onClearError={vi.fn()}
+        label="Edit Comment:"
+      />,
+    );
+    expect(lastFrame()).toContain("Edit Comment:");
+  });
+
+  it("prefills input with initialValue", async () => {
+    const onSubmit = vi.fn();
+    const { stdin } = render(
+      <CommentInput
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error={null}
+        onClearError={vi.fn()}
+        initialValue="existing content"
+      />,
+    );
+    // Submit the prefilled value directly
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith("existing content");
+    });
+  });
+
+  it("shows custom postingMessage when specified", () => {
+    const { lastFrame } = render(
+      <CommentInput
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        isPosting={true}
+        error={null}
+        onClearError={vi.fn()}
+        postingMessage="Updating comment..."
+      />,
+    );
+    expect(lastFrame()).toContain("Updating comment...");
+  });
+
+  it("shows custom errorPrefix when specified", () => {
+    const { lastFrame } = render(
+      <CommentInput
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error="You can only edit your own comments."
+        onClearError={vi.fn()}
+        errorPrefix="Failed to update comment:"
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("Failed to update comment:");
+    expect(output).toContain("You can only edit your own comments.");
+  });
+
+  it("submits edited prefilled value", async () => {
+    const onSubmit = vi.fn();
+    const { stdin } = render(
+      <CommentInput
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error={null}
+        onClearError={vi.fn()}
+        initialValue="old"
+      />,
+    );
+    // ink-text-input replaces value with typed content
+    stdin.write(" updated");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(onSubmit).toHaveBeenCalledWith("old updated");
+    });
+  });
 });
