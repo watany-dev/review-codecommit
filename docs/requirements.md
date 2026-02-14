@@ -107,9 +107,15 @@ npx review-codecommit --region <region>      # リージョン指定
 | 削除後のリロード | コメント削除後にコメント一覧を自動リロード |
 | エラーハンドリング | 権限不足、他人のコメント編集不可、削除済みコメント等のエラー対応 |
 
-### 将来対応（v0.1.0 まで）
+## 機能スコープ (v0.8) ✅
 
-- フィルタ・検索 → v0.8
+| 機能 | 内容 |
+|------|------|
+| ステータスフィルタ | Open / Closed / Merged でフィルタリング（`f` キーでサイクル） |
+| PR 検索 | タイトル・著者名でクライアントサイド検索（`/` キーで検索モード） |
+| ページネーション | 次ページ/前ページのトークンベース読み込み（`n`/`p` キー） |
+| PR ステータスバッジ | Closed / Merged の PR にバッジ表示（Open はバッジなし） |
+| トークン期限切れ対応 | InvalidContinuationTokenException 時に自動的にページ1へリセット |
 
 ### 将来対応（v0.2.0 以降）
 
@@ -144,6 +150,10 @@ npx review-codecommit --region <region>      # リージョン指定
 | `x` | PR をクローズ（確認プロンプト表示） | PR詳細画面 |
 | `Tab` | 次のビューへ切り替え（All changes → Commit 1 → ... → All changes） | PR詳細画面 |
 | `Shift+Tab` | 前のビューへ切り替え | PR詳細画面 |
+| `f` | ステータスフィルタ切り替え（OPEN → CLOSED → MERGED → OPEN） | PR一覧画面 |
+| `/` | 検索モード開始（タイトル・著者名でフィルタリング） | PR一覧画面 |
+| `n` | 次のページへ移動 | PR一覧画面 |
+| `p` | 前のページへ移動 | PR一覧画面 |
 
 ## 画面フロー・遷移
 
@@ -180,16 +190,20 @@ npx review-codecommit --region <region>      # リージョン指定
 ### 2. PR一覧画面
 
 ```
-┌─ review-codecommit ─ my-service ────────────┐
-│                                              │
-│  Open Pull Requests (3):                     │
-│                                              │
-│  > #42  fix: login timeout   watany  2h ago  │
-│    #41  feat: add search     taro    1d ago  │
-│    #38  chore: deps update   bot     3d ago  │
-│                                              │
-│  ↑↓ navigate  Enter view  q back             │
-└──────────────────────────────────────────────┘
+┌─ review-codecommit ─ my-service ─────────────────┐
+│                                                    │
+│  [Open]   Closed   Merged                          │
+│                                                    │
+│  Open Pull Requests (3):                           │
+│                                                    │
+│  > #42  fix: login timeout   watany  2h ago        │
+│    #41  feat: add search     taro    1d ago        │
+│    #38  chore: deps update   bot     3d ago        │
+│                                                    │
+│  Page 1  n next                                    │
+│  ↑↓ navigate  Enter view  f filter  / search       │
+│  n next  p prev  q back  ? help                    │
+└────────────────────────────────────────────────────┘
 ```
 
 ### 3. PR詳細画面 (diff)
@@ -235,7 +249,7 @@ npx review-codecommit --region <region>      # リージョン指定
 | 画面 | 取得件数 | 表示方式 |
 |------|----------|----------|
 | リポジトリ一覧 | 最大100件 | スクロール |
-| PR一覧 | OPEN のみ、最大25件ずつ | スクロール |
+| PR一覧 | OPEN/CLOSED/MERGED、最大25件ずつ | `n`/`p` キーでページ切替 |
 | diff | 全ファイル取得 | 画面内スクロール |
 
 ## エラーハンドリング
@@ -277,6 +291,7 @@ npx review-codecommit --region <region>      # リージョン指定
 | コメント編集文字数超過 | 「Comment exceeds the 10,240 character limit.」と表示 |
 | 削除済みコメント再削除 | 「Comment has already been deleted.」と表示 |
 | 存在しないコメント削除 | 「Comment not found.」と表示 |
+| ページトークン期限切れ | 「Page token expired. Returning to first page.」と表示し、ページ1にリセット |
 
 ## テスト戦略
 
