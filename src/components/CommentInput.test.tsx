@@ -55,6 +55,25 @@ describe("CommentInput", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("does not call onSubmit when text exceeds max length", async () => {
+    const onSubmit = vi.fn();
+    const { stdin } = render(
+      <CommentInput
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        isPosting={false}
+        error={null}
+        onClearError={vi.fn()}
+      />,
+    );
+    const oversizedText = "a".repeat(10241);
+    stdin.write(oversizedText);
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   it("calls onCancel on Escape key", () => {
     const onCancel = vi.fn();
     const { stdin } = render(
