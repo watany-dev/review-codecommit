@@ -34,6 +34,8 @@ export function Help({ onClose }: Props) {
         <Text> r Revoke approval (PR Detail)</Text>
         <Text> m Merge PR (PR Detail)</Text>
         <Text> x Close PR without merge (PR Detail)</Text>
+        <Text> Tab Switch to commit view (PR Detail)</Text>
+        <Text> S-Tab Previous commit (PR Detail)</Text>
         <Text> ? Toggle this help</Text>
       </Box>
       <Box marginTop={1}>
