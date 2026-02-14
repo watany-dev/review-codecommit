@@ -9,6 +9,7 @@ import {
   listPullRequests,
   listRepositories,
   postComment,
+  postCommentReply,
   updateApprovalState,
 } from "./codecommit.js";
 
@@ -526,6 +527,46 @@ describe("getComments", () => {
     const threads = await getComments(mockClient, "42", "my-service");
     expect(threads).toHaveLength(1);
     expect(threads[0].location).toBeNull();
+  });
+});
+
+describe("postCommentReply", () => {
+  it("posts a reply with inReplyTo and content", async () => {
+    const mockReply = {
+      commentId: "reply-1",
+      content: "Will fix in next PR",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+      inReplyTo: "comment-1",
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockReply });
+
+    const result = await postCommentReply(mockClient, {
+      inReplyTo: "comment-1",
+      content: "Will fix in next PR",
+    });
+
+    expect(result).toEqual(mockReply);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          inReplyTo: "comment-1",
+          content: "Will fix in next PR",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("comment not found");
+    error.name = "CommentDoesNotExistException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      postCommentReply(mockClient, {
+        inReplyTo: "nonexistent",
+        content: "reply",
+      }),
+    ).rejects.toThrow("comment not found");
   });
 });
 
