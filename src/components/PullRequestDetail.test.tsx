@@ -85,6 +85,14 @@ describe("PullRequestDetail", () => {
     onClearClosePRError: vi.fn(),
   };
 
+  const defaultCommitProps = {
+    commits: [] as any[],
+    commitDifferences: [] as any[],
+    commitDiffTexts: new Map<string, { before: string; after: string }>(),
+    isLoadingCommitDiff: false,
+    onLoadCommitDiff: vi.fn(),
+  };
+
   it("renders PR title and ID", () => {
     const { lastFrame } = render(
       <PullRequestDetail
@@ -102,6 +110,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -126,6 +135,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -150,6 +160,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -174,6 +185,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("src/auth.ts");
@@ -196,6 +208,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -219,6 +232,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -243,6 +257,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).not.toContain("Comments");
@@ -273,6 +288,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("(no title)");
@@ -295,6 +311,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("(unknown file)");
@@ -324,6 +341,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("src/other.ts");
@@ -346,6 +364,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("cursor");
@@ -371,6 +390,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("q");
@@ -395,6 +415,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("?");
@@ -418,6 +439,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("c");
@@ -444,6 +466,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("c");
@@ -473,6 +496,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("c comment");
@@ -495,6 +519,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Simulate posting complete (isPostingComment: true -> false, no error)
@@ -514,6 +539,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Comment mode should be closed
@@ -538,6 +564,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Enter comment mode
@@ -563,6 +590,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Posting comment...");
@@ -584,6 +612,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Error should be shown, comment mode still open
@@ -612,6 +641,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -637,6 +667,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Approvals:");
@@ -669,6 +700,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -704,6 +736,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -730,6 +763,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -753,6 +787,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("a");
@@ -778,6 +813,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("r");
@@ -804,6 +840,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("a");
@@ -832,6 +869,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("a approve");
@@ -855,6 +893,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Enter approve mode
@@ -884,6 +923,7 @@ describe("PullRequestDetail", () => {
         isApproving={true}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -911,6 +951,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     // Prompt should be closed, approval state updated
@@ -937,6 +978,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Enter approve mode
@@ -963,6 +1005,7 @@ describe("PullRequestDetail", () => {
         isApproving={true}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
 
@@ -987,6 +1030,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError="Access denied. Check your IAM policy."
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     // Error should be displayed in prompt
@@ -1016,6 +1060,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={onClearApprovalError}
+        {...defaultCommitProps}
       />,
     );
     // Enter approve mode
@@ -1045,6 +1090,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError="Some error"
         onClearApprovalError={onClearApprovalError}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Some error");
@@ -1073,6 +1119,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("a");
@@ -1103,6 +1150,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("c");
@@ -1147,6 +1195,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1185,6 +1234,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1232,6 +1282,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1258,6 +1309,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("> ");
@@ -1280,6 +1332,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -1305,6 +1358,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("k");
@@ -1331,6 +1385,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move cursor to a diff line (skip header and separator), wait for render
@@ -1364,6 +1419,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Cursor is on header line (index 0) — no filePath/lineNumber
@@ -1398,6 +1454,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move to add line (header=0, separator=1, context=2, add=3)
@@ -1439,6 +1496,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move to delete line (header=0, separator=1, context=2, delete=3)
@@ -1471,6 +1529,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -1507,6 +1566,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move to separator line (index 1)
@@ -1533,6 +1593,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move to diff line and open inline comment
@@ -1585,6 +1646,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("💬 taro: before-context comment");
@@ -1607,6 +1669,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -1639,6 +1702,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -1665,6 +1729,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Should stay open with error shown
@@ -1697,6 +1762,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Navigate past all diff lines to comment section
@@ -1728,6 +1794,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -1750,6 +1817,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move to diff line and wait for render before pressing C
@@ -1783,6 +1851,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -1808,6 +1877,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Inline comment mode should be closed
@@ -1843,6 +1913,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -1869,6 +1940,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1903,6 +1975,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Rules:");
@@ -1939,6 +2012,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1986,6 +2060,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2028,6 +2103,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2091,6 +2167,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2129,6 +2206,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2171,6 +2249,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame()!;
@@ -2217,6 +2296,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame()!;
@@ -2268,6 +2348,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2313,6 +2394,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2365,6 +2447,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Initially folded
@@ -2430,6 +2513,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -2484,6 +2568,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Navigate to comment (sep=0, comment-header=1, comment=2)
@@ -2515,6 +2600,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Cursor is on header line
@@ -2552,6 +2638,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -2598,6 +2685,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -2645,6 +2733,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -2677,6 +2766,7 @@ describe("PullRequestDetail", () => {
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2700,6 +2790,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2736,6 +2827,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("j");
@@ -2768,6 +2860,7 @@ describe("PullRequestDetail", () => {
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -2790,6 +2883,7 @@ describe("PullRequestDetail", () => {
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2815,6 +2909,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -2838,6 +2933,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Cursor is on header line (no threadIndex)
@@ -2882,6 +2978,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -2918,6 +3015,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -2952,6 +3050,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -2977,6 +3076,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -2999,6 +3099,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -3023,6 +3124,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -3053,6 +3155,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -3077,6 +3180,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("m");
@@ -3110,6 +3214,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onCheckConflicts={onCheckConflicts}
       />,
     );
@@ -3147,6 +3252,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onMerge={onMerge}
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3185,6 +3291,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onCheckConflicts={onCheckConflicts}
       />,
     );
@@ -3223,6 +3330,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onCheckConflicts={onCheckConflicts}
       />,
     );
@@ -3258,6 +3366,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("m");
@@ -3294,6 +3403,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onCheckConflicts={onCheckConflicts}
       />,
     );
@@ -3334,6 +3444,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         mergeError="Conflicts detected. Cannot auto-merge."
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3371,6 +3482,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onMerge={onMerge}
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3415,6 +3527,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onMerge={onMerge}
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3455,6 +3568,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("x");
@@ -3481,6 +3595,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onClosePR={onClosePR}
       />,
     );
@@ -3509,6 +3624,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("x");
@@ -3539,6 +3655,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         closePRError="Pull request is already closed."
       />,
     );
@@ -3565,6 +3682,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("m merge");
@@ -3593,6 +3711,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         isMerging={true}
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3624,6 +3743,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         isClosingPR={true}
       />,
     );
@@ -3650,6 +3770,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Enter comment mode
@@ -3683,6 +3804,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Move cursor to an actual diff line (index 2 = context " line1")
@@ -3734,6 +3856,7 @@ describe("PullRequestDetail", () => {
         onClearReplyError={onClearReplyError}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     // Navigate to the comment (header, separator, 5 diff lines, separator, separator, comment-header, comment)
@@ -3778,6 +3901,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         closePRError="Some error"
         onClearClosePRError={onClearClosePRError}
       />,
@@ -3814,6 +3938,7 @@ describe("PullRequestDetail", () => {
         approvalError="Cannot approve own PR"
         onClearApprovalError={onClearApprovalError}
         {...defaultMergeProps}
+        {...defaultCommitProps}
       />,
     );
     stdin.write("a");
@@ -3845,6 +3970,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onCheckConflicts={onCheckConflicts}
       />,
     );
@@ -3885,6 +4011,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         onClearMergeError={onClearMergeError}
         onCheckConflicts={onCheckConflicts}
       />,
@@ -3929,6 +4056,7 @@ describe("PullRequestDetail", () => {
         {...defaultReplyProps}
         {...defaultApprovalProps}
         {...defaultMergeProps}
+        {...defaultCommitProps}
         mergeError="Merge failed"
         onClearMergeError={onClearMergeError}
         onCheckConflicts={onCheckConflicts}
@@ -3945,6 +4073,567 @@ describe("PullRequestDetail", () => {
     stdin.write("\r"); // dismiss error
     await vi.waitFor(() => {
       expect(onClearMergeError).toHaveBeenCalled();
+    });
+  });
+
+  const sampleCommits = [
+    {
+      commitId: "aaa1234567",
+      shortId: "aaa1234",
+      message: "Fix input validation",
+      authorName: "watany",
+      authorDate: new Date("2026-02-13T10:00:00Z"),
+      parentIds: ["base123"],
+    },
+    {
+      commitId: "bbb5678901",
+      shortId: "bbb5678",
+      message: "Add error handling",
+      authorName: "taro",
+      authorDate: new Date("2026-02-13T11:00:00Z"),
+      parentIds: ["aaa1234567"],
+    },
+    {
+      commitId: "ccc9012345",
+      shortId: "ccc9012",
+      message: "Update tests",
+      authorName: "watany",
+      authorDate: new Date("2026-02-13T12:00:00Z"),
+      parentIds: ["bbb5678901"],
+    },
+  ];
+
+  describe("commit view - tab header", () => {
+    it("does not show tab header when commits is empty", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+        />,
+      );
+      expect(lastFrame()).not.toContain("[All changes]");
+      expect(lastFrame()).not.toContain("Commits");
+    });
+
+    it("shows [All changes] and Commits (N) when commits exist", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      expect(lastFrame()).toContain("[All changes]");
+      expect(lastFrame()).toContain("Commits (3)");
+    });
+  });
+
+  describe("commit view - Tab/Shift+Tab navigation", () => {
+    it("Tab switches to first commit view", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          onLoadCommitDiff={onLoadCommitDiff}
+        />,
+      );
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      expect(lastFrame()).toContain("aaa1234");
+      expect(lastFrame()).toContain("Fix input validation");
+      expect(onLoadCommitDiff).toHaveBeenCalledWith(0);
+    });
+
+    it("Tab wraps from last commit to All changes", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          onLoadCommitDiff={onLoadCommitDiff}
+        />,
+      );
+      // Tab 4 times: All changes -> Commit 1 -> Commit 2 -> Commit 3 -> All changes
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 2/3]");
+      });
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 3/3]");
+      });
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[All changes]");
+      });
+      expect(onLoadCommitDiff).toHaveBeenCalledTimes(3);
+    });
+
+    it("Shift+Tab wraps from All changes to last commit", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          onLoadCommitDiff={onLoadCommitDiff}
+        />,
+      );
+      stdin.write("\u001b[Z"); // Shift+Tab
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 3/3]");
+      });
+      expect(lastFrame()).toContain("ccc9012");
+      expect(onLoadCommitDiff).toHaveBeenCalledWith(2);
+    });
+
+    it("Shift+Tab goes from commit 2 to commit 1 (non-wrapping)", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          onLoadCommitDiff={onLoadCommitDiff}
+        />,
+      );
+      // Go to commit 2
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 2/3]");
+      });
+      // Shift+Tab back to commit 1
+      stdin.write("\u001b[Z");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+    });
+
+    it("Tab does nothing when commits are empty", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+        />,
+      );
+      stdin.write("\t");
+      // Wait a tick for async processing
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(lastFrame()).not.toContain("[Commit");
+      expect(onLoadCommitDiff).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("commit view - comment keys disabled", () => {
+    it("c key is disabled in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("c"); // try to comment
+      expect(lastFrame()).not.toContain("Comment:");
+    });
+
+    it("C key is disabled in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("C"); // try to inline comment
+      expect(lastFrame()).not.toContain("Inline comment on");
+    });
+  });
+
+  describe("commit view - loading indicator", () => {
+    it("shows loading when isLoadingCommitDiff is true and in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          isLoadingCommitDiff={true}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Loading commit diff...");
+      });
+    });
+
+    it("does not show loading in All changes view", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          isLoadingCommitDiff={true}
+        />,
+      );
+      expect(lastFrame()).not.toContain("Loading commit diff...");
+    });
+  });
+
+  describe("commit view - footer", () => {
+    it("shows Tab switch view in All changes when commits exist", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      expect(lastFrame()).toContain("Tab switch view");
+    });
+
+    it("shows Tab next S-Tab prev in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Tab next");
+      });
+      expect(lastFrame()).toContain("S-Tab prev");
+    });
+
+    it("does not show Tab in footer when no commits", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+        />,
+      );
+      expect(lastFrame()).not.toContain("Tab switch");
+      expect(lastFrame()).not.toContain("Tab next");
+    });
+  });
+
+  describe("commit view - commit diff display", () => {
+    it("shows commit diff data when in commit view", async () => {
+      const commitDiffTexts = new Map([
+        [
+          "cb1:cb2",
+          {
+            before: "old line",
+            after: "new line",
+          },
+        ],
+      ]);
+      const commitDifferences = [
+        {
+          beforeBlob: { blobId: "cb1", path: "src/validators.ts" },
+          afterBlob: { blobId: "cb2", path: "src/validators.ts" },
+        },
+      ];
+
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          commitDifferences={commitDifferences as any}
+          commitDiffTexts={commitDiffTexts}
+          isLoadingCommitDiff={false}
+          onLoadCommitDiff={vi.fn()}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("src/validators.ts");
+      });
+    });
+  });
+
+  describe("commit view - cursor reset", () => {
+    it("resets cursor to 0 when switching views", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      // Move cursor down
+      stdin.write("j");
+      stdin.write("j");
+      // Switch to commit view - cursor should reset
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+    });
+  });
+
+  describe("commit view - PR-level actions still work", () => {
+    it("a key works in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("a"); // approve
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Approve this pull request?");
+      });
     });
   });
 });

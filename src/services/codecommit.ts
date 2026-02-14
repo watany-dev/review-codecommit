@@ -7,6 +7,7 @@ import {
   type Evaluation,
   GetBlobCommand,
   GetCommentsForPullRequestCommand,
+  GetCommitCommand,
   GetDifferencesCommand,
   GetMergeConflictsCommand,
   GetPullRequestApprovalStatesCommand,
@@ -412,4 +413,69 @@ export async function closePullRequest(
   });
   const response = await client.send(command);
   return response.pullRequest!;
+}
+
+export interface CommitInfo {
+  commitId: string;
+  shortId: string;
+  message: string;
+  authorName: string;
+  authorDate: Date;
+  parentIds: string[];
+}
+
+export async function getCommit(
+  client: CodeCommitClient,
+  repositoryName: string,
+  commitId: string,
+): Promise<CommitInfo> {
+  const command = new GetCommitCommand({ repositoryName, commitId });
+  const response = await client.send(command);
+  const commit = response.commit;
+  if (!commit) throw new Error(`Commit ${commitId} not found.`);
+
+  return {
+    commitId: commit.commitId ?? commitId,
+    shortId: (commit.commitId ?? commitId).slice(0, 7),
+    message: (commit.message ?? "").split("\n")[0] ?? "",
+    authorName: commit.author?.name ?? "unknown",
+    authorDate: commit.author?.date ? new Date(commit.author.date) : new Date(),
+    parentIds: commit.parents ?? [],
+  };
+}
+
+const MAX_COMMITS = 100;
+
+export async function getCommitsForPR(
+  client: CodeCommitClient,
+  repositoryName: string,
+  sourceCommit: string,
+  mergeBase: string,
+): Promise<CommitInfo[]> {
+  const commits: CommitInfo[] = [];
+  let currentId = sourceCommit;
+
+  while (currentId !== mergeBase && commits.length < MAX_COMMITS) {
+    const commit = await getCommit(client, repositoryName, currentId);
+    commits.push(commit);
+    if (commit.parentIds.length === 0) break;
+    currentId = commit.parentIds[0]!;
+  }
+
+  return commits.reverse();
+}
+
+export async function getCommitDifferences(
+  client: CodeCommitClient,
+  repositoryName: string,
+  beforeCommitId: string,
+  afterCommitId: string,
+): Promise<Difference[]> {
+  const command = new GetDifferencesCommand({
+    repositoryName,
+    beforeCommitSpecifier: beforeCommitId,
+    afterCommitSpecifier: afterCommitId,
+  });
+  const response = await client.send(command);
+  return response.differences ?? [];
 }

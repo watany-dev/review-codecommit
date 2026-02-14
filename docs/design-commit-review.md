@@ -1,4 +1,8 @@
-# コミット単位レビュー 設計書（v0.7）
+# コミット単位レビュー 設計書（v0.6.1）
+
+> **✅ 実装完了** (2026-02-14)
+>
+> PR 詳細画面に Tab/Shift+Tab によるビュー切り替え（All changes ↔ 各コミット）を実装。サービス層（getCommit, getCommitsForPR, getCommitDifferences）、PullRequestDetail UI（viewIndex, タブヘッダー、コミット diff 表示）、App 統合（状態管理、diff ロード）、Help 画面更新を含む。
 
 ## 概要
 

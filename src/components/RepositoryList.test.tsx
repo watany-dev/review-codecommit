@@ -64,6 +64,23 @@ describe("RepositoryList", () => {
     expect(onQuit).toHaveBeenCalled();
   });
 
+  it("renders repos with missing repositoryId", () => {
+    const reposNoId = [
+      { repositoryName: "no-id-repo" },
+      { repositoryName: "another-repo", repositoryId: "x" },
+    ];
+    const { lastFrame } = render(
+      <RepositoryList
+        repositories={reposNoId as any}
+        onSelect={vi.fn()}
+        onQuit={vi.fn()}
+        onHelp={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("no-id-repo");
+    expect(lastFrame()).toContain("another-repo");
+  });
+
   it("calls onHelp on ? key", () => {
     const onHelp = vi.fn();
     const { stdin } = render(

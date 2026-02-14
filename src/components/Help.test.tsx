@@ -28,6 +28,10 @@ describe("Help", () => {
     expect(output).toContain("Merge PR");
     expect(output).toContain("x");
     expect(output).toContain("Close PR without merge");
+    expect(output).toContain("Tab");
+    expect(output).toContain("Switch to commit view");
+    expect(output).toContain("S-Tab");
+    expect(output).toContain("Previous commit");
   });
 
   it("renders help title", () => {

@@ -1,7 +1,12 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useState } from "react";
-import type { CommentThread, ConflictSummary, MergeStrategy } from "../services/codecommit.js";
+import type {
+  CommentThread,
+  CommitInfo,
+  ConflictSummary,
+  MergeStrategy,
+} from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
@@ -49,6 +54,11 @@ interface Props {
   isClosingPR: boolean;
   closePRError: string | null;
   onClearClosePRError: () => void;
+  commits: CommitInfo[];
+  commitDifferences: Difference[];
+  commitDiffTexts: Map<string, { before: string; after: string }>;
+  isLoadingCommitDiff: boolean;
+  onLoadCommitDiff: (commitIndex: number) => void;
 }
 
 export function PullRequestDetail({
@@ -86,6 +96,11 @@ export function PullRequestDetail({
   isClosingPR,
   closePRError,
   onClearClosePRError,
+  commits,
+  commitDifferences,
+  commitDiffTexts,
+  isLoadingCommitDiff,
+  onLoadCommitDiff,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -111,6 +126,7 @@ export function PullRequestDetail({
   const [conflictSummary, setConflictSummary] = useState<ConflictSummary | null>(null);
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [viewIndex, setViewIndex] = useState(-1); // -1 = All changes
   const [wasMerging, setWasMerging] = useState(false);
   const [wasClosingPR, setWasClosingPR] = useState(false);
   const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
@@ -200,10 +216,20 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const lines = useMemo(
-    () => buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads),
-    [differences, diffTexts, commentThreads, collapsedThreads],
-  );
+  const lines = useMemo(() => {
+    if (viewIndex === -1) {
+      return buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
+    }
+    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set());
+  }, [
+    viewIndex,
+    differences,
+    diffTexts,
+    commentThreads,
+    collapsedThreads,
+    commitDifferences,
+    commitDiffTexts,
+  ]);
 
   async function handleStrategySelect(strategy: MergeStrategy) {
     setSelectedStrategy(strategy);
@@ -235,6 +261,23 @@ export function PullRequestDetail({
     )
       return;
 
+    if (key.tab && commits.length > 0) {
+      const newIndex = key.shift
+        ? viewIndex - 1 < -1
+          ? commits.length - 1
+          : viewIndex - 1
+        : viewIndex + 1 > commits.length - 1
+          ? -1
+          : viewIndex + 1;
+
+      setViewIndex(newIndex);
+      setCursorIndex(0);
+      if (newIndex >= 0) {
+        onLoadCommitDiff(newIndex);
+      }
+      return;
+    }
+
     if (input === "q" || key.escape) {
       onBack();
       return;
@@ -252,10 +295,12 @@ export function PullRequestDetail({
       return;
     }
     if (input === "c") {
+      if (viewIndex >= 0) return;
       setIsCommenting(true);
       return;
     }
     if (input === "C") {
+      if (viewIndex >= 0) return;
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
       const location = getLocationFromLine(currentLine);
@@ -361,6 +406,39 @@ export function PullRequestDetail({
             </Text>
           </Box>
         )}
+      {commits.length > 0 && (
+        <Box flexDirection="column" marginBottom={0}>
+          <Box>
+            {viewIndex === -1 ? (
+              <>
+                <Text bold color="cyan">
+                  [All changes]
+                </Text>
+                <Text> Commits ({commits.length})</Text>
+              </>
+            ) : (
+              <>
+                <Text>All changes </Text>
+                <Text bold color="cyan">
+                  [Commit {viewIndex + 1}/{commits.length}]
+                </Text>
+                <Text> {commits[viewIndex]!.shortId}</Text>
+              </>
+            )}
+          </Box>
+          {viewIndex >= 0 && (
+            <Text dimColor>
+              {commits[viewIndex]!.message} {commits[viewIndex]!.authorName}{" "}
+              {formatRelativeDate(commits[viewIndex]!.authorDate)}
+            </Text>
+          )}
+        </Box>
+      )}
+      {isLoadingCommitDiff && viewIndex >= 0 && (
+        <Box>
+          <Text color="cyan">Loading commit diff...</Text>
+        </Box>
+      )}
       <Box flexDirection="column">
         {visibleLines.map((line, index) => {
           const globalIndex = scrollOffset + index;
@@ -506,7 +584,11 @@ export function PullRequestDetail({
           mergeStep ||
           isClosing
             ? ""
-            : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"}
+            : viewIndex === -1 && commits.length > 0
+              ? "Tab switch view  ↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"
+              : viewIndex >= 0
+                ? "Tab next  S-Tab prev  ↑↓ cursor  a approve  r revoke  m merge  x close  q back  ? help"
+                : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"}
         </Text>
       </Box>
     </Box>
