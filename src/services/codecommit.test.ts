@@ -284,6 +284,75 @@ describe("postComment", () => {
     );
   });
 
+  it("posts a comment with location parameter", async () => {
+    const mockComment = {
+      commentId: "comment-2",
+      content: "Fix this line",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockComment });
+
+    const result = await postComment(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      beforeCommitId: "def456",
+      afterCommitId: "abc123",
+      content: "Fix this line",
+      location: {
+        filePath: "src/auth.ts",
+        filePosition: 10,
+        relativeFileVersion: "AFTER",
+      },
+    });
+
+    expect(result).toEqual(mockComment);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          repositoryName: "my-service",
+          beforeCommitId: "def456",
+          afterCommitId: "abc123",
+          content: "Fix this line",
+          location: {
+            filePath: "src/auth.ts",
+            filePosition: 10,
+            relativeFileVersion: "AFTER",
+          },
+        },
+      }),
+    );
+  });
+
+  it("posts a comment without location (general comment)", async () => {
+    const mockComment = {
+      commentId: "comment-3",
+      content: "General",
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockComment });
+
+    await postComment(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      beforeCommitId: "def456",
+      afterCommitId: "abc123",
+      content: "General",
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          repositoryName: "my-service",
+          beforeCommitId: "def456",
+          afterCommitId: "abc123",
+          content: "General",
+          location: undefined,
+        },
+      }),
+    );
+  });
+
   it("propagates API errors", async () => {
     const error = new Error("Access denied");
     error.name = "AccessDeniedException";

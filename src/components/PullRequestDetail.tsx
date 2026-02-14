@@ -22,6 +22,17 @@ interface Props {
   isPostingComment: boolean;
   commentError: string | null;
   onClearCommentError: () => void;
+  onPostInlineComment: (
+    content: string,
+    location: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    },
+  ) => void;
+  isPostingInlineComment: boolean;
+  inlineCommentError: string | null;
+  onClearInlineCommentError: () => void;
   approvals: Approval[];
   approvalEvaluation: Evaluation | null;
   onApprove: () => void;
@@ -42,6 +53,10 @@ export function PullRequestDetail({
   isPostingComment,
   commentError,
   onClearCommentError,
+  onPostInlineComment,
+  isPostingInlineComment,
+  inlineCommentError,
+  onClearInlineCommentError,
   approvals,
   approvalEvaluation,
   onApprove,
@@ -53,6 +68,13 @@ export function PullRequestDetail({
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [wasPosting, setWasPosting] = useState(false);
+  const [isInlineCommenting, setIsInlineCommenting] = useState(false);
+  const [inlineCommentLocation, setInlineCommentLocation] = useState<{
+    filePath: string;
+    filePosition: number;
+    relativeFileVersion: "BEFORE" | "AFTER";
+  } | null>(null);
+  const [wasPostingInline, setWasPostingInline] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
 
@@ -66,6 +88,18 @@ export function PullRequestDetail({
       setWasPosting(false);
     }
   }, [isPostingComment, commentError]);
+
+  useEffect(() => {
+    if (isPostingInlineComment) {
+      setWasPostingInline(true);
+    } else if (wasPostingInline && !inlineCommentError) {
+      setIsInlineCommenting(false);
+      setInlineCommentLocation(null);
+      setWasPostingInline(false);
+    } else {
+      setWasPostingInline(false);
+    }
+  }, [isPostingInlineComment, inlineCommentError]);
 
   useEffect(() => {
     if (isApproving) {
@@ -90,7 +124,7 @@ export function PullRequestDetail({
   const lines = buildDisplayLines(differences, diffTexts, commentThreads);
 
   useInput((input, key) => {
-    if (isCommenting || approvalAction) return;
+    if (isCommenting || isInlineCommenting || approvalAction) return;
 
     if (input === "q" || key.escape) {
       onBack();
@@ -112,6 +146,15 @@ export function PullRequestDetail({
       setIsCommenting(true);
       return;
     }
+    if (input === "C") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const location = getLocationFromLine(currentLine);
+      if (!location) return;
+      setInlineCommentLocation(location);
+      setIsInlineCommenting(true);
+      return;
+    }
     if (input === "a") {
       setApprovalAction("approve");
       return;
@@ -122,7 +165,7 @@ export function PullRequestDetail({
     }
   });
 
-  const visibleLineCount = isCommenting || approvalAction ? 20 : 30;
+  const visibleLineCount = isCommenting || isInlineCommenting || approvalAction ? 20 : 30;
   const scrollOffset = useMemo(() => {
     const halfVisible = Math.floor(visibleLineCount / 2);
     const maxOffset = Math.max(0, lines.length - visibleLineCount);
@@ -195,6 +238,23 @@ export function PullRequestDetail({
           onClearError={onClearCommentError}
         />
       )}
+      {isInlineCommenting && inlineCommentLocation && (
+        <Box flexDirection="column">
+          <Text dimColor>
+            Inline comment on {inlineCommentLocation.filePath}:{inlineCommentLocation.filePosition}
+          </Text>
+          <CommentInput
+            onSubmit={(content) => onPostInlineComment(content, inlineCommentLocation)}
+            onCancel={() => {
+              setIsInlineCommenting(false);
+              setInlineCommentLocation(null);
+            }}
+            isPosting={isPostingInlineComment}
+            error={inlineCommentError}
+            onClearError={onClearInlineCommentError}
+          />
+        </Box>
+      )}
       {approvalAction && (
         <ConfirmPrompt
           message={
@@ -216,9 +276,9 @@ export function PullRequestDetail({
       )}
       <Box marginTop={1}>
         <Text dimColor>
-          {isCommenting || approvalAction
+          {isCommenting || isInlineCommenting || approvalAction
             ? ""
-            : "↑↓ cursor  c comment  a approve  r revoke  q back  ? help"}
+            : "↑↓ cursor  c comment  C inline  a approve  r revoke  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -339,6 +399,38 @@ function findMatchingThreads(
   }
 
   return results;
+}
+
+function getLocationFromLine(line: DisplayLine): {
+  filePath: string;
+  filePosition: number;
+  relativeFileVersion: "BEFORE" | "AFTER";
+} | null {
+  if (!line.filePath) return null;
+
+  if (line.type === "delete" && line.beforeLineNumber) {
+    return {
+      filePath: line.filePath,
+      filePosition: line.beforeLineNumber,
+      relativeFileVersion: "BEFORE",
+    };
+  }
+  if (line.type === "add" && line.afterLineNumber) {
+    return {
+      filePath: line.filePath,
+      filePosition: line.afterLineNumber,
+      relativeFileVersion: "AFTER",
+    };
+  }
+  if (line.type === "context" && line.afterLineNumber) {
+    return {
+      filePath: line.filePath,
+      filePosition: line.afterLineNumber,
+      relativeFileVersion: "AFTER",
+    };
+  }
+
+  return null;
 }
 
 /**

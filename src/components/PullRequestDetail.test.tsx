@@ -47,6 +47,13 @@ describe("PullRequestDetail", () => {
     },
   ];
 
+  const defaultInlineCommentProps = {
+    onPostInlineComment: vi.fn(),
+    isPostingInlineComment: false,
+    inlineCommentError: null as string | null,
+    onClearInlineCommentError: vi.fn(),
+  };
+
   const defaultApprovalProps = {
     approvals: [] as any[],
     approvalEvaluation: null,
@@ -70,6 +77,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -91,6 +99,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -112,6 +121,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -133,6 +143,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -152,6 +163,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -172,6 +184,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -193,6 +206,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -220,6 +234,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -239,6 +254,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -265,6 +281,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -284,6 +301,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -306,6 +324,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -327,6 +346,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -359,6 +379,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -380,6 +401,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -400,6 +422,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -423,6 +446,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -449,6 +473,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -468,6 +493,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={true}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -484,6 +510,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -505,6 +532,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -527,6 +555,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={true}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -545,6 +574,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError="Comment exceeds the 10,240 character limit."
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -566,6 +596,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -594,6 +625,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -614,6 +646,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={{
           approved: true,
@@ -648,6 +681,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={{
           approved: false,
@@ -682,6 +716,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -702,6 +737,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -724,6 +760,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -747,6 +784,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -772,6 +810,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -792,6 +831,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -814,6 +854,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -840,6 +881,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[{ userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" }]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -869,6 +911,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -888,6 +931,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -911,6 +955,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -939,6 +984,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -967,6 +1013,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         approvals={[]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
@@ -998,6 +1045,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1025,6 +1073,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1066,6 +1115,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1101,6 +1151,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1145,6 +1196,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1168,6 +1220,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1187,6 +1240,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1209,6 +1263,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1232,6 +1287,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1241,6 +1297,158 @@ describe("PullRequestDetail", () => {
     });
     stdin.write("j"); // should not move cursor
     expect(onBack).not.toHaveBeenCalled();
+  });
+
+  // v0.4: Inline comment posting tests
+  it("shows inline comment input on C key when cursor is on diff line", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move cursor to a diff line (skip header and separator), wait for render
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      // Cursor should be on context line " line1"
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+  });
+
+  it("does not open inline comment input on non-diff line", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Cursor is on header line (index 0) — no filePath/lineNumber
+    stdin.write("C");
+    // Should not show inline comment input
+    expect(lastFrame()).not.toContain("Inline comment on");
+  });
+
+  it("shows C inline in footer", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("C inline");
+  });
+
+  it("auto-closes inline comment mode on successful post", async () => {
+    const { stdin, rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Move to diff line and wait for render before pressing C
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Simulate posting start
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        onPostInlineComment={vi.fn()}
+        isPostingInlineComment={true}
+        inlineCommentError={null}
+        onClearInlineCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    // Wait for effect to run (wasPostingInline = true)
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Simulate posting complete
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Inline comment mode should be closed
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Inline comment on");
+    });
   });
 
   it("displays multiple comments on same line as thread", () => {
@@ -1275,6 +1483,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
         {...defaultApprovalProps}
       />,
     );

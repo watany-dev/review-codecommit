@@ -180,6 +180,11 @@ export async function postComment(
     beforeCommitId: string;
     afterCommitId: string;
     content: string;
+    location?: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    };
   },
 ): Promise<Comment> {
   const command = new PostCommentForPullRequestCommand({
@@ -188,6 +193,13 @@ export async function postComment(
     beforeCommitId: params.beforeCommitId,
     afterCommitId: params.afterCommitId,
     content: params.content,
+    location: params.location
+      ? {
+          filePath: params.location.filePath,
+          filePosition: params.location.filePosition,
+          relativeFileVersion: params.location.relativeFileVersion,
+        }
+      : undefined,
   });
   const response = await client.send(command);
   return response.comment!;

@@ -8,6 +8,7 @@ vi.mock("./services/codecommit.js", () => ({
   getPullRequestDetail: vi.fn(),
   getBlobContent: vi.fn(),
   postComment: vi.fn(),
+  getComments: vi.fn(),
   getApprovalStates: vi.fn(),
   evaluateApprovalRules: vi.fn(),
   updateApprovalState: vi.fn(),
@@ -18,6 +19,7 @@ import {
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
+  getComments,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
@@ -34,6 +36,7 @@ describe("App", () => {
     vi.mocked(getPullRequestDetail).mockReset();
     vi.mocked(getBlobContent).mockReset();
     vi.mocked(postComment).mockReset();
+    vi.mocked(getComments).mockReset();
     vi.mocked(getApprovalStates).mockReset();
     vi.mocked(evaluateApprovalRules).mockReset();
     vi.mocked(updateApprovalState).mockReset();
@@ -1690,6 +1693,102 @@ describe("App", () => {
     stdin.write("y");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("raw string error");
+    });
+  });
+
+  // v0.4: Inline comment integration tests
+  it("posts inline comment successfully and reloads comments", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockResolvedValueOnce("const timeout = 10000;");
+    vi.mocked(postComment).mockResolvedValue({
+      commentId: "c1",
+      content: "Fix this!",
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Move cursor to a diff line, wait for render, then press C
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*const timeout = 3000/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Mock reload after post
+    vi.mocked(getComments).mockResolvedValue([
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER",
+        },
+        comments: [
+          {
+            commentId: "c1",
+            content: "Fix this!",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+          },
+        ],
+      },
+    ]);
+
+    stdin.write("Fix this!");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(postComment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          content: "Fix this!",
+          location: expect.objectContaining({
+            filePath: "src/auth.ts",
+          }),
+        }),
+      );
     });
   });
 });

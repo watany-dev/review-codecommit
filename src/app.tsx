@@ -53,6 +53,9 @@ export function App({ client, initialRepo }: AppProps) {
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
 
+  const [isPostingInlineComment, setIsPostingInlineComment] = useState(false);
+  const [inlineCommentError, setInlineCommentError] = useState<string | null>(null);
+
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
   const [isApproving, setIsApproving] = useState(false);
@@ -178,6 +181,37 @@ export function App({ client, initialRepo }: AppProps) {
     setCommentThreads(threads);
   }
 
+  async function handlePostInlineComment(
+    content: string,
+    location: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    },
+  ) {
+    if (!prDetail) return;
+    const target = prDetail.pullRequestTargets?.[0];
+    if (!target?.destinationCommit || !target?.sourceCommit) return;
+
+    setIsPostingInlineComment(true);
+    setInlineCommentError(null);
+    try {
+      await postComment(client, {
+        pullRequestId: prDetail.pullRequestId!,
+        repositoryName: selectedRepo,
+        beforeCommitId: target.destinationCommit,
+        afterCommitId: target.sourceCommit,
+        content,
+        location,
+      });
+      await reloadComments(prDetail.pullRequestId!);
+    } catch (err) {
+      setInlineCommentError(formatCommentError(err));
+    } finally {
+      setIsPostingInlineComment(false);
+    }
+  }
+
   async function handleApprove() {
     if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
 
@@ -295,6 +329,10 @@ export function App({ client, initialRepo }: AppProps) {
           isPostingComment={isPostingComment}
           commentError={commentError}
           onClearCommentError={() => setCommentError(null)}
+          onPostInlineComment={handlePostInlineComment}
+          isPostingInlineComment={isPostingInlineComment}
+          inlineCommentError={inlineCommentError}
+          onClearInlineCommentError={() => setInlineCommentError(null)}
           approvals={approvals}
           approvalEvaluation={approvalEvaluation}
           onApprove={handleApprove}
