@@ -14,12 +14,15 @@ import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
   type CommentThread,
+  type CommitInfo,
   type ConflictSummary,
   closePullRequest,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
   getComments,
+  getCommitDifferences,
+  getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
@@ -74,6 +77,13 @@ export function App({ client, initialRepo }: AppProps) {
   const [mergeError, setMergeError] = useState<string | null>(null);
   const [isClosingPR, setIsClosingPR] = useState(false);
   const [closePRError, setClosePRError] = useState<string | null>(null);
+
+  const [commits, setCommits] = useState<CommitInfo[]>([]);
+  const [commitDifferences, setCommitDifferences] = useState<Difference[]>([]);
+  const [commitDiffTexts, setCommitDiffTexts] = useState<
+    Map<string, { before: string; after: string }>
+  >(new Map());
+  const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
 
   /**
    * Wrapper for async operations with automatic loading/error state management.
@@ -152,6 +162,18 @@ export function App({ client, initialRepo }: AppProps) {
         texts.set(result.key, { before: result.before, after: result.after });
       }
       setDiffTexts(texts);
+
+      // v0.7: コミット一覧を取得
+      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
+      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
+      if (sourceCommit && mergeBase) {
+        const commitList = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        setCommits(commitList);
+      } else {
+        setCommits([]);
+      }
+      setCommitDifferences([]);
+      setCommitDiffTexts(new Map());
     });
   }
 
@@ -352,6 +374,40 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function handleLoadCommitDiff(commitIndex: number) {
+    const commit = commits[commitIndex];
+    if (!commit || commit.parentIds.length === 0) return;
+
+    setIsLoadingCommitDiff(true);
+    try {
+      const parentId = commit.parentIds[0]!;
+      const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
+      setCommitDifferences(diffs);
+
+      const blobFetches = diffs.map(async (diff) => {
+        const beforeBlobId = diff.beforeBlob?.blobId;
+        const afterBlobId = diff.afterBlob?.blobId;
+        const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
+
+        const [before, after] = await Promise.all([
+          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
+          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
+        ]);
+
+        return { key, before, after };
+      });
+
+      const blobResults = await Promise.all(blobFetches);
+      const texts = new Map<string, { before: string; after: string }>();
+      for (const result of blobResults) {
+        texts.set(result.key, { before: result.before, after: result.after });
+      }
+      setCommitDiffTexts(texts);
+    } finally {
+      setIsLoadingCommitDiff(false);
+    }
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -446,6 +502,11 @@ export function App({ client, initialRepo }: AppProps) {
           isClosingPR={isClosingPR}
           closePRError={closePRError}
           onClearClosePRError={() => setClosePRError(null)}
+          commits={commits}
+          commitDifferences={commitDifferences}
+          commitDiffTexts={commitDiffTexts}
+          isLoadingCommitDiff={isLoadingCommitDiff}
+          onLoadCommitDiff={handleLoadCommitDiff}
         />
       );
   }

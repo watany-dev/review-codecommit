@@ -16,6 +16,8 @@ vi.mock("./services/codecommit.js", () => ({
   mergePullRequest: vi.fn(),
   getMergeConflicts: vi.fn(),
   closePullRequest: vi.fn(),
+  getCommitsForPR: vi.fn(),
+  getCommitDifferences: vi.fn(),
 }));
 
 import { App } from "./app.js";
@@ -25,6 +27,8 @@ import {
   getApprovalStates,
   getBlobContent,
   getComments,
+  getCommitDifferences,
+  getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
@@ -52,6 +56,11 @@ describe("App", () => {
     vi.mocked(mergePullRequest).mockReset();
     vi.mocked(getMergeConflicts).mockReset();
     vi.mocked(closePullRequest).mockReset();
+    vi.mocked(getCommitsForPR).mockReset();
+    vi.mocked(getCommitDifferences).mockReset();
+    // Default: no commits
+    vi.mocked(getCommitsForPR).mockResolvedValue([]);
+    vi.mocked(getCommitDifferences).mockResolvedValue([]);
     // Default: no approvals, no rules
     vi.mocked(getApprovalStates).mockResolvedValue([]);
     vi.mocked(evaluateApprovalRules).mockResolvedValue(null);
@@ -3079,6 +3088,161 @@ describe("App", () => {
     stdin.write("y");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Access denied.");
+    });
+  });
+
+  it("fetches commits when loading PR detail with mergeBase", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockResolvedValue([
+      {
+        commitId: "src123",
+        shortId: "src1234",
+        message: "Fix bug",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["base789"],
+      },
+    ]);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    expect(lastFrame()).toContain("[All changes]");
+    expect(lastFrame()).toContain("Commits (1)");
+  });
+
+  it("does not show commits when mergeBase is missing", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    expect(getCommitsForPR).not.toHaveBeenCalled();
+    expect(lastFrame()).not.toContain("[All changes]");
+  });
+
+  it("loads commit diff when switching to commit view", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockResolvedValue([
+      {
+        commitId: "src123",
+        shortId: "src1234",
+        message: "Fix bug",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["base789"],
+      },
+    ]);
+    vi.mocked(getCommitDifferences).mockResolvedValue([
+      {
+        beforeBlob: { blobId: "cb1", path: "src/auth.ts" },
+        afterBlob: { blobId: "cb2", path: "src/auth.ts" },
+      },
+    ]);
+    vi.mocked(getBlobContent).mockResolvedValue("content");
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("\t"); // switch to commit view
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/1]");
+    });
+    await vi.waitFor(() => {
+      expect(getCommitDifferences).toHaveBeenCalledWith(
+        mockClient,
+        "my-service",
+        "base789",
+        "src123",
+      );
     });
   });
 });
