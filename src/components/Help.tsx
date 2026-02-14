@@ -32,6 +32,8 @@ export function Help({ onClose }: Props) {
         <Text> o Toggle thread fold (PR Detail)</Text>
         <Text> a Approve PR (PR Detail)</Text>
         <Text> r Revoke approval (PR Detail)</Text>
+        <Text> m Merge PR (PR Detail)</Text>
+        <Text> x Close PR without merge (PR Detail)</Text>
         <Text> ? Toggle this help</Text>
       </Box>
       <Box marginTop={1}>
