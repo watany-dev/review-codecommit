@@ -253,7 +253,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
     } catch (err) {
-      setApprovalError(formatApprovalError(err));
+      setApprovalError(formatApprovalError(err, "approve"));
     } finally {
       setIsApproving(false);
     }
@@ -272,7 +272,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
     } catch (err) {
-      setApprovalError(formatApprovalError(err));
+      setApprovalError(formatApprovalError(err, "revoke"));
     } finally {
       setIsApproving(false);
     }
@@ -384,7 +384,11 @@ export function App({ client, initialRepo }: AppProps) {
  * @param context - Optional context ('comment' or 'approval' for specific errors)
  * @returns User-friendly error message
  */
-function formatErrorMessage(err: unknown, context?: "comment" | "reply" | "approval"): string {
+function formatErrorMessage(
+  err: unknown,
+  context?: "comment" | "reply" | "approval",
+  approvalAction?: "approve" | "revoke",
+): string {
   if (!(err instanceof Error)) {
     return context ? String(err) : "An unexpected error occurred.";
   }
@@ -429,7 +433,9 @@ function formatErrorMessage(err: unknown, context?: "comment" | "reply" | "appro
       return "Invalid revision. The PR may have been updated. Go back and reopen.";
     }
     if (name === "PullRequestCannotBeApprovedByAuthorException") {
-      return "Cannot approve your own pull request.";
+      return approvalAction === "revoke"
+        ? "Cannot revoke approval on your own pull request."
+        : "Cannot approve your own pull request.";
     }
     if (name === "PullRequestAlreadyClosedException") {
       return "Pull request is already closed.";
@@ -480,8 +486,8 @@ function formatCommentError(err: unknown): string {
   return formatErrorMessage(err, "comment");
 }
 
-function formatApprovalError(err: unknown): string {
-  return formatErrorMessage(err, "approval");
+function formatApprovalError(err: unknown, action: "approve" | "revoke"): string {
+  return formatErrorMessage(err, "approval", action);
 }
 
 function formatError(err: unknown): string {
