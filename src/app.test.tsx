@@ -2400,11 +2400,6 @@ describe("App", () => {
       expect(lastFrame()).toContain("(y/n)");
     });
 
-    // Mock PR list reload after merge
-    vi.mocked(listPullRequests).mockResolvedValue({
-      pullRequests: [],
-    });
-
     stdin.write("y");
     await vi.waitFor(() => {
       expect(mergePullRequest).toHaveBeenCalledWith(
@@ -2627,11 +2622,6 @@ describe("App", () => {
     stdin.write("x");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Close this pull request without merging?");
-    });
-
-    // Mock PR list reload after close
-    vi.mocked(listPullRequests).mockResolvedValue({
-      pullRequests: [],
     });
 
     stdin.write("y");
@@ -3044,7 +3034,6 @@ describe("App", () => {
     // getMergeConflicts should NOT have been called since commits are missing
     expect(getMergeConflicts).not.toHaveBeenCalled();
 
-    vi.mocked(listPullRequests).mockResolvedValue({ pullRequests: [] });
     stdin.write("y");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Open Pull Requests");
