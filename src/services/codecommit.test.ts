@@ -594,6 +594,106 @@ describe("getComments", () => {
     expect(callInput.afterCommitId).toBeUndefined();
     expect(callInput.beforeCommitId).toBeUndefined();
   });
+
+  it("sorts comments so root comment comes before replies", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [
+            {
+              commentId: "reply-1",
+              inReplyTo: "root-1",
+              content: "This is a reply",
+              authorArn: "arn:aws:iam::123456789012:user/bob",
+            },
+            {
+              commentId: "root-1",
+              content: "This is the root comment",
+              authorArn: "arn:aws:iam::123456789012:user/alice",
+            },
+          ],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].comments[0].commentId).toBe("root-1");
+    expect(threads[0].comments[0].inReplyTo).toBeUndefined();
+    expect(threads[0].comments[1].commentId).toBe("reply-1");
+    expect(threads[0].comments[1].inReplyTo).toBe("root-1");
+  });
+
+  it("sorts replies by creationDate within a thread", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [
+            {
+              commentId: "reply-2",
+              inReplyTo: "root-1",
+              content: "Second reply",
+              creationDate: new Date("2026-02-14T12:00:00Z"),
+            },
+            {
+              commentId: "root-1",
+              content: "Root",
+              creationDate: new Date("2026-02-14T10:00:00Z"),
+            },
+            {
+              commentId: "reply-1",
+              inReplyTo: "root-1",
+              content: "First reply",
+              creationDate: new Date("2026-02-14T11:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads[0].comments[0].commentId).toBe("root-1");
+    expect(threads[0].comments[1].commentId).toBe("reply-1");
+    expect(threads[0].comments[2].commentId).toBe("reply-2");
+  });
+
+  it("handles replies with missing creationDate during sort", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [
+            {
+              commentId: "reply-2",
+              inReplyTo: "root-1",
+              content: "Has date",
+              creationDate: new Date("2026-02-14T12:00:00Z"),
+            },
+            {
+              commentId: "root-1",
+              content: "Root",
+            },
+            {
+              commentId: "reply-1",
+              inReplyTo: "root-1",
+              content: "No date",
+            },
+            {
+              commentId: "reply-3",
+              inReplyTo: "root-1",
+              content: "Also no date",
+            },
+          ],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads[0].comments[0].commentId).toBe("root-1");
+    // Replies without creationDate (epoch 0) come before those with dates
+    expect(threads[0].comments[1].commentId).toBe("reply-1");
+    expect(threads[0].comments[2].commentId).toBe("reply-3");
+    expect(threads[0].comments[3].commentId).toBe("reply-2");
+  });
 });
 
 describe("postCommentReply", () => {

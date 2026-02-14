@@ -134,6 +134,20 @@ export async function getPullRequestDetail(
   return { pullRequest, differences, commentThreads };
 }
 
+function sortCommentsRootFirst(comments: Comment[]): Comment[] {
+  const root: Comment[] = [];
+  const replies: Comment[] = [];
+  for (const c of comments) {
+    if (c.inReplyTo) {
+      replies.push(c);
+    } else {
+      root.push(c);
+    }
+  }
+  replies.sort((a, b) => (a.creationDate?.getTime() ?? 0) - (b.creationDate?.getTime() ?? 0));
+  return [...root, ...replies];
+}
+
 async function fetchCommentThreads(
   client: CodeCommitClient,
   pullRequestId: string,
@@ -166,7 +180,7 @@ async function fetchCommentThreads(
       : null;
     commentThreads.push({
       location,
-      comments: thread.comments ?? [],
+      comments: sortCommentsRootFirst(thread.comments ?? []),
     });
   }
   return commentThreads;
