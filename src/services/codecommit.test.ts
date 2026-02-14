@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closePullRequest,
   createClient,
+  deleteComment,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
@@ -17,6 +18,7 @@ import {
   postComment,
   postCommentReply,
   updateApprovalState,
+  updateComment,
 } from "./codecommit.js";
 
 const mockSend = vi.fn();
@@ -1389,5 +1391,82 @@ describe("getCommitDifferences", () => {
       beforeCommitSpecifier: "parentABC",
       afterCommitSpecifier: "commitDEF",
     });
+  });
+});
+
+describe("updateComment", () => {
+  it("sends UpdateCommentCommand with correct parameters and returns updated comment", async () => {
+    const mockComment = {
+      commentId: "comment-1",
+      content: "Updated content",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockComment });
+
+    const result = await updateComment(mockClient, {
+      commentId: "comment-1",
+      content: "Updated content",
+    });
+
+    expect(result).toEqual(mockComment);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          commentId: "comment-1",
+          content: "Updated content",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("not your comment");
+    error.name = "CommentNotCreatedByCallerException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      updateComment(mockClient, {
+        commentId: "comment-1",
+        content: "New content",
+      }),
+    ).rejects.toThrow("not your comment");
+  });
+});
+
+describe("deleteComment", () => {
+  it("sends DeleteCommentContentCommand with correct parameters and returns deleted comment", async () => {
+    const mockComment = {
+      commentId: "comment-1",
+      content: "",
+      deleted: true,
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+    };
+    mockSend.mockResolvedValueOnce({ comment: mockComment });
+
+    const result = await deleteComment(mockClient, {
+      commentId: "comment-1",
+    });
+
+    expect(result).toEqual(mockComment);
+    expect(result.deleted).toBe(true);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          commentId: "comment-1",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("already deleted");
+    error.name = "CommentDeletedException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      deleteComment(mockClient, {
+        commentId: "comment-1",
+      }),
+    ).rejects.toThrow("already deleted");
   });
 });

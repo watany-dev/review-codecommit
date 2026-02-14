@@ -2,6 +2,7 @@ import {
   type Approval,
   CodeCommitClient,
   type Comment,
+  DeleteCommentContentCommand,
   type Difference,
   EvaluatePullRequestApprovalRulesCommand,
   type Evaluation,
@@ -21,6 +22,7 @@ import {
   PostCommentReplyCommand,
   type PullRequest,
   type RepositoryNameIdPair,
+  UpdateCommentCommand,
   UpdatePullRequestApprovalStateCommand,
   UpdatePullRequestStatusCommand,
 } from "@aws-sdk/client-codecommit";
@@ -478,4 +480,32 @@ export async function getCommitDifferences(
   });
   const response = await client.send(command);
   return response.differences ?? [];
+}
+
+export async function updateComment(
+  client: CodeCommitClient,
+  params: {
+    commentId: string;
+    content: string;
+  },
+): Promise<Comment> {
+  const command = new UpdateCommentCommand({
+    commentId: params.commentId,
+    content: params.content,
+  });
+  const response = await client.send(command);
+  return response.comment!;
+}
+
+export async function deleteComment(
+  client: CodeCommitClient,
+  params: {
+    commentId: string;
+  },
+): Promise<Comment> {
+  const command = new DeleteCommentContentCommand({
+    commentId: params.commentId,
+  });
+  const response = await client.send(command);
+  return response.comment!;
 }
