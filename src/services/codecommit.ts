@@ -77,10 +77,11 @@ export async function listPullRequests(
   client: CodeCommitClient,
   repositoryName: string,
   nextToken?: string,
+  pullRequestStatus?: "OPEN" | "CLOSED",
 ): Promise<{ pullRequests: PullRequestSummary[]; nextToken?: string }> {
   const listCommand = new ListPullRequestsCommand({
     repositoryName,
-    pullRequestStatus: "OPEN",
+    pullRequestStatus: pullRequestStatus ?? "OPEN",
     maxResults: 25,
     nextToken,
   });

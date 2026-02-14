@@ -109,6 +109,45 @@ describe("listPullRequests", () => {
     expect(result.pullRequests[0].status).toBe("MERGED");
   });
 
+  it("passes pullRequestStatus OPEN to API by default", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("OPEN");
+  });
+
+  it("passes pullRequestStatus CLOSED to API when specified", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service", undefined, "CLOSED");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("CLOSED");
+  });
+
+  it("passes pullRequestStatus OPEN to API when specified", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service", undefined, "OPEN");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("OPEN");
+  });
+
+  it("returns nextToken when API provides one", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: [],
+      nextToken: "next-page-token",
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.nextToken).toBe("next-page-token");
+  });
+
+  it("returns no nextToken on last page", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: [],
+      nextToken: undefined,
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.nextToken).toBeUndefined();
+  });
+
   it("returns CLOSED status when mergeMetadata.isMerged is false", async () => {
     mockSend.mockResolvedValueOnce({
       pullRequestIds: ["35"],
