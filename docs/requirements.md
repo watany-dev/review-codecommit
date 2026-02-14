@@ -87,10 +87,20 @@ npx review-codecommit --region <region>      # リージョン指定
 | 画面遷移 | マージ/クローズ成功後、PR 一覧へ自動遷移 |
 | エラーハンドリング | コンフリクト、承認ルール未充足、並行更新、権限不足等のエラー対応 |
 
+## 機能スコープ (v0.7) ✅
+
+| 機能 | 内容 |
+|------|------|
+| コミット一覧取得 | PR のコミット一覧を親コミット辿りで取得（`GetCommitCommand`） |
+| ビュー切り替え | Tab / Shift+Tab で「All changes」と各コミットの diff を切り替え（循環ナビゲーション） |
+| コミット diff 表示 | コミット単位の差分を既存の `computeSimpleDiff` で表示 |
+| コミットメタデータ表示 | タブヘッダーにコミットハッシュ（短縮）、メッセージ、著者、日時を表示 |
+| 遅延ロード | コミット diff は選択時にオンデマンドで取得（ローディング表示付き） |
+
 ### 将来対応
 
-- コメント編集・削除 → v0.7
-- フィルタ・検索 → v0.8
+- コメント編集・削除 → v0.8
+- フィルタ・検索 → v0.9
 
 詳細は [docs/roadmap.md](roadmap.md) を参照。
 
@@ -112,6 +122,8 @@ npx review-codecommit --region <region>      # リージョン指定
 | `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
 | `m` | マージ操作を開始（戦略選択） | PR詳細画面 |
 | `x` | PR をクローズ（確認プロンプト表示） | PR詳細画面 |
+| `Tab` | 次のビューへ切り替え（All changes → Commit 1 → ... → All changes） | PR詳細画面 |
+| `Shift+Tab` | 前のビューへ切り替え | PR詳細画面 |
 
 ## 画面フロー・遷移
 
@@ -187,7 +199,7 @@ npx review-codecommit --region <region>      # リージョン指定
 │                                              │
 │  ↑↓ cursor  c comment  C inline  R reply     │
 │  o fold  a approve  r revoke  m merge        │
-│  x close  q back  ? help                     │
+│  Tab/S-Tab commits  x close  q back  ? help  │
 └──────────────────────────────────────────────┘
 ```
 

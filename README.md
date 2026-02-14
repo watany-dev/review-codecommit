@@ -24,6 +24,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 - Merge PRs with strategy selection (Fast-forward / Squash / Three-way) (`m` key)
 - Pre-merge conflict detection and display
 - Close PRs without merging (`x` key)
+- Commit-level review with Tab/Shift+Tab navigation between "All changes" and individual commits
 - Cursor-based diff navigation with `>` marker
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
@@ -32,7 +33,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations, `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
+- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
 
 ## Installation
 
@@ -78,6 +79,8 @@ review-codecommit --region <region>
 | `r` | Revoke approval (with confirmation) | PR Detail |
 | `m` | Merge PR (strategy selection) | PR Detail |
 | `x` | Close PR without merge | PR Detail |
+| `Tab` | Next view (All changes / Commits) | PR Detail |
+| `Shift+Tab` | Previous view | PR Detail |
 | `Ctrl+C` | Exit immediately | All |
 | `?` | Toggle help | All |
 
@@ -138,8 +141,9 @@ bun run build
 | v0.4 | Inline comments (file-line specific) | ✅ Released |
 | v0.5 | Comment replies (threads) | ✅ Released |
 | v0.6 | Merge operations | ✅ Released |
-| v0.7 | Comment edit / delete | Planned |
-| v0.8 | PR status filter and search | Planned |
+| v0.7 | Commit-level review | ✅ Released |
+| v0.8 | Comment edit / delete | Planned |
+| v0.9 | PR status filter and search | Planned |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 

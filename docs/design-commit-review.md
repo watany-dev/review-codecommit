@@ -1,5 +1,9 @@
 # コミット単位レビュー 設計書（v0.7）
 
+> **✅ 実装完了** (2026-02-14)
+>
+> PR 詳細画面に Tab/Shift+Tab によるビュー切り替え（All changes ↔ 各コミット）を実装。サービス層（getCommit, getCommitsForPR, getCommitDifferences）、PullRequestDetail UI（viewIndex, タブヘッダー、コミット diff 表示）、App 統合（状態管理、diff ロード）、Help 画面更新を含む。
+
 ## 概要
 
 PR 詳細画面に「All changes」と「Commits」のタブ切り替え機能を追加し、コミット単位で差分を確認できるようにする。大きな PR でも各コミットの意図を追いやすくなり、レビュー品質が向上する。v0.6 までで閲覧・コメント・承認・マージの全ワークフローが揃ったが、大きな PR を効率的にレビューするためにはコミット単位の差分確認が不可欠であった。
