@@ -23,24 +23,10 @@ beforeEach(() => {
 });
 
 describe("createClient", () => {
-  it("creates client without options", () => {
-    const client = createClient({});
-    expect(client).toBeDefined();
-  });
-
-  it("creates client with profile", () => {
-    const client = createClient({ profile: "dev" });
-    expect(client).toBeDefined();
-  });
-
-  it("creates client with region", () => {
-    const client = createClient({ region: "us-east-1" });
-    expect(client).toBeDefined();
-  });
-
-  it("creates client with all options", () => {
-    const client = createClient({ profile: "prod", region: "ap-northeast-1" });
-    expect(client).toBeDefined();
+  it("returns a CodeCommitClient instance with provided config", () => {
+    const client = createClient({ profile: "dev", region: "ap-northeast-1" });
+    expect(client).toBeInstanceOf(Object);
+    expect(client.send).toBeDefined();
   });
 });
 

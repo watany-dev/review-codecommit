@@ -43,20 +43,6 @@ describe("RepositoryList", () => {
     expect(lastFrame()).toContain("> my-service");
   });
 
-  it("handles j key for cursor down", () => {
-    const { stdin } = render(
-      <RepositoryList repositories={repos} onSelect={vi.fn()} onQuit={vi.fn()} onHelp={vi.fn()} />,
-    );
-    stdin.write("j");
-  });
-
-  it("handles k key for cursor up", () => {
-    const { stdin } = render(
-      <RepositoryList repositories={repos} onSelect={vi.fn()} onQuit={vi.fn()} onHelp={vi.fn()} />,
-    );
-    stdin.write("k");
-  });
-
   it("calls onSelect on enter", () => {
     const onSelect = vi.fn();
     const { stdin } = render(

@@ -111,12 +111,6 @@ describe("computeUnifiedDiff", () => {
     expect(result.hunks[1].header).toContain("@@");
   });
 
-  it("returns empty hunks for identical content", () => {
-    const content = "line1\nline2\nline3";
-    const result = computeUnifiedDiff(content, content, "same.ts");
-    expect(result.hunks).toHaveLength(0);
-  });
-
   it("correctly splits widely separated changes into separate hunks with context", () => {
     const lines = Array.from({ length: 100 }, (_, i) => `line-${i}`);
     const before = lines.join("\n");

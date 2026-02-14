@@ -32,8 +32,8 @@ describe("useListNavigation", () => {
     expect(lastFrame()).toBe("cursor: 0");
   });
 
-  it("handles j key", () => {
-    const { stdin } = render(
+  it("moves cursor down with j key", async () => {
+    const { stdin, lastFrame } = render(
       <TestComponent
         items={["a", "b", "c"]}
         onSelect={vi.fn()}
@@ -42,10 +42,44 @@ describe("useListNavigation", () => {
       />,
     );
     stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBe("cursor: 1");
+    });
   });
 
-  it("handles k key", () => {
-    const { stdin } = render(
+  it("moves cursor up with k key", async () => {
+    const { stdin, lastFrame } = render(
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={vi.fn()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
+    );
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBe("cursor: 1");
+    });
+    stdin.write("k");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBe("cursor: 0");
+    });
+  });
+
+  it("does not move cursor below last item", async () => {
+    const { stdin, lastFrame } = render(
+      <TestComponent items={["a", "b"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBe("cursor: 1");
+    });
+  });
+
+  it("does not move cursor above first item", async () => {
+    const { stdin, lastFrame } = render(
       <TestComponent
         items={["a", "b", "c"]}
         onSelect={vi.fn()}
@@ -54,6 +88,9 @@ describe("useListNavigation", () => {
       />,
     );
     stdin.write("k");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBe("cursor: 0");
+    });
   });
 
   it("calls onBack when q is pressed", () => {
