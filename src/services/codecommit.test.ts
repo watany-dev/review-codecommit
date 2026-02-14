@@ -352,9 +352,7 @@ describe("updateApprovalState", () => {
 describe("getApprovalStates", () => {
   it("returns approval list when approvals exist", async () => {
     mockSend.mockResolvedValueOnce({
-      approvals: [
-        { userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" },
-      ],
+      approvals: [{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }],
     });
     const result = await getApprovalStates(mockClient, {
       pullRequestId: "42",

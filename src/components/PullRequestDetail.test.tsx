@@ -561,9 +561,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
-        approvals={[
-          { userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" },
-        ]}
+        approvals={[{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
         onRevoke={vi.fn()}
@@ -837,9 +835,7 @@ describe("PullRequestDetail", () => {
         isPostingComment={false}
         commentError={null}
         onClearCommentError={vi.fn()}
-        approvals={[
-          { userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" },
-        ]}
+        approvals={[{ userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" }]}
         approvalEvaluation={null}
         onApprove={vi.fn()}
         onRevoke={vi.fn()}

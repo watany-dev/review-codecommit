@@ -59,11 +59,7 @@ describe("ConfirmPrompt", () => {
   it("calls onClearError on any key when error is shown", () => {
     const onClearError = vi.fn();
     const { stdin } = render(
-      <ConfirmPrompt
-        {...defaultProps}
-        error="Some error"
-        onClearError={onClearError}
-      />,
+      <ConfirmPrompt {...defaultProps} error="Some error" onClearError={onClearError} />,
     );
     stdin.write("x");
     expect(onClearError).toHaveBeenCalled();

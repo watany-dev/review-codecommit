@@ -1,21 +1,21 @@
 import {
+  type Approval,
   CodeCommitClient,
   type Comment,
   type Difference,
-  type Approval,
+  EvaluatePullRequestApprovalRulesCommand,
   type Evaluation,
   GetBlobCommand,
   GetCommentsForPullRequestCommand,
   GetDifferencesCommand,
+  GetPullRequestApprovalStatesCommand,
   GetPullRequestCommand,
   ListPullRequestsCommand,
   ListRepositoriesCommand,
   PostCommentForPullRequestCommand,
-  UpdatePullRequestApprovalStateCommand,
-  GetPullRequestApprovalStatesCommand,
-  EvaluatePullRequestApprovalRulesCommand,
   type PullRequest,
   type RepositoryNameIdPair,
+  UpdatePullRequestApprovalStateCommand,
 } from "@aws-sdk/client-codecommit";
 
 export interface CodeCommitConfig {

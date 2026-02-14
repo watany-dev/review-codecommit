@@ -185,9 +185,7 @@ export function PullRequestDetail({
       {approvalAction && (
         <ConfirmPrompt
           message={
-            approvalAction === "approve"
-              ? "Approve this pull request?"
-              : "Revoke your approval?"
+            approvalAction === "approve" ? "Approve this pull request?" : "Revoke your approval?"
           }
           onConfirm={approvalAction === "approve" ? onApprove : onRevoke}
           onCancel={() => {
@@ -195,9 +193,7 @@ export function PullRequestDetail({
             onClearApprovalError();
           }}
           isProcessing={isApproving}
-          processingMessage={
-            approvalAction === "approve" ? "Approving..." : "Revoking approval..."
-          }
+          processingMessage={approvalAction === "approve" ? "Approving..." : "Revoking approval..."}
           error={approvalError}
           onClearError={() => {
             onClearApprovalError();
