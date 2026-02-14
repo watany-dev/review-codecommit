@@ -13,17 +13,23 @@ vi.mock("./services/codecommit.js", () => ({
   getApprovalStates: vi.fn(),
   evaluateApprovalRules: vi.fn(),
   updateApprovalState: vi.fn(),
+  mergePullRequest: vi.fn(),
+  getMergeConflicts: vi.fn(),
+  closePullRequest: vi.fn(),
 }));
 
 import { App } from "./app.js";
 import {
+  closePullRequest,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
   getComments,
+  getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  mergePullRequest,
   postComment,
   postCommentReply,
   updateApprovalState,
@@ -43,9 +49,18 @@ describe("App", () => {
     vi.mocked(getApprovalStates).mockReset();
     vi.mocked(evaluateApprovalRules).mockReset();
     vi.mocked(updateApprovalState).mockReset();
+    vi.mocked(mergePullRequest).mockReset();
+    vi.mocked(getMergeConflicts).mockReset();
+    vi.mocked(closePullRequest).mockReset();
     // Default: no approvals, no rules
     vi.mocked(getApprovalStates).mockResolvedValue([]);
     vi.mocked(evaluateApprovalRules).mockResolvedValue(null);
+    // Default: no conflicts
+    vi.mocked(getMergeConflicts).mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
     vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
   });
 
@@ -360,6 +375,13 @@ describe("App", () => {
     stdin.write("?");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Key Bindings");
+    });
+
+    // Close help by pressing ? again
+    stdin.write("?");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("my-service");
+      expect(lastFrame()).not.toContain("Key Bindings");
     });
   });
 
@@ -2179,6 +2201,79 @@ describe("App", () => {
     });
   });
 
+  it("shows reply empty error for CommentContentRequiredException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+      nextToken: undefined,
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
+        creationDate: new Date("2026-02-13T10:00:00Z"),
+        revisionId: "rev-1",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+            destinationCommit: "abc",
+            sourceCommit: "def",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Fix it",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getBlobContent).mockResolvedValue("");
+
+    const emptyError = new Error("empty");
+    emptyError.name = "CommentContentRequiredException";
+    vi.mocked(postCommentReply).mockRejectedValue(emptyError);
+
+    const { stdin, lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Fix it/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("reply");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Reply cannot be empty.");
+    });
+  });
+
   it("shows invalid comment ID error", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
@@ -2249,6 +2344,752 @@ describe("App", () => {
     await vi.waitFor(() => {
       stdin.write("\r");
       expect(lastFrame()).toContain("Invalid comment ID format.");
+    });
+  });
+
+  // v0.6: Merge integration tests
+  it("merges PR and returns to PR list", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(mergePullRequest).mockResolvedValue({
+      pullRequestId: "42",
+      pullRequestStatus: "CLOSED",
+    } as any);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+
+    stdin.write("\r"); // select fast-forward
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+
+    // Mock PR list reload after merge
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [],
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(mergePullRequest).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          pullRequestId: "42",
+          strategy: "fast-forward",
+        }),
+      );
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Open Pull Requests");
+    });
+  });
+
+  it("shows merge error for ManualMergeRequiredException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("conflicts");
+    err.name = "ManualMergeRequiredException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Conflicts detected. Cannot auto-merge.");
+    });
+  });
+
+  it("shows merge error for PullRequestApprovalRulesNotSatisfiedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("rules not met");
+    err.name = "PullRequestApprovalRulesNotSatisfiedException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approval rules not satisfied.");
+    });
+  });
+
+  it("shows merge error for TipOfSourceReferenceIsDifferentException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("branch updated");
+    err.name = "TipOfSourceReferenceIsDifferentException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Source branch has been updated.");
+    });
+  });
+
+  // v0.6: Close PR integration tests
+  it("closes PR and returns to PR list", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(closePullRequest).mockResolvedValue({
+      pullRequestId: "42",
+      pullRequestStatus: "CLOSED",
+    } as any);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+
+    // Mock PR list reload after close
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [],
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(closePullRequest).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ pullRequestId: "42" }),
+      );
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Open Pull Requests");
+    });
+  });
+
+  it("shows close error for PullRequestAlreadyClosedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("already closed");
+    err.name = "PullRequestAlreadyClosedException";
+    vi.mocked(closePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request is already closed.");
+    });
+  });
+
+  it("shows merge error for ConcurrentReferenceUpdateException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("concurrent");
+    err.name = "ConcurrentReferenceUpdateException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Branch was updated concurrently.");
+    });
+  });
+
+  it("shows merge error for PullRequestAlreadyClosedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("closed");
+    err.name = "PullRequestAlreadyClosedException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request is already closed.");
+    });
+  });
+
+  it("shows merge error for EncryptionKeyAccessDeniedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("key denied");
+    err.name = "EncryptionKeyAccessDeniedException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Encryption key access denied.");
+    });
+  });
+
+  it("shows merge error for TipsDivergenceExceededException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("diverged");
+    err.name = "TipsDivergenceExceededException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Branches have diverged too much.");
+    });
+  });
+
+  it("shows merge error for PullRequestDoesNotExistException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("not found");
+    err.name = "PullRequestDoesNotExistException";
+    vi.mocked(mergePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request not found.");
+    });
+  });
+
+  it("shows close error for PullRequestDoesNotExistException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("not found");
+    err.name = "PullRequestDoesNotExistException";
+    vi.mocked(closePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request not found.");
+    });
+  });
+
+  it("skips conflict check when PR target has no commit IDs", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(mergePullRequest).mockResolvedValue({
+      pullRequestId: "42",
+      pullRequestStatus: "CLOSED",
+    } as any);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r"); // select fast-forward
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    // getMergeConflicts should NOT have been called since commits are missing
+    expect(getMergeConflicts).not.toHaveBeenCalled();
+
+    vi.mocked(listPullRequests).mockResolvedValue({ pullRequests: [] });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Open Pull Requests");
+    });
+  });
+
+  it("shows close error for AccessDeniedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    const err = new Error("denied");
+    err.name = "AccessDeniedException";
+    vi.mocked(closePullRequest).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Access denied.");
     });
   });
 });

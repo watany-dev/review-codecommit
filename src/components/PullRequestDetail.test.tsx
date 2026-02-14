@@ -71,6 +71,20 @@ describe("PullRequestDetail", () => {
     onClearApprovalError: vi.fn(),
   };
 
+  const defaultMergeProps = {
+    onMerge: vi.fn(),
+    isMerging: false,
+    mergeError: null as string | null,
+    onClearMergeError: vi.fn(),
+    onCheckConflicts: vi
+      .fn()
+      .mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
+    onClosePR: vi.fn(),
+    isClosingPR: false,
+    closePRError: null as string | null,
+    onClearClosePRError: vi.fn(),
+  };
+
   it("renders PR title and ID", () => {
     const { lastFrame } = render(
       <PullRequestDetail
@@ -87,6 +101,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -110,6 +125,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -133,6 +149,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -156,6 +173,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("src/auth.ts");
@@ -177,6 +195,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -199,6 +218,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -222,6 +242,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).not.toContain("Comments");
@@ -251,6 +272,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("(no title)");
@@ -272,6 +294,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("(unknown file)");
@@ -300,6 +323,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("src/other.ts");
@@ -321,6 +345,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("cursor");
@@ -345,6 +370,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("q");
@@ -368,6 +394,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("?");
@@ -390,6 +417,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("c");
@@ -415,6 +443,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("c");
@@ -443,6 +472,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("c comment");
@@ -464,6 +494,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Simulate posting complete (isPostingComment: true -> false, no error)
@@ -482,6 +513,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Comment mode should be closed
@@ -505,6 +537,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Enter comment mode
@@ -529,6 +562,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("Posting comment...");
@@ -549,6 +583,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Error should be shown, comment mode still open
@@ -601,6 +636,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("Approvals:");
@@ -693,6 +729,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -715,6 +752,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("a");
@@ -739,6 +777,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("r");
@@ -764,6 +803,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("a");
@@ -791,6 +831,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("a approve");
@@ -813,6 +854,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Enter approve mode
@@ -894,6 +936,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Enter approve mode
@@ -1029,6 +1072,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("a");
@@ -1058,6 +1102,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("c");
@@ -1101,6 +1146,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -1138,6 +1184,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -1184,6 +1231,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -1209,6 +1257,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("> ");
@@ -1230,6 +1279,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -1254,6 +1304,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("k");
@@ -1279,6 +1330,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move cursor to a diff line (skip header and separator), wait for render
@@ -1311,6 +1363,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Cursor is on header line (index 0) — no filePath/lineNumber
@@ -1344,6 +1397,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move to add line (header=0, separator=1, context=2, add=3)
@@ -1384,6 +1438,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move to delete line (header=0, separator=1, context=2, delete=3)
@@ -1415,6 +1470,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -1450,6 +1506,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move to separator line (index 1)
@@ -1475,6 +1532,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move to diff line and open inline comment
@@ -1526,6 +1584,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("💬 taro: before-context comment");
@@ -1547,6 +1606,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -1578,6 +1638,7 @@ describe("PullRequestDetail", () => {
         onClearInlineCommentError={vi.fn()}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     await vi.waitFor(() => {
@@ -1603,6 +1664,7 @@ describe("PullRequestDetail", () => {
         onClearInlineCommentError={vi.fn()}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Should stay open with error shown
@@ -1634,6 +1696,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Navigate past all diff lines to comment section
@@ -1664,6 +1727,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -1685,6 +1749,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Move to diff line and wait for render before pressing C
@@ -1717,6 +1782,7 @@ describe("PullRequestDetail", () => {
         onClearInlineCommentError={vi.fn()}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -1741,6 +1807,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Inline comment mode should be closed
@@ -1871,6 +1938,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -1917,6 +1985,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -1958,6 +2027,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2020,6 +2090,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2057,6 +2128,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2098,6 +2170,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame()!;
@@ -2143,6 +2216,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame()!;
@@ -2193,6 +2267,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2237,6 +2312,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2288,6 +2364,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Initially folded
@@ -2352,6 +2429,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2405,6 +2483,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Navigate to comment (sep=0, comment-header=1, comment=2)
@@ -2435,6 +2514,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Cursor is on header line
@@ -2471,6 +2551,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -2516,6 +2597,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -2562,6 +2644,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -2593,6 +2676,7 @@ describe("PullRequestDetail", () => {
         replyError={null}
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2615,6 +2699,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2650,6 +2735,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     stdin.write("j");
@@ -2681,6 +2767,7 @@ describe("PullRequestDetail", () => {
         replyError={null}
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2702,6 +2789,7 @@ describe("PullRequestDetail", () => {
         replyError="Reply exceeds the 10,240 character limit."
         onClearReplyError={vi.fn()}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2726,6 +2814,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -2748,6 +2837,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     // Cursor is on header line (no threadIndex)
@@ -2791,6 +2881,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
     const output = lastFrame();
@@ -2826,6 +2917,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2859,6 +2951,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2883,6 +2976,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2904,6 +2998,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2927,6 +3022,7 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
@@ -2956,9 +3052,899 @@ describe("PullRequestDetail", () => {
         {...defaultInlineCommentProps}
         {...defaultReplyProps}
         {...defaultApprovalProps}
+        {...defaultMergeProps}
       />,
     );
 
     expect(lastFrame()).toContain("src/utils.ts");
+  });
+
+  // v0.6: Merge integration tests
+  it("shows merge strategy selector on m key", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+      expect(lastFrame()).toContain("Fast-forward");
+      expect(lastFrame()).toContain("Squash");
+      expect(lastFrame()).toContain("Three-way merge");
+    });
+  });
+
+  it("shows merge confirmation after strategy selection and conflict check", async () => {
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r"); // select fast-forward
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fast-forward");
+      expect(lastFrame()).toContain("(y/n)");
+    });
+  });
+
+  it("calls onMerge with selected strategy on confirm", async () => {
+    const onMerge = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onMerge={onMerge}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r"); // select fast-forward
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    expect(onMerge).toHaveBeenCalledWith("fast-forward");
+  });
+
+  it("shows conflict details when merge has conflicts", async () => {
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: false,
+      conflictCount: 2,
+      conflictFiles: ["src/auth.ts", "src/config.ts"],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r"); // select fast-forward
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot merge: 2 conflicting files");
+      expect(lastFrame()).toContain("src/auth.ts");
+      expect(lastFrame()).toContain("src/config.ts");
+      expect(lastFrame()).toContain("Resolve conflicts before merging.");
+    });
+  });
+
+  it("dismisses conflict display on key press", async () => {
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: false,
+      conflictCount: 1,
+      conflictFiles: ["src/auth.ts"],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot merge");
+    });
+    stdin.write(" "); // any key to dismiss
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Cannot merge");
+      expect(lastFrame()).toContain("m merge");
+    });
+  });
+
+  it("cancels merge strategy selection on Esc", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\u001B"); // Esc
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Select merge strategy:");
+      expect(lastFrame()).toContain("m merge");
+    });
+  });
+
+  it("shows checking for conflicts message", async () => {
+    let resolveConflictCheck: (value: any) => void;
+    const onCheckConflicts = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveConflictCheck = resolve;
+      }),
+    );
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Checking for conflicts...");
+    });
+    // Resolve to complete
+    resolveConflictCheck!({ mergeable: true, conflictCount: 0, conflictFiles: [] });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+  });
+
+  it("shows merge error on failure", async () => {
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        mergeError="Conflicts detected. Cannot auto-merge."
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Conflicts detected. Cannot auto-merge.");
+    });
+  });
+
+  it("selects squash strategy via j+Enter", async () => {
+    const onMerge = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onMerge={onMerge}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("j"); // move to Squash
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("> Squash");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("squash");
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    expect(onMerge).toHaveBeenCalledWith("squash");
+  });
+
+  it("selects three-way strategy via j+j+Enter", async () => {
+    const onMerge = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onMerge={onMerge}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("j");
+    stdin.write("j"); // move to Three-way
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("> Three-way merge");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("three-way merge");
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    expect(onMerge).toHaveBeenCalledWith("three-way");
+  });
+
+  // v0.6: Close PR tests
+  it("shows close confirmation on x key", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+  });
+
+  it("calls onClosePR on close confirmation", async () => {
+    const onClosePR = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onClosePR={onClosePR}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+    stdin.write("y");
+    expect(onClosePR).toHaveBeenCalled();
+  });
+
+  it("cancels close on n key", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Close this pull request without merging?");
+    });
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Close this pull request");
+      expect(lastFrame()).toContain("m merge");
+    });
+  });
+
+  it("shows close error on failure", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        closePRError="Pull request is already closed."
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Pull request is already closed.");
+    });
+  });
+
+  it("shows m merge and x close in footer bar", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    expect(lastFrame()).toContain("m merge");
+    expect(lastFrame()).toContain("x close");
+  });
+
+  it("shows merging indicator", async () => {
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        isMerging={true}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Merging...");
+    });
+  });
+
+  it("shows closing indicator", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        isClosingPR={true}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Closing...");
+    });
+  });
+
+  it("ignores m and x keys when in other modes", async () => {
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    // Enter comment mode
+    stdin.write("c");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("New Comment:");
+    });
+    // m and x should be ignored in comment mode (typing them)
+    // They will just be input text in the comment input, not trigger merge/close
+    expect(lastFrame()).not.toContain("Select merge strategy:");
+    expect(lastFrame()).not.toContain("Close this pull request");
+  });
+
+  // Coverage: exercise inline comment cancel callback
+  it("cancels inline comment on Esc", async () => {
+    const onClearInlineCommentError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        onClearInlineCommentError={onClearInlineCommentError}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    // Move cursor to an actual diff line (index 2 = context " line1")
+    stdin.write("j"); // move to separator (index 1)
+    stdin.write("j"); // move to context line (index 2)
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .* line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+    stdin.write("\u001B"); // Esc to cancel
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Inline comment on");
+    });
+  });
+
+  // Coverage: exercise reply cancel callback
+  it("cancels reply on Esc", async () => {
+    const onClearReplyError = vi.fn();
+    const threads = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "LGTM",
+          },
+        ],
+      },
+    ];
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        onClearReplyError={onClearReplyError}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    // Navigate to the comment (header, separator, 5 diff lines, separator, separator, comment-header, comment)
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("taro: LGTM");
+    });
+    // Press j 10 times to reach the comment line at index 10
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*taro: LGTM/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("\u001B"); // Esc to cancel
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Replying to");
+      expect(onClearReplyError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise close PR error clear callback
+  it("clears close error on dismiss", async () => {
+    const onClearClosePRError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        closePRError="Some error"
+        onClearClosePRError={onClearClosePRError}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Some error");
+    });
+    // Press enter or key to clear the error
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(onClearClosePRError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise approval error clear callback
+  it("clears approval error on dismiss", async () => {
+    const onClearApprovalError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        approvalError="Cannot approve own PR"
+        onClearApprovalError={onClearApprovalError}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot approve own PR");
+    });
+    stdin.write("\r"); // dismiss error
+    await vi.waitFor(() => {
+      expect(onClearApprovalError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise handleStrategySelect catch block
+  it("returns to normal when conflict check throws", async () => {
+    const onCheckConflicts = vi.fn().mockRejectedValue(new Error("network error"));
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    // After the error, merge should be cancelled and we're back to normal
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("m merge");
+      expect(lastFrame()).not.toContain("Select merge strategy:");
+      expect(lastFrame()).not.toContain("Checking for conflicts...");
+    });
+  });
+
+  // Coverage: exercise merge cancel callback (onCancel at confirm stage)
+  it("cancels merge at confirm stage on n key", async () => {
+    const onClearMergeError = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onClearMergeError={onClearMergeError}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("n"); // cancel merge
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("(y/n)");
+      expect(lastFrame()).toContain("m merge");
+      expect(onClearMergeError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise merge error clear callback
+  it("clears merge error on dismiss", async () => {
+    const onClearMergeError = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        mergeError="Merge failed"
+        onClearMergeError={onClearMergeError}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Merge failed");
+    });
+    stdin.write("\r"); // dismiss error
+    await vi.waitFor(() => {
+      expect(onClearMergeError).toHaveBeenCalled();
+    });
   });
 });

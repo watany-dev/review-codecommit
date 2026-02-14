@@ -24,6 +24,10 @@ describe("Help", () => {
     expect(output).toContain("Approve PR");
     expect(output).toContain("r");
     expect(output).toContain("Revoke approval");
+    expect(output).toContain("m");
+    expect(output).toContain("Merge PR");
+    expect(output).toContain("x");
+    expect(output).toContain("Close PR without merge");
   });
 
   it("renders help title", () => {

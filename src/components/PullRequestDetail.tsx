@@ -1,10 +1,11 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useState } from "react";
-import type { CommentThread } from "../services/codecommit.js";
+import type { CommentThread, ConflictSummary, MergeStrategy } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
+import { MergeStrategySelector } from "./MergeStrategySelector.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -39,6 +40,15 @@ interface Props {
   isApproving: boolean;
   approvalError: string | null;
   onClearApprovalError: () => void;
+  onMerge: (strategy: MergeStrategy) => void;
+  isMerging: boolean;
+  mergeError: string | null;
+  onClearMergeError: () => void;
+  onCheckConflicts: (strategy: MergeStrategy) => Promise<ConflictSummary>;
+  onClosePR: () => void;
+  isClosingPR: boolean;
+  closePRError: string | null;
+  onClearClosePRError: () => void;
 }
 
 export function PullRequestDetail({
@@ -67,6 +77,15 @@ export function PullRequestDetail({
   isApproving,
   approvalError,
   onClearApprovalError,
+  onMerge,
+  isMerging,
+  mergeError,
+  onClearMergeError,
+  onCheckConflicts,
+  onClosePR,
+  isClosingPR,
+  closePRError,
+  onClearClosePRError,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -87,6 +106,13 @@ export function PullRequestDetail({
   const [wasPostingReply, setWasPostingReply] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
+  const [mergeStep, setMergeStep] = useState<"strategy" | "confirm" | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<MergeStrategy>("fast-forward");
+  const [conflictSummary, setConflictSummary] = useState<ConflictSummary | null>(null);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [wasMerging, setWasMerging] = useState(false);
+  const [wasClosingPR, setWasClosingPR] = useState(false);
   const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
     const collapsed = new Set<number>();
     for (let i = 0; i < commentThreads.length; i++) {
@@ -143,6 +169,28 @@ export function PullRequestDetail({
     }
   }, [isApproving, approvalError]);
 
+  useEffect(() => {
+    if (isMerging) {
+      setWasMerging(true);
+    } else if (wasMerging && !mergeError) {
+      setMergeStep(null);
+      setWasMerging(false);
+    } else {
+      setWasMerging(false);
+    }
+  }, [isMerging, mergeError]);
+
+  useEffect(() => {
+    if (isClosingPR) {
+      setWasClosingPR(true);
+    } else if (wasClosingPR && !closePRError) {
+      setIsClosing(false);
+      setWasClosingPR(false);
+    } else {
+      setWasClosingPR(false);
+    }
+  }, [isClosingPR, closePRError]);
+
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
   const prId = pullRequest.pullRequestId ?? "";
@@ -157,8 +205,35 @@ export function PullRequestDetail({
     [differences, diffTexts, commentThreads, collapsedThreads],
   );
 
+  async function handleStrategySelect(strategy: MergeStrategy) {
+    setSelectedStrategy(strategy);
+    setIsCheckingConflicts(true);
+    setConflictSummary(null);
+
+    try {
+      const summary = await onCheckConflicts(strategy);
+      setConflictSummary(summary);
+      setIsCheckingConflicts(false);
+
+      if (summary.mergeable) {
+        setMergeStep("confirm");
+      }
+    } catch {
+      setIsCheckingConflicts(false);
+      setMergeStep(null);
+    }
+  }
+
   useInput((input, key) => {
-    if (isCommenting || isInlineCommenting || isReplying || approvalAction) return;
+    if (
+      isCommenting ||
+      isInlineCommenting ||
+      isReplying ||
+      approvalAction ||
+      mergeStep ||
+      isClosing
+    )
+      return;
 
     if (input === "q" || key.escape) {
       onBack();
@@ -221,10 +296,20 @@ export function PullRequestDetail({
       setApprovalAction("revoke");
       return;
     }
+    if (input === "m") {
+      setMergeStep("strategy");
+      return;
+    }
+    if (input === "x") {
+      setIsClosing(true);
+      return;
+    }
   });
 
   const visibleLineCount =
-    isCommenting || isInlineCommenting || isReplying || approvalAction ? 20 : 30;
+    isCommenting || isInlineCommenting || isReplying || approvalAction || mergeStep || isClosing
+      ? 20
+      : 30;
   const scrollOffset = useMemo(() => {
     const halfVisible = Math.floor(visibleLineCount / 2);
     const maxOffset = Math.max(0, lines.length - visibleLineCount);
@@ -352,11 +437,76 @@ export function PullRequestDetail({
           }}
         />
       )}
+      {mergeStep === "strategy" && !isCheckingConflicts && !conflictSummary && (
+        <MergeStrategySelector
+          sourceRef={sourceRef}
+          destRef={destRef}
+          onSelect={handleStrategySelect}
+          onCancel={() => {
+            setMergeStep(null);
+            setConflictSummary(null);
+          }}
+        />
+      )}
+      {isCheckingConflicts && (
+        <Box flexDirection="column">
+          <Text color="cyan">Checking for conflicts...</Text>
+        </Box>
+      )}
+      {conflictSummary && !conflictSummary.mergeable && (
+        <ConflictDisplay
+          conflictSummary={conflictSummary}
+          onDismiss={() => {
+            setConflictSummary(null);
+            setMergeStep(null);
+          }}
+        />
+      )}
+      {mergeStep === "confirm" && (
+        <ConfirmPrompt
+          message={`Merge ${sourceRef} into ${destRef} using ${formatStrategyName(selectedStrategy)}?`}
+          onConfirm={() => onMerge(selectedStrategy)}
+          onCancel={() => {
+            setMergeStep(null);
+            setConflictSummary(null);
+            onClearMergeError();
+          }}
+          isProcessing={isMerging}
+          processingMessage="Merging..."
+          error={mergeError}
+          onClearError={() => {
+            onClearMergeError();
+            setMergeStep(null);
+          }}
+        />
+      )}
+      {isClosing && (
+        <ConfirmPrompt
+          message="Close this pull request without merging?"
+          onConfirm={onClosePR}
+          onCancel={() => {
+            setIsClosing(false);
+            onClearClosePRError();
+          }}
+          isProcessing={isClosingPR}
+          processingMessage="Closing..."
+          error={closePRError}
+          onClearError={() => {
+            onClearClosePRError();
+            setIsClosing(false);
+          }}
+        />
+      )}
       <Box marginTop={1}>
         <Text dimColor>
-          {isCommenting || isInlineCommenting || isReplying || approvalAction
+          {isCommenting ||
+          isInlineCommenting ||
+          isReplying ||
+          approvalAction ||
+          mergeStep ||
+          isClosing
             ? ""
-            : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  q back  ? help"}
+            : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -724,5 +874,44 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
           {line.text}
         </Text>
       );
+  }
+}
+
+function ConflictDisplay({
+  conflictSummary,
+  onDismiss,
+}: {
+  conflictSummary: ConflictSummary;
+  onDismiss: () => void;
+}) {
+  useInput(() => {
+    onDismiss();
+  });
+
+  return (
+    <Box flexDirection="column">
+      <Text color="red">
+        ✗ Cannot merge: {conflictSummary.conflictCount} conflicting file
+        {conflictSummary.conflictCount !== 1 ? "s" : ""}
+      </Text>
+      <Text> </Text>
+      {conflictSummary.conflictFiles.map((file) => (
+        <Text key={file}> {file}</Text>
+      ))}
+      <Text> </Text>
+      <Text>Resolve conflicts before merging.</Text>
+      <Text dimColor>Press any key to return</Text>
+    </Box>
+  );
+}
+
+function formatStrategyName(strategy: MergeStrategy): string {
+  switch (strategy) {
+    case "fast-forward":
+      return "fast-forward";
+    case "squash":
+      return "squash";
+    case "three-way":
+      return "three-way merge";
   }
 }

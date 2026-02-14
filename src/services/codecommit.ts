@@ -8,15 +8,20 @@ import {
   GetBlobCommand,
   GetCommentsForPullRequestCommand,
   GetDifferencesCommand,
+  GetMergeConflictsCommand,
   GetPullRequestApprovalStatesCommand,
   GetPullRequestCommand,
   ListPullRequestsCommand,
   ListRepositoriesCommand,
+  MergePullRequestByFastForwardCommand,
+  MergePullRequestBySquashCommand,
+  MergePullRequestByThreeWayCommand,
   PostCommentForPullRequestCommand,
   PostCommentReplyCommand,
   type PullRequest,
   type RepositoryNameIdPair,
   UpdatePullRequestApprovalStateCommand,
+  UpdatePullRequestStatusCommand,
 } from "@aws-sdk/client-codecommit";
 
 export interface CodeCommitConfig {
@@ -308,4 +313,98 @@ export async function getBlobContent(
     return new TextDecoder().decode(response.content);
   }
   return "";
+}
+
+export type MergeStrategy = "fast-forward" | "squash" | "three-way";
+
+export interface ConflictSummary {
+  mergeable: boolean;
+  conflictCount: number;
+  conflictFiles: string[];
+}
+
+export async function mergePullRequest(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    repositoryName: string;
+    sourceCommitId?: string | undefined;
+    strategy: MergeStrategy;
+  },
+): Promise<PullRequest> {
+  let command;
+  switch (params.strategy) {
+    case "fast-forward":
+      command = new MergePullRequestByFastForwardCommand({
+        pullRequestId: params.pullRequestId,
+        repositoryName: params.repositoryName,
+        sourceCommitId: params.sourceCommitId,
+      });
+      break;
+    case "squash":
+      command = new MergePullRequestBySquashCommand({
+        pullRequestId: params.pullRequestId,
+        repositoryName: params.repositoryName,
+        sourceCommitId: params.sourceCommitId,
+      });
+      break;
+    case "three-way":
+      command = new MergePullRequestByThreeWayCommand({
+        pullRequestId: params.pullRequestId,
+        repositoryName: params.repositoryName,
+        sourceCommitId: params.sourceCommitId,
+      });
+      break;
+  }
+  const response = await client.send(command);
+  return response.pullRequest!;
+}
+
+export async function getMergeConflicts(
+  client: CodeCommitClient,
+  params: {
+    repositoryName: string;
+    sourceCommitId: string;
+    destinationCommitId: string;
+    strategy: MergeStrategy;
+  },
+): Promise<ConflictSummary> {
+  const mergeOptionMap: Record<
+    MergeStrategy,
+    "FAST_FORWARD_MERGE" | "SQUASH_MERGE" | "THREE_WAY_MERGE"
+  > = {
+    "fast-forward": "FAST_FORWARD_MERGE",
+    squash: "SQUASH_MERGE",
+    "three-way": "THREE_WAY_MERGE",
+  };
+
+  const command = new GetMergeConflictsCommand({
+    repositoryName: params.repositoryName,
+    sourceCommitSpecifier: params.sourceCommitId,
+    destinationCommitSpecifier: params.destinationCommitId,
+    mergeOption: mergeOptionMap[params.strategy],
+  });
+  const response = await client.send(command);
+
+  return {
+    mergeable: response.mergeable ?? false,
+    conflictCount: response.conflictMetadataList?.length ?? 0,
+    conflictFiles: (response.conflictMetadataList ?? [])
+      .map((c) => c.filePath ?? "(unknown)")
+      .filter(Boolean),
+  };
+}
+
+export async function closePullRequest(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+  },
+): Promise<PullRequest> {
+  const command = new UpdatePullRequestStatusCommand({
+    pullRequestId: params.pullRequestId,
+    pullRequestStatus: "CLOSED",
+  });
+  const response = await client.send(command);
+  return response.pullRequest!;
 }

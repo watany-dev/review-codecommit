@@ -75,9 +75,20 @@ npx review-codecommit --region <region>      # リージョン指定
 | 折りたたみインジケータ | `[+N replies]` 表示で未読返信数を表示 |
 | 返信エラーハンドリング | 空返信、文字数超過、コメント削除済み、不正ID等のエラー対応 |
 
+## 機能スコープ (v0.6) ✅
+
+| 機能 | 内容 |
+|------|------|
+| マージ実行 | PR をマージする（`m` キー → 戦略選択 → コンフリクトチェック → 確認 → 実行） |
+| マージ戦略選択 | Fast-forward / Squash / Three-way merge から選択（j/k ナビゲーション） |
+| コンフリクト検出 | マージ前にコンフリクトを自動検出し、対象ファイルを一覧表示 |
+| マージ確認プロンプト | 戦略名・ブランチ名を含む最終確認（y/n） |
+| PR クローズ | マージせずに PR を閉じる（`x` キー → 確認プロンプト → 実行） |
+| 画面遷移 | マージ/クローズ成功後、PR 一覧へ自動遷移 |
+| エラーハンドリング | コンフリクト、承認ルール未充足、並行更新、権限不足等のエラー対応 |
+
 ### 将来対応
 
-- マージ操作 → v0.6
 - コメント編集・削除 → v0.7
 - フィルタ・検索 → v0.8
 
@@ -99,6 +110,8 @@ npx review-codecommit --region <region>      # リージョン指定
 | `o` | スレッド折りたたみ/展開切替 | PR詳細画面（コメント行上のみ） |
 | `a` | PR を承認（確認プロンプト表示） | PR詳細画面 |
 | `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
+| `m` | マージ操作を開始（戦略選択） | PR詳細画面 |
+| `x` | PR をクローズ（確認プロンプト表示） | PR詳細画面 |
 
 ## 画面フロー・遷移
 
@@ -173,7 +186,8 @@ npx review-codecommit --region <region>      # リージョン指定
 │     └ hanako: 他も確認してください            │
 │                                              │
 │  ↑↓ cursor  c comment  C inline  R reply     │
-│  o fold  a approve  r revoke  q back  ? help │
+│  o fold  a approve  r revoke  m merge        │
+│  x close  q back  ? help                     │
 └──────────────────────────────────────────────┘
 ```
 
@@ -213,6 +227,17 @@ npx review-codecommit --region <region>      # リージョン指定
 | 返信文字数超過 | 「Reply exceeds the 10,240 character limit.」と表示 |
 | 返信先コメント削除済み | 「The comment you are replying to no longer exists.」と表示 |
 | 不正コメントID | 「Invalid comment ID format.」と表示 |
+| マージコンフリクト | 「Conflicts detected. Cannot auto-merge. Resolve conflicts manually.」と表示 |
+| 承認ルール未充足（マージ時） | 「Approval rules not satisfied. Get required approvals first.」と表示 |
+| ソースブランチ変更（マージ時） | 「Source branch has been updated. Go back and reopen the PR.」と表示 |
+| 並行更新エラー（マージ時） | 「Branch was updated concurrently. Try again.」と表示 |
+| コミット差分超過（マージ時） | 「Branches have diverged too much. Merge manually.」と表示 |
+| PR既にクローズ（マージ時） | 「Pull request is already closed.」と表示 |
+| PR不在（マージ時） | 「Pull request not found.」と表示 |
+| 暗号化キーアクセス拒否（マージ時） | 「Encryption key access denied.」と表示 |
+| PR既にクローズ（クローズ時） | 「Pull request is already closed.」と表示 |
+| PR不在（クローズ時） | 「Pull request not found.」と表示 |
+| アクセス拒否（クローズ時） | 「Access denied. Check your IAM policy.」と表示 |
 
 ## テスト戦略
 
