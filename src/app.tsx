@@ -310,9 +310,9 @@ export function App({ client, initialRepo }: AppProps) {
         sourceCommitId: target?.sourceCommit,
         strategy,
       });
-      // On success, reload PR list and go back to PR list
+      // On success, remove merged PR from local state and go back to PR list
+      setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
-      loadPullRequests(selectedRepo);
     } catch (err) {
       setMergeError(formatMergeError(err));
     } finally {
@@ -342,9 +342,9 @@ export function App({ client, initialRepo }: AppProps) {
       await closePullRequest(client, {
         pullRequestId: prDetail.pullRequestId,
       });
-      // On success, reload PR list and go back to PR list
+      // On success, remove closed PR from local state and go back to PR list
+      setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
-      loadPullRequests(selectedRepo);
     } catch (err) {
       setClosePRError(formatCloseError(err));
     } finally {

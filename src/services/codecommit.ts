@@ -81,20 +81,22 @@ export async function listPullRequests(
   const listResponse = await client.send(listCommand);
   const pullRequestIds = listResponse.pullRequestIds ?? [];
 
-  const pullRequests: PullRequestSummary[] = [];
-  for (const id of pullRequestIds) {
-    const getCommand = new GetPullRequestCommand({ pullRequestId: id });
-    const getResponse = await client.send(getCommand);
-    const pr = getResponse.pullRequest;
-    if (pr) {
-      pullRequests.push({
-        pullRequestId: pr.pullRequestId ?? id,
-        title: pr.title ?? "(no title)",
-        authorArn: pr.authorArn ?? "unknown",
-        creationDate: pr.creationDate ?? new Date(),
-      });
-    }
-  }
+  const pullRequests: PullRequestSummary[] = (
+    await Promise.all(
+      pullRequestIds.map(async (id) => {
+        const getCommand = new GetPullRequestCommand({ pullRequestId: id });
+        const getResponse = await client.send(getCommand);
+        const pr = getResponse.pullRequest;
+        if (!pr) return null;
+        return {
+          pullRequestId: pr.pullRequestId ?? id,
+          title: pr.title ?? "(no title)",
+          authorArn: pr.authorArn ?? "unknown",
+          creationDate: pr.creationDate ?? new Date(),
+        };
+      }),
+    )
+  ).filter((pr): pr is PullRequestSummary => pr !== null);
 
   const result: { pullRequests: PullRequestSummary[]; nextToken?: string } = { pullRequests };
   if (listResponse.nextToken != null) result.nextToken = listResponse.nextToken;
@@ -114,29 +116,32 @@ export async function getPullRequestDetail(
   }
 
   const target = pullRequest.pullRequestTargets?.[0];
-  const differences: Difference[] = [];
+  const hasCommits = !!(target?.sourceCommit && target?.destinationCommit);
 
-  if (target?.sourceCommit && target?.destinationCommit) {
-    const diffCommand = new GetDifferencesCommand({
+  const [diffResult, commentThreads] = await Promise.all([
+    hasCommits
+      ? client
+          .send(
+            new GetDifferencesCommand({
+              repositoryName,
+              beforeCommitSpecifier: target!.destinationCommit!,
+              afterCommitSpecifier: target!.sourceCommit!,
+            }),
+          )
+          .then((r) => r.differences ?? [])
+      : Promise.resolve([]),
+    fetchCommentThreads(client, pullRequestId, {
       repositoryName,
-      beforeCommitSpecifier: target.destinationCommit,
-      afterCommitSpecifier: target.sourceCommit,
-    });
-    const diffResponse = await client.send(diffCommand);
-    differences.push(...(diffResponse.differences ?? []));
-  }
+      ...(hasCommits
+        ? {
+            afterCommitId: target!.sourceCommit!,
+            beforeCommitId: target!.destinationCommit!,
+          }
+        : {}),
+    }),
+  ]);
 
-  const commentThreads = await fetchCommentThreads(client, pullRequestId, {
-    repositoryName,
-    ...(target?.sourceCommit && target?.destinationCommit
-      ? {
-          afterCommitId: target.sourceCommit,
-          beforeCommitId: target.destinationCommit,
-        }
-      : {}),
-  });
-
-  return { pullRequest, differences, commentThreads };
+  return { pullRequest, differences: diffResult as Difference[], commentThreads };
 }
 
 function sortCommentsRootFirst(comments: Comment[]): Comment[] {
