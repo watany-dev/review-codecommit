@@ -15,8 +15,11 @@ titmouse lets you browse AWS CodeCommit repositories, view open pull requests, a
 - View PR details with color-coded unified diffs (green for additions, red for deletions)
 - Read PR comments inline
 - Post comments on pull requests (`c` key in PR detail view)
+- Post inline comments on specific diff lines (`C` key at cursor position)
+- View inline comments displayed under matching diff lines
 - Approve / revoke pull requests (`a`/`r` keys with confirmation prompt)
 - View approval status and approval rule evaluation
+- Cursor-based diff navigation with `>` marker
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
 
@@ -63,6 +66,7 @@ titmouse --region <region>
 | `Enter` | Select / confirm / submit comment | List screens / Comment input |
 | `q` / `Esc` | Go back / cancel | All / Comment input / Confirm prompt |
 | `c` | Post comment | PR Detail |
+| `C` | Post inline comment at cursor line | PR Detail |
 | `a` | Approve PR (with confirmation) | PR Detail |
 | `r` | Revoke approval (with confirmation) | PR Detail |
 | `Ctrl+C` | Exit immediately | All |
@@ -122,7 +126,7 @@ bun run build
 | v0.1 | Browse repositories, PRs, diffs, and comments | ✅ Released |
 | v0.2 | Post comments on pull requests | ✅ Released |
 | v0.3 | Approve / Revoke operations | ✅ Released |
-| v0.4 | Inline comments (file-line specific) | Planned |
+| v0.4 | Inline comments (file-line specific) | ✅ Released |
 | v0.5 | Comment replies (threads) | Planned |
 | v0.6 | Merge operations | Planned |
 | v0.7 | Comment edit / delete | Planned |
