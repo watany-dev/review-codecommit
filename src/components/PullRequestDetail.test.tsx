@@ -1855,6 +1855,6 @@ describe("PullRequestDetail", () => {
     );
     const output = lastFrame();
     expect(output).toContain("💬 taro: first comment");
-    expect(output).toContain("💬 watany: second comment");
+    expect(output).toContain("└ watany: second comment");
   });
 });

@@ -116,7 +116,8 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const lines = buildDisplayLines(differences, diffTexts, commentThreads);
+  const emptyCollapsed = useMemo(() => new Set<number>(), []);
+  const lines = buildDisplayLines(differences, diffTexts, commentThreads, emptyCollapsed);
 
   useInput((input, key) => {
     if (isCommenting || isInlineCommenting || approvalAction) return;
@@ -289,27 +290,101 @@ interface DisplayLine {
     | "context"
     | "comment-header"
     | "comment"
-    | "inline-comment";
+    | "inline-comment"
+    | "inline-reply"
+    | "comment-reply"
+    | "fold-indicator";
   text: string;
   filePath?: string;
   beforeLineNumber?: number;
   afterLineNumber?: number;
+  threadIndex?: number;
+  commentId?: string;
+}
+
+const FOLD_THRESHOLD = 4;
+
+function appendThreadLines(
+  lines: DisplayLine[],
+  thread: CommentThread,
+  threadIndex: number,
+  collapsedThreads: Set<number>,
+  mode: "inline" | "general",
+): void {
+  const comments = thread.comments;
+  if (comments.length === 0) return;
+
+  const rootComment = comments[0]!;
+  const replies = comments.slice(1);
+  const isCollapsed = collapsedThreads.has(threadIndex);
+  const shouldFold = comments.length >= FOLD_THRESHOLD;
+
+  const rootAuthor = extractAuthorName(rootComment.authorArn ?? "unknown");
+  const rootContent = rootComment.content ?? "";
+
+  if (mode === "inline") {
+    lines.push({
+      type: "inline-comment",
+      text: `💬 ${rootAuthor}: ${rootContent}`,
+      threadIndex,
+      commentId: rootComment.commentId,
+    });
+  } else {
+    lines.push({
+      type: "comment",
+      text: `${rootAuthor}: ${rootContent}`,
+      threadIndex,
+      commentId: rootComment.commentId,
+    });
+  }
+
+  if (shouldFold && isCollapsed) {
+    lines.push({
+      type: "fold-indicator",
+      text: `[+${replies.length} replies]`,
+      threadIndex,
+    });
+    return;
+  }
+
+  for (const reply of replies) {
+    const author = extractAuthorName(reply.authorArn ?? "unknown");
+    const content = reply.content ?? "";
+
+    if (mode === "inline") {
+      lines.push({
+        type: "inline-reply",
+        text: `└ ${author}: ${content}`,
+        threadIndex,
+        commentId: reply.commentId,
+      });
+    } else {
+      lines.push({
+        type: "comment-reply",
+        text: `└ ${author}: ${content}`,
+        threadIndex,
+        commentId: reply.commentId,
+      });
+    }
+  }
 }
 
 function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
   commentThreads: CommentThread[],
+  collapsedThreads: Set<number>,
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
   // Index inline comments by file:position:version for efficient lookup
-  const inlineThreadsByKey = new Map<string, CommentThread[]>();
-  for (const thread of commentThreads) {
+  const inlineThreadsByKey = new Map<string, { thread: CommentThread; index: number }[]>();
+  for (let i = 0; i < commentThreads.length; i++) {
+    const thread = commentThreads[i]!;
     if (thread.location) {
       const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
       const existing = inlineThreadsByKey.get(key) ?? [];
-      existing.push(thread);
+      existing.push({ thread, index: i });
       inlineThreadsByKey.set(key, existing);
     }
   }
@@ -330,17 +405,9 @@ function buildDisplayLines(
         dl.filePath = filePath;
         lines.push(dl);
 
-        // Insert inline comments under matching diff lines
-        const matchingThreads = findMatchingThreads(inlineThreadsByKey, filePath, dl);
-        for (const thread of matchingThreads) {
-          for (const comment of thread.comments) {
-            const author = extractAuthorName(comment.authorArn ?? "unknown");
-            const content = comment.content ?? "";
-            lines.push({
-              type: "inline-comment",
-              text: `💬 ${author}: ${content}`,
-            });
-          }
+        const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
+        for (const { thread, index: threadIdx } of matchingEntries) {
+          appendThreadLines(lines, thread, threadIdx, collapsedThreads, "inline");
         }
       }
     }
@@ -348,29 +415,31 @@ function buildDisplayLines(
     lines.push({ type: "separator", text: "" });
   }
 
-  const generalComments = commentThreads
-    .filter((t) => t.location === null)
-    .flatMap((t) => t.comments);
+  const generalThreads = commentThreads
+    .map((t, i) => ({ thread: t, index: i }))
+    .filter(({ thread }) => thread.location === null);
 
-  if (generalComments.length > 0) {
+  if (generalThreads.length > 0) {
+    const totalComments = generalThreads.reduce(
+      (sum, { thread }) => sum + thread.comments.length,
+      0,
+    );
     lines.push({ type: "separator", text: "─".repeat(50) });
-    lines.push({ type: "comment-header", text: `Comments (${generalComments.length}):` });
-    for (const comment of generalComments) {
-      const author = extractAuthorName(comment.authorArn ?? "unknown");
-      const content = comment.content ?? "";
-      lines.push({ type: "comment", text: `${author}: ${content}` });
+    lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
+    for (const { thread, index: threadIdx } of generalThreads) {
+      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general");
     }
   }
 
   return lines;
 }
 
-function findMatchingThreads(
-  threadsByKey: Map<string, CommentThread[]>,
+function findMatchingThreadEntries(
+  threadsByKey: Map<string, { thread: CommentThread; index: number }[]>,
   filePath: string,
   line: DisplayLine,
-): CommentThread[] {
-  const results: CommentThread[] = [];
+): { thread: CommentThread; index: number }[] {
+  const results: { thread: CommentThread; index: number }[] = [];
 
   if (line.type === "delete" && line.beforeLineNumber) {
     const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
@@ -528,5 +597,11 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
       return <Text> {line.text}</Text>;
     case "inline-comment":
       return <Text color="magenta"> {line.text}</Text>;
+    case "inline-reply":
+      return <Text color="magenta">    {line.text}</Text>;
+    case "comment-reply":
+      return <Text>   {line.text}</Text>;
+    case "fold-indicator":
+      return <Text dimColor>    {line.text}</Text>;
   }
 }
