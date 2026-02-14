@@ -13,6 +13,7 @@ import {
   ListPullRequestsCommand,
   ListRepositoriesCommand,
   PostCommentForPullRequestCommand,
+  PostCommentReplyCommand,
   type PullRequest,
   type RepositoryNameIdPair,
   UpdatePullRequestApprovalStateCommand,
@@ -200,6 +201,21 @@ export async function postComment(
           relativeFileVersion: params.location.relativeFileVersion,
         }
       : undefined,
+  });
+  const response = await client.send(command);
+  return response.comment!;
+}
+
+export async function postCommentReply(
+  client: CodeCommitClient,
+  params: {
+    inReplyTo: string;
+    content: string;
+  },
+): Promise<Comment> {
+  const command = new PostCommentReplyCommand({
+    inReplyTo: params.inReplyTo,
+    content: params.content,
   });
   const response = await client.send(command);
   return response.comment!;

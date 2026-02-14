@@ -16,6 +16,10 @@ describe("Help", () => {
     expect(output).toContain("Post comment");
     expect(output).toContain("C");
     expect(output).toContain("Post inline comment");
+    expect(output).toContain("R");
+    expect(output).toContain("Reply to comment");
+    expect(output).toContain("o");
+    expect(output).toContain("Toggle thread fold");
     expect(output).toContain("a");
     expect(output).toContain("Approve PR");
     expect(output).toContain("r");

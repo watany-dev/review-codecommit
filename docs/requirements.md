@@ -65,9 +65,18 @@ npx titmouse --region <region>      # リージョン指定
 | カーソルナビゲーション | diff 行へのカーソル移動（`>` マーカー、j/k でカーソル移動、スクロール追従） |
 | CommentThread データモデル | コメントをスレッド構造で管理（一般コメントとインラインコメントの統一的取り扱い） |
 
+## 機能スコープ (v0.5) ✅
+
+| 機能 | 内容 |
+|------|------|
+| コメント返信投稿 | 既存コメントへの返信を投稿（`R` キー） |
+| 返信のスレッド表示 | 返信を `└` プレフィックス付きのインデント表示 |
+| スレッド折りたたみ | 4件以上のスレッドを自動折りたたみ、`o` キーで展開/折りたたみ切替 |
+| 折りたたみインジケータ | `[+N replies]` 表示で未読返信数を表示 |
+| 返信エラーハンドリング | 空返信、文字数超過、コメント削除済み、不正ID等のエラー対応 |
+
 ### 将来対応
 
-- コメント返信 → v0.5
 - マージ操作 → v0.6
 - コメント編集・削除 → v0.7
 - フィルタ・検索 → v0.8
@@ -86,6 +95,8 @@ npx titmouse --region <region>      # リージョン指定
 | `?` | ヘルプ表示 | 全画面（コメント入力中・確認プロンプト中は無効） |
 | `c` | コメント入力モード開始 | PR詳細画面 |
 | `C` | インラインコメント投稿（カーソル行） | PR詳細画面（diff行上のみ） |
+| `R` | コメント返信（カーソル行のコメントに返信） | PR詳細画面（コメント行上のみ） |
+| `o` | スレッド折りたたみ/展開切替 | PR詳細画面（コメント行上のみ） |
 | `a` | PR を承認（確認プロンプト表示） | PR詳細画面 |
 | `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
 
@@ -151,16 +162,18 @@ npx titmouse --region <region>      # リージョン指定
 │   const config = {                           │
 │ > -   timeout: 3000,                         │
 │     💬 taro: この値はconfigから取る方が良さそう │
+│        └ watany: 次のPRで修正します           │
 │   +   timeout: 10000,                        │
 │   };                                         │
 │                                              │
 │──────────────────────────────────────────────│
-│  Comments (2):                               │
+│  Comments (3):                               │
 │  watany: タイムアウトを延長しました          │
-│  taro: LGTMです                              │
+│     └ taro: LGTMです                         │
+│     └ hanako: 他も確認してください            │
 │                                              │
-│  ↑↓ cursor  c comment  C inline  a approve   │
-│  r revoke  q back  ? help                    │
+│  ↑↓ cursor  c comment  C inline  R reply     │
+│  o fold  a approve  r revoke  q back  ? help │
 └──────────────────────────────────────────────┘
 ```
 
@@ -196,6 +209,10 @@ npx titmouse --region <region>      # リージョン指定
 | PR既にクローズ（承認時） | 「Pull request is already closed.」と表示 |
 | 暗号化キーアクセス拒否 | 「Encryption key access denied.」と表示 |
 | PR不在（承認時） | 「Pull request not found.」と表示 |
+| 返信空 | 「Reply cannot be empty.」と表示 |
+| 返信文字数超過 | 「Reply exceeds the 10,240 character limit.」と表示 |
+| 返信先コメント削除済み | 「The comment you are replying to no longer exists.」と表示 |
+| 不正コメントID | 「Invalid comment ID format.」と表示 |
 
 ## テスト戦略
 

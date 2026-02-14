@@ -54,6 +54,13 @@ describe("PullRequestDetail", () => {
     onClearInlineCommentError: vi.fn(),
   };
 
+  const defaultReplyProps = {
+    onPostReply: vi.fn(),
+    isPostingReply: false,
+    replyError: null as string | null,
+    onClearReplyError: vi.fn(),
+  };
+
   const defaultApprovalProps = {
     approvals: [] as any[],
     approvalEvaluation: null,
@@ -78,6 +85,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -100,6 +108,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -122,6 +131,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -144,6 +154,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -164,6 +175,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -185,6 +197,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -207,6 +220,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -235,6 +249,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -255,6 +270,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -282,6 +298,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -302,6 +319,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -325,6 +343,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -347,6 +366,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -368,6 +388,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -392,6 +413,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -419,6 +441,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -439,6 +462,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -456,6 +480,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -478,6 +503,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -501,6 +527,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -520,6 +547,7 @@ describe("PullRequestDetail", () => {
         commentError="Comment exceeds the 10,240 character limit."
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -571,6 +599,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -662,6 +691,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -683,6 +713,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -706,6 +737,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -730,6 +762,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -756,6 +789,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -777,6 +811,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -857,6 +892,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -991,6 +1027,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1019,6 +1056,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1061,6 +1099,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1097,6 +1136,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1142,6 +1182,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1166,6 +1207,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1186,6 +1228,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1209,6 +1252,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1233,6 +1277,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1264,6 +1309,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1296,6 +1342,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1335,6 +1382,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1365,6 +1413,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1381,7 +1430,7 @@ describe("PullRequestDetail", () => {
     stdin.write("\x1B");
     await vi.waitFor(() => {
       expect(lastFrame()).not.toContain("Inline comment on");
-      expect(lastFrame()).toContain("C inline");
+      expect(lastFrame()).toContain("R reply");
     });
   });
 
@@ -1399,6 +1448,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1423,6 +1473,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1473,6 +1524,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1493,6 +1545,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1523,6 +1576,7 @@ describe("PullRequestDetail", () => {
         isPostingInlineComment={true}
         inlineCommentError={null}
         onClearInlineCommentError={vi.fn()}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1547,6 +1601,7 @@ describe("PullRequestDetail", () => {
         isPostingInlineComment={false}
         inlineCommentError="Access denied"
         onClearInlineCommentError={vi.fn()}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1577,6 +1632,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1606,10 +1662,11 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
-    expect(lastFrame()).toContain("C inline");
+    expect(lastFrame()).toContain("R reply");
   });
 
   it("auto-closes inline comment mode on successful post", async () => {
@@ -1626,6 +1683,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1657,6 +1715,7 @@ describe("PullRequestDetail", () => {
         isPostingInlineComment={true}
         inlineCommentError={null}
         onClearInlineCommentError={vi.fn()}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1680,6 +1739,7 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
@@ -1809,12 +1869,805 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
     // Should render without error, showing "unknown" for missing author
     expect(output).toContain("unknown");
+  });
+
+  // v0.5: Reply display tests
+  it("displays inline reply with indent under root comment", () => {
+    const threadWithReply = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 2,
+          relativeFileVersion: "BEFORE" as const,
+        },
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "This value should come from config",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "Will fix in next PR",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threadWithReply as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: This value should come from config");
+    expect(output).toContain("└ watany: Will fix in next PR");
+  });
+
+  it("displays general comment reply with indent", () => {
+    const threadWithReply = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "Extended timeout",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Use a constant instead?",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threadWithReply as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("watany: Extended timeout");
+    expect(output).toContain("└ taro: Use a constant instead?");
+    expect(output).toContain("Comments (2):");
+  });
+
+  it("displays mixed inline and general threads with replies", () => {
+    const mixedThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "inline root",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "inline reply",
+          },
+        ],
+      },
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c3",
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "general root",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c3",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "general reply",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={mixedThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: inline root");
+    expect(output).toContain("└ watany: inline reply");
+    expect(output).toContain("hanako: general root");
+    expect(output).toContain("└ taro: general reply");
+  });
+
+  it("renders thread with no replies (backward compat with v0.4)", () => {
+    const singleCommentThread = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "solo comment",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={singleCommentThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("watany: solo comment");
+    expect(output).not.toContain("└");
+  });
+
+  // v0.5: Thread folding tests
+  it("auto-folds threads with 4+ comments on initial render", () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={longThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("a: root");
+    expect(output).toContain("[+3 replies]");
+    expect(output).not.toContain("reply1");
+  });
+
+  it("does not fold threads with fewer than 4 comments", () => {
+    const shortThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={shortThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("a: root");
+    expect(output).toContain("└ b: reply1");
+    expect(output).toContain("└ c: reply2");
+    expect(output).not.toContain("[+");
+  });
+
+  it("expands folded thread with o key", async () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Initially folded
+    expect(lastFrame()).toContain("[+3 replies]");
+
+    // Navigate to the comment line (sep=0, comment-header=1, comment=2)
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*a: root/);
+    });
+
+    // Press o to unfold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+      expect(lastFrame()).toContain("└ c: reply2");
+      expect(lastFrame()).toContain("└ d: reply3");
+      expect(lastFrame()).not.toContain("[+3 replies]");
+    });
+  });
+
+  it("re-folds expanded thread with o key", async () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    // Navigate to comment line
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*a: root/);
+    });
+
+    // Unfold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+    });
+
+    // Press o again to refold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[+3 replies]");
+      expect(lastFrame()).not.toContain("reply1");
+    });
+  });
+
+  // v0.5: Reply posting tests
+  it("shows reply input on R key when cursor is on comment line", async () => {
+    const threadWithComment = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Please fix this",
+          },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Navigate to comment (sep=0, comment-header=1, comment=2)
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Please fix this/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+  });
+
+  it("does not open reply input on non-comment line", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Cursor is on header line
+    stdin.write("R");
+    expect(lastFrame()).not.toContain("Replying to");
+  });
+
+  it("does not scroll when in reply mode", async () => {
+    const onBack = vi.fn();
+    const threadWithComment = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "comment",
+          },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={onBack}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: comment/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    // j/k/q should not work
+    stdin.write("j");
+    stdin.write("q");
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("cancels reply mode on Esc", async () => {
+    const threadWithComment = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "fix this",
+          },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: fix this/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("\x1B");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Replying to");
+      expect(lastFrame()).toContain("R reply");
+    });
+  });
+
+  it("auto-closes reply mode on successful post", async () => {
+    const threadWithComment = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "fix",
+          },
+        ],
+      },
+    ];
+    const { stdin, rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: fix/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+
+    // Simulate posting start
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        onPostReply={vi.fn()}
+        isPostingReply={true}
+        replyError={null}
+        onClearReplyError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+
+    // Simulate posting complete
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Replying to");
+    });
+  });
+
+  it("keeps reply mode open on error", async () => {
+    const threadWithComment = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "fix",
+          },
+        ],
+      },
+    ];
+    const { stdin, rerender, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: fix/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+
+    // Simulate posting start then failure
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        onPostReply={vi.fn()}
+        isPostingReply={true}
+        replyError={null}
+        onClearReplyError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={threadWithComment as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        onPostReply={vi.fn()}
+        isPostingReply={false}
+        replyError="Reply exceeds the 10,240 character limit."
+        onClearReplyError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+      expect(lastFrame()).toContain("Reply exceeds the 10,240 character limit.");
+    });
+  });
+
+  it("shows R reply and o fold in footer", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    expect(lastFrame()).toContain("R reply");
+    expect(lastFrame()).toContain("o fold");
+  });
+
+  it("ignores o key on non-comment lines", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Cursor is on header line (no threadIndex)
+    stdin.write("o");
+    // Should not crash, no visible change
+    expect(lastFrame()).toContain("src/auth.ts");
   });
 
   it("displays multiple comments on same line as thread", () => {
@@ -1850,11 +2703,12 @@ describe("PullRequestDetail", () => {
         commentError={null}
         onClearCommentError={vi.fn()}
         {...defaultInlineCommentProps}
+        {...defaultReplyProps}
         {...defaultApprovalProps}
       />,
     );
     const output = lastFrame();
     expect(output).toContain("💬 taro: first comment");
-    expect(output).toContain("💬 watany: second comment");
+    expect(output).toContain("└ watany: second comment");
   });
 });

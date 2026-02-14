@@ -28,6 +28,8 @@ export function Help({ onClose }: Props) {
         <Text> Ctrl+C Exit immediately</Text>
         <Text> c Post comment (PR Detail)</Text>
         <Text> C Post inline comment (PR Detail)</Text>
+        <Text> R Reply to comment (PR Detail)</Text>
+        <Text> o Toggle thread fold (PR Detail)</Text>
         <Text> a Approve PR (PR Detail)</Text>
         <Text> r Revoke approval (PR Detail)</Text>
         <Text> ? Toggle this help</Text>
