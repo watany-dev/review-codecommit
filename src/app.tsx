@@ -13,14 +13,19 @@ import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
+  closePullRequest,
   type CommentThread,
+  type ConflictSummary,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
   getComments,
+  getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  type MergeStrategy,
+  mergePullRequest,
   type PullRequestSummary,
   postComment,
   postCommentReply,
@@ -64,6 +69,11 @@ export function App({ client, initialRepo }: AppProps) {
 
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+
+  const [isMerging, setIsMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [isClosingPR, setIsClosingPR] = useState(false);
+  const [closePRError, setClosePRError] = useState<string | null>(null);
 
   /**
    * Wrapper for async operations with automatic loading/error state management.
@@ -287,6 +297,61 @@ export function App({ client, initialRepo }: AppProps) {
     setApprovalEvaluation(evaluation);
   }
 
+  async function handleMerge(strategy: MergeStrategy) {
+    if (!prDetail?.pullRequestId) return;
+    const target = prDetail.pullRequestTargets?.[0];
+
+    setIsMerging(true);
+    setMergeError(null);
+    try {
+      await mergePullRequest(client, {
+        pullRequestId: prDetail.pullRequestId,
+        repositoryName: selectedRepo,
+        sourceCommitId: target?.sourceCommit,
+        strategy,
+      });
+      // On success, reload PR list and go back to PR list
+      setScreen("prs");
+      loadPullRequests(selectedRepo);
+    } catch (err) {
+      setMergeError(formatMergeError(err));
+    } finally {
+      setIsMerging(false);
+    }
+  }
+
+  async function handleCheckConflicts(strategy: MergeStrategy): Promise<ConflictSummary> {
+    const target = prDetail?.pullRequestTargets?.[0];
+    if (!target?.sourceCommit || !target?.destinationCommit) {
+      return { mergeable: true, conflictCount: 0, conflictFiles: [] };
+    }
+    return await getMergeConflicts(client, {
+      repositoryName: selectedRepo,
+      sourceCommitId: target.sourceCommit,
+      destinationCommitId: target.destinationCommit,
+      strategy,
+    });
+  }
+
+  async function handleClosePR() {
+    if (!prDetail?.pullRequestId) return;
+
+    setIsClosingPR(true);
+    setClosePRError(null);
+    try {
+      await closePullRequest(client, {
+        pullRequestId: prDetail.pullRequestId,
+      });
+      // On success, reload PR list and go back to PR list
+      setScreen("prs");
+      loadPullRequests(selectedRepo);
+    } catch (err) {
+      setClosePRError(formatCloseError(err));
+    } finally {
+      setIsClosingPR(false);
+    }
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -372,6 +437,15 @@ export function App({ client, initialRepo }: AppProps) {
           isApproving={isApproving}
           approvalError={approvalError}
           onClearApprovalError={() => setApprovalError(null)}
+          onMerge={handleMerge}
+          isMerging={isMerging}
+          mergeError={mergeError}
+          onClearMergeError={() => setMergeError(null)}
+          onCheckConflicts={handleCheckConflicts}
+          onClosePR={handleClosePR}
+          isClosingPR={isClosingPR}
+          closePRError={closePRError}
+          onClearClosePRError={() => setClosePRError(null)}
         />
       );
   }
@@ -386,7 +460,7 @@ export function App({ client, initialRepo }: AppProps) {
  */
 function formatErrorMessage(
   err: unknown,
-  context?: "comment" | "reply" | "approval",
+  context?: "comment" | "reply" | "approval" | "merge" | "close",
   approvalAction?: "approve" | "revoke",
 ): string {
   if (!(err instanceof Error)) {
@@ -445,6 +519,44 @@ function formatErrorMessage(
     }
   }
 
+  // Merge-specific errors
+  if (context === "merge") {
+    if (name === "ManualMergeRequiredException") {
+      return "Conflicts detected. Cannot auto-merge. Resolve conflicts manually.";
+    }
+    if (name === "PullRequestApprovalRulesNotSatisfiedException") {
+      return "Approval rules not satisfied. Get required approvals first.";
+    }
+    if (name === "TipOfSourceReferenceIsDifferentException") {
+      return "Source branch has been updated. Go back and reopen the PR.";
+    }
+    if (name === "ConcurrentReferenceUpdateException") {
+      return "Branch was updated concurrently. Try again.";
+    }
+    if (name === "TipsDivergenceExceededException") {
+      return "Branches have diverged too much. Merge manually.";
+    }
+    if (name === "PullRequestAlreadyClosedException") {
+      return "Pull request is already closed.";
+    }
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+    if (name === "EncryptionKeyAccessDeniedException") {
+      return "Encryption key access denied.";
+    }
+  }
+
+  // Close-specific errors
+  if (context === "close") {
+    if (name === "PullRequestAlreadyClosedException") {
+      return "Pull request is already closed.";
+    }
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+  }
+
   // General AWS errors
   if (name === "CredentialsProviderError" || name === "CredentialError") {
     return "AWS authentication failed. Run `aws configure` to set up credentials.";
@@ -488,6 +600,14 @@ function formatCommentError(err: unknown): string {
 
 function formatApprovalError(err: unknown, action: "approve" | "revoke"): string {
   return formatErrorMessage(err, "approval", action);
+}
+
+function formatMergeError(err: unknown): string {
+  return formatErrorMessage(err, "merge");
+}
+
+function formatCloseError(err: unknown): string {
+  return formatErrorMessage(err, "close");
 }
 
 function formatError(err: unknown): string {
