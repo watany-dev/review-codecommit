@@ -113,6 +113,36 @@ describe("getPullRequestDetail", () => {
     expect(detail.commentThreads[0].location).toBeNull();
     expect(detail.commentThreads[0].comments[0].content).toBe("LGTM");
   });
+
+  it("passes commit IDs and repositoryName to GetCommentsForPullRequest", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login timeout",
+        pullRequestTargets: [
+          {
+            sourceCommit: "abc123",
+            destinationCommit: "def456",
+          },
+        ],
+      },
+    });
+    mockSend.mockResolvedValueOnce({ differences: [] });
+    mockSend.mockResolvedValueOnce({ commentsForPullRequestData: [] });
+
+    await getPullRequestDetail(mockClient, "42", "my-service");
+
+    // Third call is GetCommentsForPullRequestCommand
+    const commentsCall = mockSend.mock.calls[2][0];
+    expect(commentsCall.input).toEqual(
+      expect.objectContaining({
+        pullRequestId: "42",
+        repositoryName: "my-service",
+        afterCommitId: "abc123",
+        beforeCommitId: "def456",
+      }),
+    );
+  });
 });
 
 describe("listPullRequests edge cases", () => {
@@ -527,6 +557,42 @@ describe("getComments", () => {
     const threads = await getComments(mockClient, "42");
     expect(threads).toHaveLength(1);
     expect(threads[0].location).toBeNull();
+  });
+
+  it("passes commit IDs and repositoryName when provided", async () => {
+    mockSend.mockResolvedValueOnce({ commentsForPullRequestData: [] });
+
+    await getComments(mockClient, "42", {
+      repositoryName: "my-service",
+      afterCommitId: "abc123",
+      beforeCommitId: "def456",
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          pullRequestId: "42",
+          repositoryName: "my-service",
+          afterCommitId: "abc123",
+          beforeCommitId: "def456",
+        }),
+      }),
+    );
+  });
+
+  it("omits commit IDs when only one is provided", async () => {
+    mockSend.mockResolvedValueOnce({ commentsForPullRequestData: [] });
+
+    await getComments(mockClient, "42", {
+      repositoryName: "my-service",
+      afterCommitId: "abc123",
+    });
+
+    const callInput = mockSend.mock.calls[0][0].input;
+    expect(callInput.pullRequestId).toBe("42");
+    expect(callInput.repositoryName).toBe("my-service");
+    expect(callInput.afterCommitId).toBeUndefined();
+    expect(callInput.beforeCommitId).toBeUndefined();
   });
 });
 

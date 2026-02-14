@@ -181,7 +181,16 @@ export function App({ client, initialRepo }: AppProps) {
 
   async function reloadComments(pullRequestId: string) {
     // Optimized: fetch only comments instead of full PR detail
-    const threads = await getComments(client, pullRequestId);
+    const target = prDetail?.pullRequestTargets?.[0];
+    const threads = await getComments(client, pullRequestId, {
+      repositoryName: selectedRepo,
+      ...(target?.sourceCommit && target?.destinationCommit
+        ? {
+            afterCommitId: target.sourceCommit,
+            beforeCommitId: target.destinationCommit,
+          }
+        : {}),
+    });
     setCommentThreads(threads);
   }
 
