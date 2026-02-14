@@ -102,7 +102,7 @@ README内のコード例が最新の実装で動作するか確認:
 
 1. `src/index.ts` のエクスポートと一致しているか
 2. コマンドラインオプションが `src/cli.tsx` と一致しているか
-3. import文が正しいか（`titmouse` からのインポート）
+3. import文が正しいか（`review-codecommit` からのインポート）
 
 ---
 

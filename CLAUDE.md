@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-titmouse is a TUI tool for reviewing AWS CodeCommit pull requests in the terminal. Built with Ink (React for CLI).
+review-codecommit is a TUI tool for reviewing AWS CodeCommit pull requests in the terminal. Built with Ink (React for CLI).
 
 ## Tech Stack
 

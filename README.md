@@ -1,4 +1,4 @@
-# titmouse
+# review-codecommit
 
 A TUI tool for reviewing AWS CodeCommit pull requests in your terminal.
 
@@ -6,7 +6,7 @@ A TUI tool for reviewing AWS CodeCommit pull requests in your terminal.
 
 ## Overview
 
-titmouse lets you browse AWS CodeCommit repositories, view open pull requests, and inspect diffs and comments — all without leaving the terminal. Built with [Ink](https://github.com/vadimdemedes/ink) (React for CLI).
+review-codecommit lets you browse AWS CodeCommit repositories, view open pull requests, and inspect diffs and comments — all without leaving the terminal. Built with [Ink](https://github.com/vadimdemedes/ink) (React for CLI).
 
 ## Features
 
