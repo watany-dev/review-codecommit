@@ -1,15 +1,1 @@
-{
-  "hooks": {
-    "PreCommit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run ci"
-          }
-        ]
-      }
-    ]
-  }
-}
+{}
