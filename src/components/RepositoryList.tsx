@@ -26,7 +26,7 @@ export function RepositoryList({ repositories, onSelect, onQuit, onHelp }: Props
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          titmouse
+          review-codecommit
         </Text>
       </Box>
       <Box marginBottom={1}>

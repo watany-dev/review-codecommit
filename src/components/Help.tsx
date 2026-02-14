@@ -16,7 +16,7 @@ export function Help({ onClose }: Props) {
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          titmouse — Help
+          review-codecommit — Help
         </Text>
       </Box>
       <Box flexDirection="column">

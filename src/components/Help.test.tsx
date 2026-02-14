@@ -28,7 +28,7 @@ describe("Help", () => {
 
   it("renders help title", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
-    expect(lastFrame()).toContain("titmouse");
+    expect(lastFrame()).toContain("review-codecommit");
     expect(lastFrame()).toContain("Help");
   });
 

@@ -1,4 +1,4 @@
-# titmouse 要件定義書
+# review-codecommit 要件定義書
 
 ## 概要
 
@@ -7,17 +7,17 @@ AWS CodeCommit のプルリクエストをターミナルでレビューするTU
 ## 起動方法
 
 ```
-npx titmouse                        # リポジトリ一覧から選択
-npx titmouse <repo-name>            # リポジトリ指定で起動
-npx titmouse --profile <name>       # AWSプロファイル指定
-npx titmouse --region <region>      # リージョン指定
+npx review-codecommit                        # リポジトリ一覧から選択
+npx review-codecommit <repo-name>            # リポジトリ指定で起動
+npx review-codecommit --profile <name>       # AWSプロファイル指定
+npx review-codecommit --region <region>      # リージョン指定
 ```
 
 ## 技術スタック
 
 | 項目 | 選択 |
 |------|------|
-| パッケージ名 | `titmouse` |
+| パッケージ名 | `review-codecommit` |
 | TUIフレームワーク | Ink (React for CLI) |
 | AWS SDK | `@aws-sdk/client-codecommit` (v3) |
 | AWS認証 | SDK標準チェーン + `--profile` / `--region` オプション |
@@ -119,7 +119,7 @@ npx titmouse --region <region>      # リージョン指定
 ### 1. リポジトリ選択画面
 
 ```
-┌─ titmouse ──────────────────────────────────┐
+┌─ review-codecommit ─────────────────────────┐
 │                                              │
 │  Select Repository:                          │
 │                                              │
@@ -135,7 +135,7 @@ npx titmouse --region <region>      # リージョン指定
 ### 2. PR一覧画面
 
 ```
-┌─ titmouse ─ my-service ─────────────────────┐
+┌─ review-codecommit ─ my-service ────────────┐
 │                                              │
 │  Open Pull Requests (3):                     │
 │                                              │

@@ -48,11 +48,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/watany-dev/titmouse.git"
+    "url": "git+https://github.com/watany-dev/review-codecommit.git"
   },
-  "homepage": "https://github.com/watany-dev/titmouse#readme",
+  "homepage": "https://github.com/watany-dev/review-codecommit#readme",
   "bugs": {
-    "url": "https://github.com/watany-dev/titmouse/issues"
+    "url": "https://github.com/watany-dev/review-codecommit/issues"
   },
   "keywords": [
     "aws",
