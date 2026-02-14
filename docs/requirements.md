@@ -117,9 +117,19 @@ npx review-codecommit --region <region>      # リージョン指定
 | PR ステータスバッジ | Closed / Merged の PR にバッジ表示（Open はバッジなし） |
 | トークン期限切れ対応 | InvalidContinuationTokenException 時に自動的にページ1へリセット |
 
-### 将来対応（v0.2.0 以降）
+## 機能スコープ (v0.2.0) ✅
 
-- リアクション → v0.2.0
+| 機能 | 内容 |
+|------|------|
+| リアクション追加 | コメントにリアクションを追加（`g` キー → 絵文字選択 → Enter で送信） |
+| リアクション表示 | コメント末尾にリアクションバッジを表示（例: 👍×2 🎉×1） |
+| リアクション削除 | 同じリアクションを再選択でトグル削除 |
+| リアクション一括取得 | PR 詳細読み込み時にリアクション情報を一括取得 |
+| リアクション自動リロード | リアクション追加/削除後に自動リロード |
+| エラーハンドリング | コメント削除済み、存在しないコメント、不正リアクション値等のエラー対応 |
+
+### 将来対応（v0.3.0 以降）
+
 - シェル補完 → v0.3.0
 - アクティビティ・自動更新 → v0.4.0
 - UX 強化（シンタックスハイライト、ファイルツリー） → v0.5.0
@@ -144,6 +154,9 @@ npx review-codecommit --region <region>      # リージョン指定
 | `o` | スレッド折りたたみ/展開切替 | PR詳細画面（コメント行上のみ） |
 | `e` | コメント編集（既存内容プリフィル） | PR詳細画面（コメント行上のみ） |
 | `d` | コメント削除（確認プロンプト表示） | PR詳細画面（コメント行上のみ） |
+| `g` | リアクション追加/削除（絵文字ピッカー表示） | PR詳細画面（コメント行上のみ） |
+| `←` / `h` | リアクション選択を左へ | リアクションピッカー |
+| `→` / `l` | リアクション選択を右へ | リアクションピッカー |
 | `a` | PR を承認（確認プロンプト表示） | PR詳細画面 |
 | `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
 | `m` | マージ操作を開始（戦略選択） | PR詳細画面 |
@@ -227,14 +240,14 @@ npx review-codecommit --region <region>      # リージョン指定
 │                                              │
 │──────────────────────────────────────────────│
 │  Comments (3):                               │
-│  watany: タイムアウトを延長しました          │
-│     └ taro: LGTMです                         │
+│  watany: タイムアウトを延長しました  👍×2     │
+│     └ taro: LGTMです  🎉×1                   │
 │     └ hanako: 他も確認してください            │
 │                                              │
 │  ↑↓ cursor  c comment  C inline  R reply     │
-│  o fold  e edit  d delete  a approve         │
-│  r revoke  m merge  Tab/S-Tab commits        │
-│  x close  q back  ? help                     │
+│  o fold  e edit  d delete  g react           │
+│  a approve  r revoke  m merge  x close       │
+│  Tab/S-Tab commits  q back  ? help           │
 └──────────────────────────────────────────────┘
 ```
 
@@ -292,6 +305,10 @@ npx review-codecommit --region <region>      # リージョン指定
 | 削除済みコメント再削除 | 「Comment has already been deleted.」と表示 |
 | 存在しないコメント削除 | 「Comment not found.」と表示 |
 | ページトークン期限切れ | 「Page token expired. Returning to first page.」と表示し、ページ1にリセット |
+| 削除済みコメントへのリアクション | 「Comment has already been deleted.」と表示 |
+| 存在しないコメントへのリアクション | 「Comment not found.」と表示 |
+| 不正リアクション値 | 「Invalid reaction value.」と表示 |
+| 不正コメントID（リアクション時） | 「Invalid comment ID format.」と表示 |
 
 ## テスト戦略
 
