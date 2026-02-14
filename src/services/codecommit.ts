@@ -121,36 +121,38 @@ export async function getPullRequestDetail(
     differences.push(...(diffResponse.differences ?? []));
   }
 
-  const commentThreads: CommentThread[] = [];
-  const commentsCommand = new GetCommentsForPullRequestCommand({
-    pullRequestId,
-  });
-  const commentsResponse = await client.send(commentsCommand);
-  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    const location = thread.location?.filePath
+  const commentThreads = await fetchCommentThreads(client, pullRequestId, {
+    repositoryName,
+    ...(target?.sourceCommit && target?.destinationCommit
       ? {
-          filePath: thread.location.filePath,
-          filePosition: thread.location.filePosition ?? 0,
-          relativeFileVersion:
-            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+          afterCommitId: target.sourceCommit,
+          beforeCommitId: target.destinationCommit,
         }
-      : null;
-    commentThreads.push({
-      location,
-      comments: thread.comments ?? [],
-    });
-  }
+      : {}),
+  });
 
   return { pullRequest, differences, commentThreads };
 }
 
-export async function getComments(
+async function fetchCommentThreads(
   client: CodeCommitClient,
   pullRequestId: string,
+  params?: {
+    repositoryName?: string;
+    afterCommitId?: string;
+    beforeCommitId?: string;
+  },
 ): Promise<CommentThread[]> {
   const commentThreads: CommentThread[] = [];
   const commentsCommand = new GetCommentsForPullRequestCommand({
     pullRequestId,
+    ...(params?.repositoryName ? { repositoryName: params.repositoryName } : {}),
+    ...(params?.afterCommitId && params?.beforeCommitId
+      ? {
+          afterCommitId: params.afterCommitId,
+          beforeCommitId: params.beforeCommitId,
+        }
+      : {}),
   });
   const commentsResponse = await client.send(commentsCommand);
   for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
@@ -168,6 +170,18 @@ export async function getComments(
     });
   }
   return commentThreads;
+}
+
+export async function getComments(
+  client: CodeCommitClient,
+  pullRequestId: string,
+  params?: {
+    repositoryName?: string;
+    afterCommitId?: string;
+    beforeCommitId?: string;
+  },
+): Promise<CommentThread[]> {
+  return fetchCommentThreads(client, pullRequestId, params);
 }
 
 export async function postComment(
