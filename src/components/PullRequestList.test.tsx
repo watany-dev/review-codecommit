@@ -10,12 +10,14 @@ describe("PullRequestList", () => {
       title: "fix: login timeout",
       authorArn: "arn:aws:iam::123456789012:user/watany",
       creationDate: new Date("2026-02-13T10:00:00Z"),
+      status: "OPEN" as const,
     },
     {
       pullRequestId: "43",
       title: "feat: add dashboard",
       authorArn: "arn:aws:iam::123456789012:user/taro",
       creationDate: new Date("2026-02-12T10:00:00Z"),
+      status: "OPEN" as const,
     },
   ];
 

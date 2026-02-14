@@ -32,11 +32,14 @@ export interface CodeCommitConfig {
   region?: string;
 }
 
+export type PullRequestDisplayStatus = "OPEN" | "CLOSED" | "MERGED";
+
 export interface PullRequestSummary {
   pullRequestId: string;
   title: string;
   authorArn: string;
   creationDate: Date;
+  status: PullRequestDisplayStatus;
 }
 
 export interface CommentThread {
@@ -91,11 +94,18 @@ export async function listPullRequests(
         const getResponse = await client.send(getCommand);
         const pr = getResponse.pullRequest;
         if (!pr) return null;
+
+        const apiStatus = pr.pullRequestStatus ?? "OPEN";
+        const isMerged = pr.pullRequestTargets?.[0]?.mergeMetadata?.isMerged === true;
+        const displayStatus: PullRequestDisplayStatus =
+          apiStatus === "CLOSED" && isMerged ? "MERGED" : (apiStatus as PullRequestDisplayStatus);
+
         return {
           pullRequestId: pr.pullRequestId ?? id,
           title: pr.title ?? "(no title)",
           authorArn: pr.authorArn ?? "unknown",
           creationDate: pr.creationDate ?? new Date(),
+          status: displayStatus,
         };
       }),
     )
