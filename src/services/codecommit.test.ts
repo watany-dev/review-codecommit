@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  closePullRequest,
   createClient,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
   getComments,
+  getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
+  mergePullRequest,
   postComment,
   postCommentReply,
   updateApprovalState,
@@ -893,5 +896,227 @@ describe("getBlobContent", () => {
     mockSend.mockResolvedValueOnce({ content: undefined });
     const content = await getBlobContent(mockClient, "my-service", "blob1");
     expect(content).toBe("");
+  });
+});
+
+describe("mergePullRequest", () => {
+  it("uses MergePullRequestByFastForwardCommand for fast-forward strategy", async () => {
+    const mockPR = { pullRequestId: "42", pullRequestStatus: "CLOSED" };
+    mockSend.mockResolvedValueOnce({ pullRequest: mockPR });
+
+    const result = await mergePullRequest(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      strategy: "fast-forward",
+    });
+
+    expect(result).toEqual(mockPR);
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.constructor.name).toBe("MergePullRequestByFastForwardCommand");
+    expect(sentCommand.input).toEqual({
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      sourceCommitId: undefined,
+    });
+  });
+
+  it("uses MergePullRequestBySquashCommand for squash strategy", async () => {
+    const mockPR = { pullRequestId: "42", pullRequestStatus: "CLOSED" };
+    mockSend.mockResolvedValueOnce({ pullRequest: mockPR });
+
+    const result = await mergePullRequest(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      strategy: "squash",
+    });
+
+    expect(result).toEqual(mockPR);
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.constructor.name).toBe("MergePullRequestBySquashCommand");
+  });
+
+  it("uses MergePullRequestByThreeWayCommand for three-way strategy", async () => {
+    const mockPR = { pullRequestId: "42", pullRequestStatus: "CLOSED" };
+    mockSend.mockResolvedValueOnce({ pullRequest: mockPR });
+
+    const result = await mergePullRequest(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      strategy: "three-way",
+    });
+
+    expect(result).toEqual(mockPR);
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.constructor.name).toBe("MergePullRequestByThreeWayCommand");
+  });
+
+  it("passes sourceCommitId when provided", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequest: { pullRequestId: "42" } });
+
+    await mergePullRequest(mockClient, {
+      pullRequestId: "42",
+      repositoryName: "my-service",
+      sourceCommitId: "abc123",
+      strategy: "fast-forward",
+    });
+
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.sourceCommitId).toBe("abc123");
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("merge failed");
+    error.name = "ManualMergeRequiredException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      mergePullRequest(mockClient, {
+        pullRequestId: "42",
+        repositoryName: "my-service",
+        strategy: "fast-forward",
+      }),
+    ).rejects.toThrow("merge failed");
+  });
+});
+
+describe("getMergeConflicts", () => {
+  it("returns mergeable summary when no conflicts", async () => {
+    mockSend.mockResolvedValueOnce({
+      mergeable: true,
+      conflictMetadataList: [],
+    });
+
+    const result = await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc123",
+      destinationCommitId: "def456",
+      strategy: "fast-forward",
+    });
+
+    expect(result).toEqual({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+  });
+
+  it("returns conflict details when conflicts exist", async () => {
+    mockSend.mockResolvedValueOnce({
+      mergeable: false,
+      conflictMetadataList: [
+        { filePath: "src/auth.ts", numberOfConflicts: 2 },
+        { filePath: "src/config.ts", numberOfConflicts: 1 },
+      ],
+    });
+
+    const result = await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc123",
+      destinationCommitId: "def456",
+      strategy: "squash",
+    });
+
+    expect(result).toEqual({
+      mergeable: false,
+      conflictCount: 2,
+      conflictFiles: ["src/auth.ts", "src/config.ts"],
+    });
+  });
+
+  it("maps merge strategy to correct mergeOption", async () => {
+    mockSend.mockResolvedValueOnce({ mergeable: true, conflictMetadataList: [] });
+    await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc",
+      destinationCommitId: "def",
+      strategy: "fast-forward",
+    });
+    expect(mockSend.mock.calls[0][0].input.mergeOption).toBe("FAST_FORWARD_MERGE");
+
+    mockSend.mockResolvedValueOnce({ mergeable: true, conflictMetadataList: [] });
+    await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc",
+      destinationCommitId: "def",
+      strategy: "squash",
+    });
+    expect(mockSend.mock.calls[1][0].input.mergeOption).toBe("SQUASH_MERGE");
+
+    mockSend.mockResolvedValueOnce({ mergeable: true, conflictMetadataList: [] });
+    await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc",
+      destinationCommitId: "def",
+      strategy: "three-way",
+    });
+    expect(mockSend.mock.calls[2][0].input.mergeOption).toBe("THREE_WAY_MERGE");
+  });
+
+  it("handles undefined mergeable and conflictMetadataList", async () => {
+    mockSend.mockResolvedValueOnce({
+      mergeable: undefined,
+      conflictMetadataList: undefined,
+    });
+
+    const result = await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc",
+      destinationCommitId: "def",
+      strategy: "three-way",
+    });
+
+    expect(result).toEqual({
+      mergeable: false,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("access denied");
+    error.name = "AccessDeniedException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      getMergeConflicts(mockClient, {
+        repositoryName: "my-service",
+        sourceCommitId: "abc",
+        destinationCommitId: "def",
+        strategy: "fast-forward",
+      }),
+    ).rejects.toThrow("access denied");
+  });
+});
+
+describe("closePullRequest", () => {
+  it("sends UpdatePullRequestStatusCommand with CLOSED status", async () => {
+    const mockPR = { pullRequestId: "42", pullRequestStatus: "CLOSED" };
+    mockSend.mockResolvedValueOnce({ pullRequest: mockPR });
+
+    const result = await closePullRequest(mockClient, {
+      pullRequestId: "42",
+    });
+
+    expect(result).toEqual(mockPR);
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          pullRequestId: "42",
+          pullRequestStatus: "CLOSED",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("already closed");
+    error.name = "PullRequestAlreadyClosedException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      closePullRequest(mockClient, {
+        pullRequestId: "42",
+      }),
+    ).rejects.toThrow("already closed");
   });
 });
