@@ -28,6 +28,10 @@ interface Props {
   isPostingInlineComment: boolean;
   inlineCommentError: string | null;
   onClearInlineCommentError: () => void;
+  onPostReply: (inReplyTo: string, content: string) => void;
+  isPostingReply: boolean;
+  replyError: string | null;
+  onClearReplyError: () => void;
   approvals: Approval[];
   approvalEvaluation: Evaluation | null;
   onApprove: () => void;
@@ -52,6 +56,10 @@ export function PullRequestDetail({
   isPostingInlineComment,
   inlineCommentError,
   onClearInlineCommentError,
+  onPostReply,
+  isPostingReply,
+  replyError,
+  onClearReplyError,
   approvals,
   approvalEvaluation,
   onApprove,
@@ -70,6 +78,9 @@ export function PullRequestDetail({
     relativeFileVersion: "BEFORE" | "AFTER";
   } | null>(null);
   const [wasPostingInline, setWasPostingInline] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<{ commentId: string; author: string; content: string } | null>(null);
+  const [wasPostingReply, setWasPostingReply] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
   const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
@@ -106,6 +117,18 @@ export function PullRequestDetail({
   }, [isPostingInlineComment, inlineCommentError]);
 
   useEffect(() => {
+    if (isPostingReply) {
+      setWasPostingReply(true);
+    } else if (wasPostingReply && !replyError) {
+      setIsReplying(false);
+      setReplyTarget(null);
+      setWasPostingReply(false);
+    } else {
+      setWasPostingReply(false);
+    }
+  }, [isPostingReply, replyError]);
+
+  useEffect(() => {
     if (isApproving) {
       setWasApproving(true);
     } else if (wasApproving && !approvalError) {
@@ -128,7 +151,7 @@ export function PullRequestDetail({
   const lines = buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
 
   useInput((input, key) => {
-    if (isCommenting || isInlineCommenting || approvalAction) return;
+    if (isCommenting || isInlineCommenting || isReplying || approvalAction) return;
 
     if (input === "q" || key.escape) {
       onBack();
@@ -174,6 +197,15 @@ export function PullRequestDetail({
       });
       return;
     }
+    if (input === "R") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const target = getReplyTargetFromLine(currentLine);
+      if (!target) return;
+      setReplyTarget(target);
+      setIsReplying(true);
+      return;
+    }
     if (input === "a") {
       setApprovalAction("approve");
       return;
@@ -184,7 +216,7 @@ export function PullRequestDetail({
     }
   });
 
-  const visibleLineCount = isCommenting || isInlineCommenting || approvalAction ? 20 : 30;
+  const visibleLineCount = isCommenting || isInlineCommenting || isReplying || approvalAction ? 20 : 30;
   const scrollOffset = useMemo(() => {
     const halfVisible = Math.floor(visibleLineCount / 2);
     const maxOffset = Math.max(0, lines.length - visibleLineCount);
@@ -274,6 +306,25 @@ export function PullRequestDetail({
           />
         </Box>
       )}
+      {isReplying && replyTarget && (
+        <Box flexDirection="column">
+          <Text dimColor>
+            Replying to {replyTarget.author}: {replyTarget.content.slice(0, 50)}
+            {replyTarget.content.length > 50 ? "..." : ""}
+          </Text>
+          <CommentInput
+            onSubmit={(content) => onPostReply(replyTarget.commentId, content)}
+            onCancel={() => {
+              setIsReplying(false);
+              setReplyTarget(null);
+              onClearReplyError();
+            }}
+            isPosting={isPostingReply}
+            error={replyError}
+            onClearError={onClearReplyError}
+          />
+        </Box>
+      )}
       {approvalAction && (
         <ConfirmPrompt
           message={
@@ -295,9 +346,9 @@ export function PullRequestDetail({
       )}
       <Box marginTop={1}>
         <Text dimColor>
-          {isCommenting || isInlineCommenting || approvalAction
+          {isCommenting || isInlineCommenting || isReplying || approvalAction
             ? ""
-            : "↑↓ cursor  c comment  C inline  a approve  r revoke  q back  ? help"}
+            : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -323,6 +374,30 @@ interface DisplayLine {
   afterLineNumber?: number;
   threadIndex?: number;
   commentId?: string;
+}
+
+function getReplyTargetFromLine(
+  line: DisplayLine,
+): { commentId: string; author: string; content: string } | null {
+  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
+  if (!commentTypes.includes(line.type)) return null;
+  if (!line.commentId) return null;
+
+  // Extract author from line text
+  const text = line.text;
+  let author = "unknown";
+  let content = text;
+  // For inline comments: "💬 author: content" or reply "└ author: content"
+  // For general comments: "author: content" or reply "└ author: content"
+  const colonIdx = text.indexOf(": ");
+  if (colonIdx !== -1) {
+    const prefix = text.slice(0, colonIdx);
+    content = text.slice(colonIdx + 2);
+    // Remove prefix symbols
+    author = prefix.replace(/^[💬└\s]+/, "").trim();
+  }
+
+  return { commentId: line.commentId, author, content };
 }
 
 const FOLD_THRESHOLD = 4;

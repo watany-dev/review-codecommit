@@ -23,6 +23,7 @@ import {
   listRepositories,
   type PullRequestSummary,
   postComment,
+  postCommentReply,
   updateApprovalState,
 } from "./services/codecommit.js";
 
@@ -58,6 +59,9 @@ export function App({ client, initialRepo }: AppProps) {
 
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
+  const [isPostingReply, setIsPostingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
 
@@ -212,6 +216,21 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function handlePostReply(inReplyTo: string, content: string) {
+    if (!prDetail?.pullRequestId) return;
+
+    setIsPostingReply(true);
+    setReplyError(null);
+    try {
+      await postCommentReply(client, { inReplyTo, content });
+      await reloadComments(prDetail.pullRequestId);
+    } catch (err) {
+      setReplyError(formatReplyError(err));
+    } finally {
+      setIsPostingReply(false);
+    }
+  }
+
   async function handleApprove() {
     if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
 
@@ -333,6 +352,10 @@ export function App({ client, initialRepo }: AppProps) {
           isPostingInlineComment={isPostingInlineComment}
           inlineCommentError={inlineCommentError}
           onClearInlineCommentError={() => setInlineCommentError(null)}
+          onPostReply={handlePostReply}
+          isPostingReply={isPostingReply}
+          replyError={replyError}
+          onClearReplyError={() => setReplyError(null)}
           approvals={approvals}
           approvalEvaluation={approvalEvaluation}
           onApprove={handleApprove}
@@ -352,12 +375,28 @@ export function App({ client, initialRepo }: AppProps) {
  * @param context - Optional context ('comment' or 'approval' for specific errors)
  * @returns User-friendly error message
  */
-function formatErrorMessage(err: unknown, context?: "comment" | "approval"): string {
+function formatErrorMessage(err: unknown, context?: "comment" | "reply" | "approval"): string {
   if (!(err instanceof Error)) {
     return context ? String(err) : "An unexpected error occurred.";
   }
 
   const name = err.name;
+
+  // Reply-specific errors
+  if (context === "reply") {
+    if (name === "CommentContentRequiredException") {
+      return "Reply cannot be empty.";
+    }
+    if (name === "CommentContentSizeLimitExceededException") {
+      return "Reply exceeds the 10,240 character limit.";
+    }
+    if (name === "CommentDoesNotExistException") {
+      return "The comment you are replying to no longer exists.";
+    }
+    if (name === "InvalidCommentIdException") {
+      return "Invalid comment ID format.";
+    }
+  }
 
   // Comment-specific errors
   if (context === "comment") {
@@ -424,6 +463,10 @@ function formatErrorMessage(err: unknown, context?: "comment" | "approval"): str
 }
 
 // Context-specific wrappers
+function formatReplyError(err: unknown): string {
+  return formatErrorMessage(err, "reply");
+}
+
 function formatCommentError(err: unknown): string {
   return formatErrorMessage(err, "comment");
 }

@@ -8,6 +8,7 @@ vi.mock("./services/codecommit.js", () => ({
   getPullRequestDetail: vi.fn(),
   getBlobContent: vi.fn(),
   postComment: vi.fn(),
+  postCommentReply: vi.fn(),
   getComments: vi.fn(),
   getApprovalStates: vi.fn(),
   evaluateApprovalRules: vi.fn(),
@@ -24,6 +25,7 @@ import {
   listPullRequests,
   listRepositories,
   postComment,
+  postCommentReply,
   updateApprovalState,
 } from "./services/codecommit.js";
 
@@ -36,6 +38,7 @@ describe("App", () => {
     vi.mocked(getPullRequestDetail).mockReset();
     vi.mocked(getBlobContent).mockReset();
     vi.mocked(postComment).mockReset();
+    vi.mocked(postCommentReply).mockReset();
     vi.mocked(getComments).mockReset();
     vi.mocked(getApprovalStates).mockReset();
     vi.mocked(evaluateApprovalRules).mockReset();
@@ -1855,6 +1858,194 @@ describe("App", () => {
           location: expect.objectContaining({
             filePath: "src/auth.ts",
           }),
+        }),
+      );
+    });
+  });
+
+  // v0.5: Reply integration tests
+  it("shows reply error on failure", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+      nextToken: undefined,
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
+        creationDate: new Date("2026-02-13T10:00:00Z"),
+        revisionId: "rev-1",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+            destinationCommit: "abc",
+            sourceCommit: "def",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Please fix",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getBlobContent).mockResolvedValue("");
+
+    const replyError = new Error("comment not found");
+    replyError.name = "CommentDoesNotExistException";
+    vi.mocked(postCommentReply).mockRejectedValue(replyError);
+
+    const { stdin, lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    // Select PR
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Navigate to comment line (sep=0, comment-header=1, comment=2)
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Please fix/);
+    });
+
+    // Open reply mode
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+
+    stdin.write("my reply");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Failed to post comment:");
+      expect(lastFrame()).toContain("The comment you are replying to no longer exists.");
+    });
+  });
+
+  it("posts reply successfully and reloads comments", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+      nextToken: undefined,
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
+        creationDate: new Date("2026-02-13T10:00:00Z"),
+        revisionId: "rev-1",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+            destinationCommit: "abc",
+            sourceCommit: "def",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Please fix",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getBlobContent).mockResolvedValue("");
+    vi.mocked(postCommentReply).mockResolvedValue({
+      commentId: "reply-1",
+      content: "Will do!",
+      authorArn: "arn:aws:iam::123456789012:user/watany",
+      inReplyTo: "c1",
+    });
+
+    // Mock reload after post
+    vi.mocked(getComments).mockResolvedValue([
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Please fix",
+          },
+          {
+            commentId: "reply-1",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "Will do!",
+          },
+        ],
+      },
+    ]);
+
+    const { stdin, lastFrame } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Navigate to comment line
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*taro: Please fix/);
+    });
+
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+
+    stdin.write("Will do!");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(postCommentReply).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          inReplyTo: "c1",
+          content: "Will do!",
         }),
       );
     });
