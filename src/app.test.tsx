@@ -18,6 +18,8 @@ vi.mock("./services/codecommit.js", () => ({
   closePullRequest: vi.fn(),
   getCommitsForPR: vi.fn(),
   getCommitDifferences: vi.fn(),
+  updateComment: vi.fn(),
+  deleteComment: vi.fn(),
 }));
 
 import { App } from "./app.js";
@@ -37,6 +39,8 @@ import {
   postComment,
   postCommentReply,
   updateApprovalState,
+  updateComment,
+  deleteComment,
 } from "./services/codecommit.js";
 
 const mockClient = {} as any;
@@ -58,6 +62,8 @@ describe("App", () => {
     vi.mocked(closePullRequest).mockReset();
     vi.mocked(getCommitsForPR).mockReset();
     vi.mocked(getCommitDifferences).mockReset();
+    vi.mocked(updateComment).mockReset();
+    vi.mocked(deleteComment).mockReset();
     // Default: no commits
     vi.mocked(getCommitsForPR).mockResolvedValue([]);
     vi.mocked(getCommitDifferences).mockResolvedValue([]);
@@ -3243,6 +3249,293 @@ describe("App", () => {
         "base789",
         "src123",
       );
+    });
+  });
+
+  // v0.7: Comment edit/delete tests
+  it("calls updateComment and reloads comments on successful edit", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "dest1",
+            sourceCommit: "src1",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Original content",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(updateComment).mockResolvedValue({
+      commentId: "comment-1",
+      content: "Updated content",
+    });
+    vi.mocked(getComments).mockResolvedValue([
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "comment-1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Updated content",
+          },
+        ],
+      },
+    ]);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    // Navigate to comment line
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro");
+    });
+    stdin.write("e");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Edit Comment:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(updateComment).toHaveBeenCalledWith(mockClient, {
+        commentId: "comment-1",
+        content: "Original content",
+      });
+    });
+  });
+
+  it("shows updateComment error for CommentNotCreatedByCallerException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "dest1",
+            sourceCommit: "src1",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "LGTM",
+            },
+          ],
+        },
+      ],
+    });
+    const err = new Error("not your comment");
+    err.name = "CommentNotCreatedByCallerException";
+    vi.mocked(updateComment).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro");
+    });
+    stdin.write("e");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Edit Comment:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("You can only edit your own comments.");
+    });
+  });
+
+  it("calls deleteComment and reloads comments on successful delete", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "dest1",
+            sourceCommit: "src1",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Delete me",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(deleteComment).mockResolvedValue({
+      commentId: "comment-1",
+      content: "",
+      deleted: true,
+    });
+    vi.mocked(getComments).mockResolvedValue([]);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro");
+    });
+    stdin.write("d");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Delete this comment?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(deleteComment).toHaveBeenCalledWith(mockClient, {
+        commentId: "comment-1",
+      });
+    });
+  });
+
+  it("shows deleteComment error for CommentDeletedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "dest1",
+            sourceCommit: "src1",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "LGTM",
+            },
+          ],
+        },
+      ],
+    });
+    const err = new Error("already deleted");
+    err.name = "CommentDeletedException";
+    vi.mocked(deleteComment).mockRejectedValue(err);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro");
+    });
+    stdin.write("d");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Delete this comment?");
+    });
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Comment has already been deleted.");
     });
   });
 });
