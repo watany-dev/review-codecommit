@@ -12,11 +12,14 @@ import {
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
+  getReactionsForComment,
+  getReactionsForComments,
   listPullRequests,
   listRepositories,
   mergePullRequest,
   postComment,
   postCommentReply,
+  putReaction,
   updateApprovalState,
   updateComment,
 } from "./codecommit.js";
@@ -1565,5 +1568,156 @@ describe("deleteComment", () => {
         commentId: "comment-1",
       }),
     ).rejects.toThrow("already deleted");
+  });
+});
+
+describe("putReaction", () => {
+  it("sends PutCommentReactionCommand with correct parameters", async () => {
+    mockSend.mockResolvedValueOnce({});
+
+    await putReaction(mockClient, {
+      commentId: "comment-1",
+      reactionValue: ":thumbsup:",
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          commentId: "comment-1",
+          reactionValue: ":thumbsup:",
+        },
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("comment deleted");
+    error.name = "CommentDeletedException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(
+      putReaction(mockClient, {
+        commentId: "comment-1",
+        reactionValue: ":thumbsup:",
+      }),
+    ).rejects.toThrow("comment deleted");
+  });
+});
+
+describe("getReactionsForComment", () => {
+  it("returns ReactionSummary array with correct aggregation", async () => {
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: { emoji: "👍", shortCode: ":thumbsup:", unicode: "U+1F44D" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/bob"],
+          reactionsFromDeletedUsersCount: 0,
+        },
+        {
+          reaction: { emoji: "🎉", shortCode: ":hooray:", unicode: "U+1F389" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/alice"],
+          reactionsFromDeletedUsersCount: 1,
+        },
+      ],
+    });
+
+    const result = await getReactionsForComment(mockClient, "comment-1");
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({
+      emoji: "👍",
+      shortCode: ":thumbsup:",
+      count: 2,
+      userArns: ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/bob"],
+    });
+    expect(result[1]).toEqual({
+      emoji: "🎉",
+      shortCode: ":hooray:",
+      count: 2,
+      userArns: ["arn:aws:iam::123456789012:user/alice"],
+    });
+  });
+
+  it("returns empty array when no reactions", async () => {
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: undefined,
+    });
+
+    const result = await getReactionsForComment(mockClient, "comment-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("includes deleted users in count", async () => {
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: { emoji: "👍", shortCode: ":thumbsup:" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/alice"],
+          reactionsFromDeletedUsersCount: 3,
+        },
+      ],
+    });
+
+    const result = await getReactionsForComment(mockClient, "comment-1");
+    expect(result[0].count).toBe(4);
+  });
+
+  it("propagates API errors", async () => {
+    const error = new Error("comment not found");
+    error.name = "CommentDoesNotExistException";
+    mockSend.mockRejectedValueOnce(error);
+
+    await expect(getReactionsForComment(mockClient, "comment-1")).rejects.toThrow("comment not found");
+  });
+});
+
+describe("getReactionsForComments", () => {
+  it("returns Map of commentId to ReactionSummary arrays", async () => {
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: { emoji: "👍", shortCode: ":thumbsup:" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/alice"],
+          reactionsFromDeletedUsersCount: 0,
+        },
+      ],
+    });
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: { emoji: "🎉", shortCode: ":hooray:" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/bob"],
+          reactionsFromDeletedUsersCount: 0,
+        },
+      ],
+    });
+
+    const result = await getReactionsForComments(mockClient, ["c1", "c2"]);
+    expect(result.size).toBe(2);
+    expect(result.get("c1")?.[0].emoji).toBe("👍");
+    expect(result.get("c2")?.[0].emoji).toBe("🎉");
+  });
+
+  it("continues when individual comment errors occur", async () => {
+    mockSend.mockRejectedValueOnce(new Error("deleted"));
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: { emoji: "👍", shortCode: ":thumbsup:" },
+          reactionUsers: ["arn:aws:iam::123456789012:user/alice"],
+          reactionsFromDeletedUsersCount: 0,
+        },
+      ],
+    });
+
+    const result = await getReactionsForComments(mockClient, ["c1", "c2"]);
+    expect(result.size).toBe(1);
+    expect(result.has("c1")).toBe(false);
+    expect(result.get("c2")?.[0].emoji).toBe("👍");
+  });
+
+  it("returns empty Map for empty commentIds list", async () => {
+    const result = await getReactionsForComments(mockClient, []);
+    expect(result.size).toBe(0);
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });

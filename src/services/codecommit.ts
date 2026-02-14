@@ -7,6 +7,7 @@ import {
   EvaluatePullRequestApprovalRulesCommand,
   type Evaluation,
   GetBlobCommand,
+  GetCommentReactionsCommand,
   GetCommentsForPullRequestCommand,
   GetCommitCommand,
   GetDifferencesCommand,
@@ -21,6 +22,7 @@ import {
   PostCommentForPullRequestCommand,
   PostCommentReplyCommand,
   type PullRequest,
+  PutCommentReactionCommand,
   type RepositoryNameIdPair,
   UpdateCommentCommand,
   UpdatePullRequestApprovalStateCommand,
@@ -519,4 +521,71 @@ export async function deleteComment(
   });
   const response = await client.send(command);
   return response.comment!;
+}
+
+/** Aggregated reaction information for a single comment */
+export interface ReactionSummary {
+  emoji: string;
+  shortCode: string;
+  count: number;
+  userArns: string[];
+}
+
+/** commentId → ReactionSummary[] mapping */
+export type ReactionsByComment = Map<string, ReactionSummary[]>;
+
+export async function putReaction(
+  client: CodeCommitClient,
+  params: {
+    commentId: string;
+    reactionValue: string;
+  },
+): Promise<void> {
+  const command = new PutCommentReactionCommand({
+    commentId: params.commentId,
+    reactionValue: params.reactionValue,
+  });
+  await client.send(command);
+}
+
+export async function getReactionsForComment(
+  client: CodeCommitClient,
+  commentId: string,
+): Promise<ReactionSummary[]> {
+  const command = new GetCommentReactionsCommand({
+    commentId,
+  });
+  const response = await client.send(command);
+
+  return (response.reactionsForComment ?? []).map((r) => ({
+    emoji: r.reaction?.emoji ?? "",
+    shortCode: r.reaction?.shortCode ?? "",
+    count: (r.reactionUsers?.length ?? 0) + (r.reactionsFromDeletedUsersCount ?? 0),
+    userArns: r.reactionUsers ?? [],
+  }));
+}
+
+export async function getReactionsForComments(
+  client: CodeCommitClient,
+  commentIds: string[],
+): Promise<ReactionsByComment> {
+  const results: ReactionsByComment = new Map();
+
+  const fetches = commentIds.map(async (commentId) => {
+    try {
+      const reactions = await getReactionsForComment(client, commentId);
+      return { commentId, reactions };
+    } catch {
+      return { commentId, reactions: [] };
+    }
+  });
+
+  const settled = await Promise.all(fetches);
+  for (const { commentId, reactions } of settled) {
+    if (reactions.length > 0) {
+      results.set(commentId, reactions);
+    }
+  }
+
+  return results;
 }
