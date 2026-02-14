@@ -144,6 +144,7 @@ function sortCommentsRootFirst(comments: Comment[]): Comment[] {
       root.push(c);
     }
   }
+  replies.sort((a, b) => (a.creationDate?.getTime() ?? 0) - (b.creationDate?.getTime() ?? 0));
   return [...root, ...replies];
 }
 
