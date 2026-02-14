@@ -6,12 +6,14 @@ A TUI tool for reviewing AWS CodeCommit pull requests in your terminal.
 
 ## Overview
 
-review-codecommit lets you browse AWS CodeCommit repositories, view open pull requests, and inspect diffs and comments — all without leaving the terminal. Built with [Ink](https://github.com/vadimdemedes/ink) (React for CLI).
+review-codecommit lets you browse AWS CodeCommit repositories, view pull requests (open, closed, and merged), and inspect diffs and comments — all without leaving the terminal. Built with [Ink](https://github.com/vadimdemedes/ink) (React for CLI).
 
 ## Features
 
 - List and select AWS CodeCommit repositories
-- Browse open pull requests
+- Browse pull requests with status filter (Open / Closed / Merged, `f` key cycle)
+- Search pull requests by title or author (`/` key)
+- Paginate through PR lists (`n`/`p` keys)
 - View PR details with color-coded unified diffs (green for additions, red for deletions)
 - Read PR comments inline
 - Post comments on pull requests (`c` key in PR detail view)
@@ -85,6 +87,10 @@ review-codecommit --region <region>
 | `x` | Close PR without merge | PR Detail |
 | `Tab` | Next view (All changes / Commits) | PR Detail |
 | `Shift+Tab` | Previous view | PR Detail |
+| `f` | Cycle status filter (Open → Closed → Merged) | PR List |
+| `/` | Search by title or author (Esc to clear) | PR List |
+| `n` | Next page | PR List |
+| `p` | Previous page | PR List |
 | `Ctrl+C` | Exit immediately | All |
 | `?` | Toggle help | All |
 
@@ -147,7 +153,7 @@ bun run build
 | v0.6 | Merge operations | ✅ Released |
 | v0.6.1 | Commit-level review | ✅ Released |
 | v0.7 | Comment edit / delete | ✅ Released |
-| v0.8 | PR status filter and search | Planned |
+| v0.8 | PR status filter, search, and pagination | ✅ Released |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 

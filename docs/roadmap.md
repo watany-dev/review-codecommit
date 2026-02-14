@@ -337,7 +337,7 @@ v0.2 の一般コメントを拡張し、ファイル・行単位のインライ
 
 ---
 
-### v0.8 — PR ステータス管理・フィルタリング
+### v0.8 — PR ステータス管理・フィルタリング ✅
 
 **目的**: Open 以外の PR も扱えるようにし、PR の検索性を向上させる。
 
@@ -345,19 +345,27 @@ v0.2 の一般コメントを拡張し、ファイル・行単位のインライ
 
 | 機能 | 内容 |
 |------|------|
-| ステータスフィルタ | Open / Closed / Merged でフィルタリング（`f` キー） |
-| PR 検索 | タイトル・著者での絞り込み（`/` キー） |
-| ページネーション改善 | 次ページ/前ページの読み込み |
-| PR 作成日時ソート | 新しい順/古い順の切り替え |
+| ステータスフィルタ | Open / Closed / Merged でフィルタリング（`f` キーでサイクル） |
+| PR 検索 | タイトル・著者名でのクライアントサイド絞り込み（`/` キー） |
+| ページネーション | 次ページ/前ページのトークンベース読み込み（`n`/`p` キー） |
+| PR ステータスバッジ | Closed / Merged の PR にバッジ表示 |
+| トークン期限切れ対応 | InvalidContinuationTokenException 時に自動的にページ1へリセット |
 
 #### キーバインド追加
 
 | キー | 動作 | 画面 |
 |------|------|------|
-| `f` | ステータスフィルタ切り替え | PR 一覧 |
-| `/` | 検索モード | PR 一覧 |
+| `f` | ステータスフィルタ切り替え（OPEN→CLOSED→MERGED→OPEN） | PR 一覧 |
+| `/` | 検索モード（Esc でクリア） | PR 一覧 |
 | `n` | 次のページ | PR 一覧 |
 | `p` | 前のページ | PR 一覧 |
+
+#### AWS SDK API
+
+- `ListPullRequestsCommand` — `pullRequestStatus: "OPEN" | "CLOSED"` パラメータ追加
+- `GetPullRequestCommand` — `mergeMetadata.isMerged` で MERGED/CLOSED を判別
+
+詳細は [docs/design-status-filter.md](design-status-filter.md) を参照。
 
 ---
 

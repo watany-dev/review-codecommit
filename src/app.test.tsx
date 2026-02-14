@@ -107,6 +107,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -246,6 +247,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -268,6 +270,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -300,6 +303,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -408,6 +412,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -453,6 +458,7 @@ describe("App", () => {
           title: "feat: new file",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -491,6 +497,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -523,6 +530,7 @@ describe("App", () => {
           title: "chore: remove old",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -561,6 +569,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -583,6 +592,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -620,6 +630,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -705,6 +716,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -760,6 +772,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -810,6 +823,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -860,6 +874,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -910,6 +925,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -958,6 +974,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1006,6 +1023,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1053,6 +1071,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1097,6 +1116,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1151,6 +1171,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1198,6 +1219,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1244,6 +1266,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1286,6 +1309,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1323,6 +1347,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1366,6 +1391,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1409,6 +1435,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1452,6 +1479,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1495,6 +1523,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1538,6 +1567,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1579,6 +1609,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1622,6 +1653,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1665,6 +1697,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1715,6 +1748,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1758,6 +1792,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1800,6 +1835,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1868,6 +1904,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -1964,6 +2001,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
       nextToken: undefined,
@@ -2045,6 +2083,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
       nextToken: undefined,
@@ -2151,6 +2190,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
       nextToken: undefined,
@@ -2224,6 +2264,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
       nextToken: undefined,
@@ -2297,6 +2338,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
       nextToken: undefined,
@@ -2371,6 +2413,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2438,6 +2481,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2495,6 +2539,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2548,6 +2593,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2602,6 +2648,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2659,6 +2706,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2701,6 +2749,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2754,6 +2803,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2807,6 +2857,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2860,6 +2911,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2913,6 +2965,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -2966,6 +3019,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3008,6 +3062,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3063,6 +3118,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3105,6 +3161,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3155,6 +3212,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3193,6 +3251,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3260,6 +3319,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3326,6 +3386,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3409,6 +3470,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3475,6 +3537,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3546,6 +3609,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3612,6 +3676,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3678,6 +3743,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3744,6 +3810,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3810,6 +3877,7 @@ describe("App", () => {
           title: "fix: login",
           authorArn: "arn:aws:iam::123456789012:user/watany",
           creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
         },
       ],
     });
@@ -3865,6 +3933,292 @@ describe("App", () => {
     stdin.write("y");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Comment no longer exists.");
+    });
+  });
+
+  // v0.8: Status filter integration tests
+  it("changes filter to CLOSED and reloads PRs", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "35",
+          title: "fix: typos",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-09T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+    });
+
+    stdin.write("f"); // filter to CLOSED
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: typos");
+    });
+    expect(vi.mocked(listPullRequests)).toHaveBeenLastCalledWith(
+      mockClient,
+      "my-service",
+      undefined,
+      "CLOSED",
+    );
+  });
+
+  it("changes filter to MERGED and filters client-side", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    // First f: OPEN→CLOSED
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "35",
+          title: "fix: typos",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-09T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+    });
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Closed]");
+    });
+
+    // Second f: CLOSED→MERGED, API returns CLOSED but client filters to MERGED
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "40",
+          title: "feat: auth",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-11T10:00:00Z"),
+          status: "MERGED" as const,
+        },
+        {
+          pullRequestId: "35",
+          title: "fix: typos",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-09T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+    });
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Merged]");
+      expect(lastFrame()).toContain("feat: auth");
+      expect(lastFrame()).not.toContain("fix: typos");
+    });
+  });
+
+  // v0.8: Pagination integration tests
+  it("navigates to next page with n key", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-A",
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+      expect(lastFrame()).toContain("n next");
+    });
+
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "50",
+          title: "feat: search",
+          authorArn: "arn:aws:iam::123456789012:user/taro",
+          creationDate: new Date("2026-02-10T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("feat: search");
+      expect(lastFrame()).toContain("Page 2");
+    });
+    expect(vi.mocked(listPullRequests)).toHaveBeenLastCalledWith(
+      mockClient,
+      "my-service",
+      "token-A",
+      "OPEN",
+    );
+  });
+
+  it("navigates to previous page with p key", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-A",
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    // Go to page 2
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "50",
+          title: "feat: search",
+          authorArn: "arn:aws:iam::123456789012:user/taro",
+          creationDate: new Date("2026-02-10T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-B",
+    });
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Page 2");
+    });
+
+    // Go back to page 1
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-A",
+    });
+    stdin.write("p");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Page 1");
+      expect(lastFrame()).toContain("fix: login");
+    });
+  });
+
+  it("resets pagination on filter change", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-A",
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    // Go to page 2
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "50",
+          title: "feat: search",
+          authorArn: "arn:aws:iam::123456789012:user/taro",
+          creationDate: new Date("2026-02-10T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Page 2");
+    });
+
+    // Change filter -> should reset to page 1
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "35",
+          title: "fix: typos",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-09T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+    });
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Page 1");
+      expect(lastFrame()).toContain("fix: typos");
+    });
+  });
+
+  it("handles InvalidContinuationTokenException by resetting to page 1", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+      nextToken: "token-A",
+    });
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    const tokenError = new Error("Invalid token");
+    tokenError.name = "InvalidContinuationTokenException";
+    vi.mocked(listPullRequests).mockRejectedValueOnce(tokenError);
+
+    stdin.write("n");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Page token expired");
     });
   });
 });

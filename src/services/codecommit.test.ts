@@ -60,7 +60,7 @@ describe("listRepositories", () => {
 });
 
 describe("listPullRequests", () => {
-  it("returns pull request summaries", async () => {
+  it("returns pull request summaries with OPEN status", async () => {
     mockSend.mockResolvedValueOnce({
       pullRequestIds: ["42"],
       nextToken: undefined,
@@ -70,12 +70,108 @@ describe("listPullRequests", () => {
         pullRequestId: "42",
         title: "fix: login timeout",
         authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "OPEN",
         creationDate: new Date("2026-02-13T10:00:00Z"),
       },
     });
     const result = await listPullRequests(mockClient, "my-service");
     expect(result.pullRequests).toHaveLength(1);
     expect(result.pullRequests[0].title).toBe("fix: login timeout");
+    expect(result.pullRequests[0].status).toBe("OPEN");
+  });
+
+  it("returns MERGED status when mergeMetadata.isMerged is true", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: ["40"],
+      nextToken: undefined,
+    });
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "40",
+        title: "feat: auth",
+        authorArn: "arn:aws:iam::123456789012:user/watany",
+        pullRequestStatus: "CLOSED",
+        creationDate: new Date("2026-02-11T10:00:00Z"),
+        pullRequestTargets: [
+          {
+            mergeMetadata: {
+              isMerged: true,
+              mergedBy: "arn:aws:iam::123456789012:user/taro",
+              mergeCommitId: "abc123",
+              mergeOption: "SQUASH_MERGE",
+            },
+          },
+        ],
+      },
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.pullRequests).toHaveLength(1);
+    expect(result.pullRequests[0].status).toBe("MERGED");
+  });
+
+  it("passes pullRequestStatus OPEN to API by default", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("OPEN");
+  });
+
+  it("passes pullRequestStatus CLOSED to API when specified", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service", undefined, "CLOSED");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("CLOSED");
+  });
+
+  it("passes pullRequestStatus OPEN to API when specified", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestIds: [], nextToken: undefined });
+    await listPullRequests(mockClient, "my-service", undefined, "OPEN");
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input.pullRequestStatus).toBe("OPEN");
+  });
+
+  it("returns nextToken when API provides one", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: [],
+      nextToken: "next-page-token",
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.nextToken).toBe("next-page-token");
+  });
+
+  it("returns no nextToken on last page", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: [],
+      nextToken: undefined,
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.nextToken).toBeUndefined();
+  });
+
+  it("returns CLOSED status when mergeMetadata.isMerged is false", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestIds: ["35"],
+      nextToken: undefined,
+    });
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "35",
+        title: "fix: typos",
+        authorArn: "arn:aws:iam::123456789012:user/hanako",
+        pullRequestStatus: "CLOSED",
+        creationDate: new Date("2026-02-09T10:00:00Z"),
+        pullRequestTargets: [
+          {
+            mergeMetadata: {
+              isMerged: false,
+            },
+          },
+        ],
+      },
+    });
+    const result = await listPullRequests(mockClient, "my-service");
+    expect(result.pullRequests).toHaveLength(1);
+    expect(result.pullRequests[0].status).toBe("CLOSED");
   });
 });
 
@@ -179,6 +275,7 @@ describe("listPullRequests edge cases", () => {
     const result = await listPullRequests(mockClient, "my-service");
     expect(result.pullRequests).toHaveLength(1);
     expect(result.pullRequests[0].title).toBe("(no title)");
+    expect(result.pullRequests[0].status).toBe("OPEN");
     expect(result.nextToken).toBe("token123");
   });
 
