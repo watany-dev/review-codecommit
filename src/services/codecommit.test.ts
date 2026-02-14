@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createClient,
   getBlobContent,
+  getComments,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
@@ -292,6 +293,54 @@ describe("postComment", () => {
         content: "test",
       }),
     ).rejects.toThrow("Access denied");
+  });
+});
+
+describe("getComments", () => {
+  it("returns comments from API response", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [
+            {
+              commentId: "comment-1",
+              content: "First comment",
+              authorArn: "arn:aws:iam::123456789012:user/alice",
+              creationDate: new Date("2026-02-13T10:00:00Z"),
+            },
+            {
+              commentId: "comment-2",
+              content: "Second comment",
+              authorArn: "arn:aws:iam::123456789012:user/bob",
+              creationDate: new Date("2026-02-13T11:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    const comments = await getComments(mockClient, "42", "my-service");
+    expect(comments).toHaveLength(2);
+    expect(comments[0].content).toBe("First comment");
+    expect(comments[1].content).toBe("Second comment");
+  });
+
+  it("handles empty comments data", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: undefined,
+    });
+
+    const comments = await getComments(mockClient, "42", "my-service");
+    expect(comments).toHaveLength(0);
+  });
+
+  it("handles thread with no comments", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [{ comments: undefined }],
+    });
+
+    const comments = await getComments(mockClient, "42", "my-service");
+    expect(comments).toHaveLength(0);
   });
 });
 
