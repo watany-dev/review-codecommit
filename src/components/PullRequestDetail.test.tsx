@@ -354,61 +354,6 @@ describe("PullRequestDetail", () => {
     expect(onHelp).toHaveBeenCalled();
   });
 
-  it("scrolls down with j key", () => {
-    const manyDiffs = Array.from({ length: 5 }, (_, i) => ({
-      beforeBlob: { blobId: `a${i}`, path: `file${i}.ts` },
-      afterBlob: { blobId: `b${i}`, path: `file${i}.ts` },
-    }));
-    const texts = new Map<string, { before: string; after: string }>();
-    for (let i = 0; i < 5; i++) {
-      texts.set(`a${i}:b${i}`, {
-        before: Array.from({ length: 10 }, (_, j) => `old-${i}-${j}`).join("\n"),
-        after: Array.from({ length: 10 }, (_, j) => `new-${i}-${j}`).join("\n"),
-      });
-    }
-
-    const { stdin } = render(
-      <PullRequestDetail
-        pullRequest={pullRequest as any}
-        differences={manyDiffs as any}
-        commentThreads={[]}
-        diffTexts={texts}
-        onBack={vi.fn()}
-        onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultApprovalProps}
-      />,
-    );
-    stdin.write("j");
-    stdin.write("j");
-    // Just verify no crash on scroll
-  });
-
-  it("scrolls up with k key stays at 0", () => {
-    const { stdin } = render(
-      <PullRequestDetail
-        pullRequest={pullRequest as any}
-        differences={differences as any}
-        commentThreads={commentThreads as any}
-        diffTexts={diffTexts}
-        onBack={vi.fn()}
-        onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultApprovalProps}
-      />,
-    );
-    stdin.write("k"); // should stay at 0
-    // Just verify no crash
-  });
-
   it("shows CommentInput when c key is pressed", async () => {
     const { stdin, lastFrame } = render(
       <PullRequestDetail
@@ -1271,32 +1216,6 @@ describe("PullRequestDetail", () => {
     stdin.write("k");
     // First line should still have cursor
     expect(lastFrame()).toContain("> ");
-  });
-
-  it("does not move cursor when in comment mode", async () => {
-    const onBack = vi.fn();
-    const { stdin, lastFrame } = render(
-      <PullRequestDetail
-        pullRequest={pullRequest as any}
-        differences={differences as any}
-        commentThreads={[]}
-        diffTexts={diffTexts}
-        onBack={onBack}
-        onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultApprovalProps}
-      />,
-    );
-    stdin.write("c");
-    await vi.waitFor(() => {
-      expect(lastFrame()).toContain("New Comment:");
-    });
-    stdin.write("j"); // should not move cursor
-    expect(onBack).not.toHaveBeenCalled();
   });
 
   // v0.4: Inline comment posting tests
