@@ -38,6 +38,10 @@ export function Help({ onClose }: Props) {
         <Text> x Close PR without merge (PR Detail)</Text>
         <Text> Tab Switch to commit view (PR Detail)</Text>
         <Text> S-Tab Previous commit (PR Detail)</Text>
+        <Text> f Filter by status (PR List)</Text>
+        <Text> / Search pull requests (PR List)</Text>
+        <Text> n Next page (PR List)</Text>
+        <Text> p Previous page (PR List)</Text>
         <Text> ? Toggle this help</Text>
       </Box>
       <Box marginTop={1}>

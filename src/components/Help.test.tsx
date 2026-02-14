@@ -71,4 +71,25 @@ describe("Help", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("Delete comment");
   });
+
+  // v0.8: Filter, search, pagination keybindings
+  it("shows f Filter by status keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Filter by status");
+  });
+
+  it("shows / Search pull requests keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Search pull requests");
+  });
+
+  it("shows n Next page keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Next page");
+  });
+
+  it("shows p Previous page keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Previous page");
+  });
 });
