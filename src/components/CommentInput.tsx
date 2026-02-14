@@ -23,9 +23,12 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
     }
   });
 
+  const COMMENT_MAX_LENGTH = 10240;
+
   function handleSubmit(text: string) {
     const trimmed = text.trim();
     if (trimmed.length === 0) return;
+    if (trimmed.length > COMMENT_MAX_LENGTH) return;
     onSubmit(trimmed);
   }
 
@@ -53,7 +56,9 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
         <Text>&gt; </Text>
         <TextInput value={value} onChange={setValue} onSubmit={handleSubmit} />
       </Box>
-      <Text dimColor>Enter submit Esc cancel</Text>
+      <Text dimColor>
+        Enter submit Esc cancel ({value.trim().length}/{COMMENT_MAX_LENGTH})
+      </Text>
     </Box>
   );
 }

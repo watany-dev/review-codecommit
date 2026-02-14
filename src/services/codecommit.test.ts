@@ -894,4 +894,11 @@ describe("getBlobContent", () => {
     const content = await getBlobContent(mockClient, "my-service", "blob1");
     expect(content).toBe("");
   });
+
+  it("returns placeholder for oversized content (>1MB)", async () => {
+    const largeContent = new Uint8Array(1024 * 1024 + 1);
+    mockSend.mockResolvedValueOnce({ content: largeContent });
+    const content = await getBlobContent(mockClient, "my-service", "blob1");
+    expect(content).toBe("[File too large to display]");
+  });
 });

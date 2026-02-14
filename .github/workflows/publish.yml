@@ -28,12 +28,15 @@ jobs:
         run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
 
       - name: Validate version match
+        env:
+          TAG_VERSION: ${{ steps.tag.outputs.version }}
+          PKG_VERSION: ${{ steps.package.outputs.version }}
         run: |
-          if [ "${{ steps.tag.outputs.version }}" != "${{ steps.package.outputs.version }}" ]; then
-            echo "::error::Tag version (v${{ steps.tag.outputs.version }}) does not match package.json version (${{ steps.package.outputs.version }})"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version (v${TAG_VERSION}) does not match package.json version (${PKG_VERSION})"
             exit 1
           fi
-          echo "✓ Version validation passed: ${{ steps.package.outputs.version }}"
+          echo "✓ Version validation passed: ${PKG_VERSION}"
 
   build-test:
     runs-on: ubuntu-latest

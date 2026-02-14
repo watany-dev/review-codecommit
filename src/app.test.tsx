@@ -192,6 +192,18 @@ describe("App", () => {
     });
   });
 
+  it("sanitizes access key ID from error message", async () => {
+    vi.mocked(listRepositories).mockRejectedValue(
+      new Error("Invalid credentials for AKIAIOSFODNN7EXAMPLE"),
+    );
+    const { lastFrame } = render(<App client={mockClient} />);
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toContain("[ACCESS_KEY]");
+      expect(frame).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    });
+  });
+
   // Screen navigation tests
   it("navigates from repos to PRs on selection", async () => {
     vi.mocked(listRepositories).mockResolvedValue([

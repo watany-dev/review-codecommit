@@ -19,6 +19,7 @@ describe("CommentInput", () => {
     expect(output).toContain(">");
     expect(output).toContain("Enter submit");
     expect(output).toContain("Esc cancel");
+    expect(output).toContain("/10240");
   });
 
   it("calls onSubmit with trimmed text on Enter", async () => {
