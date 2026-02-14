@@ -102,6 +102,7 @@ describe("PullRequestDetail", () => {
     isDeletingComment: false,
     deleteCommentError: null as string | null,
     onClearDeleteCommentError: vi.fn(),
+    reactionsByComment: new Map() as any,
   };
 
   it("renders PR title and ID", () => {
@@ -5599,6 +5600,122 @@ describe("PullRequestDetail", () => {
       await vi.waitFor(() => {
         expect(lastFrame()).not.toContain("Delete this comment?");
       });
+    });
+  });
+
+  describe("v0.2.0: reaction badge display", () => {
+    const commentThreadsWithReactableComments = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "comment-r1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "LGTM",
+          },
+          {
+            commentId: "reply-r1",
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "Agreed",
+            inReplyTo: "comment-r1",
+          },
+        ],
+      },
+    ];
+
+    it("displays reaction badges on comment lines", () => {
+      const reactionsByComment = new Map([
+        [
+          "comment-r1",
+          [
+            { emoji: "👍", shortCode: ":thumbsup:", count: 2, userArns: [] },
+            { emoji: "🎉", shortCode: ":hooray:", count: 1, userArns: [] },
+          ],
+        ],
+      ]);
+
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          reactionsByComment={reactionsByComment}
+        />,
+      );
+      const output = lastFrame() ?? "";
+      expect(output).toContain("👍×2");
+      expect(output).toContain("🎉×1");
+    });
+
+    it("displays reaction badges on reply lines", () => {
+      const reactionsByComment = new Map([
+        [
+          "reply-r1",
+          [{ emoji: "❤️", shortCode: ":heart:", count: 3, userArns: [] }],
+        ],
+      ]);
+
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          reactionsByComment={reactionsByComment}
+        />,
+      );
+      const output = lastFrame() ?? "";
+      expect(output).toContain("❤️×3");
+    });
+
+    it("shows no badge when comment has no reactions", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithReactableComments as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      const output = lastFrame() ?? "";
+      expect(output).not.toContain("×");
     });
   });
 });

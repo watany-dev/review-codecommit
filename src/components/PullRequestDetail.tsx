@@ -6,6 +6,8 @@ import type {
   CommitInfo,
   ConflictSummary,
   MergeStrategy,
+  ReactionsByComment,
+  ReactionSummary,
 } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
@@ -67,6 +69,7 @@ interface Props {
   isDeletingComment: boolean;
   deleteCommentError: string | null;
   onClearDeleteCommentError: () => void;
+  reactionsByComment: ReactionsByComment;
 }
 
 export function PullRequestDetail({
@@ -117,6 +120,7 @@ export function PullRequestDetail({
   isDeletingComment,
   deleteCommentError,
   onClearDeleteCommentError,
+  reactionsByComment,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -269,15 +273,16 @@ export function PullRequestDetail({
 
   const lines = useMemo(() => {
     if (viewIndex === -1) {
-      return buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
+      return buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads, reactionsByComment);
     }
-    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set());
+    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set(), new Map());
   }, [
     viewIndex,
     differences,
     diffTexts,
     commentThreads,
     collapsedThreads,
+    reactionsByComment,
     commitDifferences,
     commitDiffTexts,
   ]);
@@ -733,6 +738,7 @@ interface DisplayLine {
   afterLineNumber?: number;
   threadIndex?: number | undefined;
   commentId?: string | undefined;
+  reactionText?: string;
 }
 
 function getEditTargetFromLine(line: DisplayLine): { commentId: string } | null {
@@ -787,12 +793,21 @@ function getReplyTargetFromLine(
 
 const FOLD_THRESHOLD = 4;
 
+function formatReactionBadge(reactions: ReactionSummary[] | undefined): string {
+  if (!reactions || reactions.length === 0) return "";
+  return reactions
+    .filter((r) => r.count > 0)
+    .map((r) => `${r.emoji}×${r.count}`)
+    .join(" ");
+}
+
 function appendThreadLines(
   lines: DisplayLine[],
   thread: CommentThread,
   threadIndex: number,
   collapsedThreads: Set<number>,
   mode: "inline" | "general",
+  reactionsByComment: ReactionsByComment,
 ): void {
   const comments = thread.comments;
   if (comments.length === 0) return;
@@ -804,6 +819,7 @@ function appendThreadLines(
 
   const rootAuthor = extractAuthorName(rootComment.authorArn ?? "unknown");
   const rootContent = rootComment.content ?? "";
+  const rootReactionText = formatReactionBadge(reactionsByComment.get(rootComment.commentId ?? ""));
 
   if (mode === "inline") {
     lines.push({
@@ -811,6 +827,7 @@ function appendThreadLines(
       text: `💬 ${rootAuthor}: ${rootContent}`,
       threadIndex,
       commentId: rootComment.commentId,
+      reactionText: rootReactionText,
     });
   } else {
     lines.push({
@@ -818,6 +835,7 @@ function appendThreadLines(
       text: `${rootAuthor}: ${rootContent}`,
       threadIndex,
       commentId: rootComment.commentId,
+      reactionText: rootReactionText,
     });
   }
 
@@ -833,6 +851,7 @@ function appendThreadLines(
   for (const reply of replies) {
     const author = extractAuthorName(reply.authorArn ?? "unknown");
     const content = reply.content ?? "";
+    const replyReactionText = formatReactionBadge(reactionsByComment.get(reply.commentId ?? ""));
 
     if (mode === "inline") {
       lines.push({
@@ -840,6 +859,7 @@ function appendThreadLines(
         text: `└ ${author}: ${content}`,
         threadIndex,
         commentId: reply.commentId,
+        reactionText: replyReactionText,
       });
     } else {
       lines.push({
@@ -847,6 +867,7 @@ function appendThreadLines(
         text: `└ ${author}: ${content}`,
         threadIndex,
         commentId: reply.commentId,
+        reactionText: replyReactionText,
       });
     }
   }
@@ -857,6 +878,7 @@ function buildDisplayLines(
   diffTexts: Map<string, { before: string; after: string }>,
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
+  reactionsByComment: ReactionsByComment,
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
@@ -890,7 +912,7 @@ function buildDisplayLines(
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
-          appendThreadLines(lines, thread, threadIdx, collapsedThreads, "inline");
+          appendThreadLines(lines, thread, threadIdx, collapsedThreads, "inline", reactionsByComment);
         }
       }
     }
@@ -910,7 +932,7 @@ function buildDisplayLines(
     lines.push({ type: "separator", text: "─".repeat(50) });
     lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
     for (const { thread, index: threadIdx } of generalThreads) {
-      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general");
+      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general", reactionsByComment);
     }
   }
 
@@ -1078,14 +1100,25 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
-      return <Text> {line.text}</Text>;
+      return (
+        <Text>
+          {" "}{line.text}
+          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+        </Text>
+      );
     case "inline-comment":
-      return <Text color="magenta"> {line.text}</Text>;
+      return (
+        <Text color="magenta">
+          {" "}{line.text}
+          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+        </Text>
+      );
     case "inline-reply":
       return (
         <Text color="magenta">
           {"   "}
           {line.text}
+          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
         </Text>
       );
     case "comment-reply":
@@ -1093,6 +1126,7 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
         <Text>
           {"   "}
           {line.text}
+          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
         </Text>
       );
     case "fold-indicator":
