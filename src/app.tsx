@@ -17,6 +17,7 @@ import {
   type CommitInfo,
   type ConflictSummary,
   closePullRequest,
+  deleteComment,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
@@ -33,6 +34,7 @@ import {
   postComment,
   postCommentReply,
   updateApprovalState,
+  updateComment,
 } from "./services/codecommit.js";
 
 type Screen = "repos" | "prs" | "detail";
@@ -84,6 +86,11 @@ export function App({ client, initialRepo }: AppProps) {
     Map<string, { before: string; after: string }>
   >(new Map());
   const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
+
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+  const [updateCommentError, setUpdateCommentError] = useState<string | null>(null);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+  const [deleteCommentError, setDeleteCommentError] = useState<string | null>(null);
 
   /**
    * Wrapper for async operations with automatic loading/error state management.
@@ -408,6 +415,36 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function handleUpdateComment(commentId: string, content: string) {
+    if (!prDetail?.pullRequestId) return;
+
+    setIsUpdatingComment(true);
+    setUpdateCommentError(null);
+    try {
+      await updateComment(client, { commentId, content });
+      await reloadComments(prDetail.pullRequestId);
+    } catch (err) {
+      setUpdateCommentError(formatUpdateCommentError(err));
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!prDetail?.pullRequestId) return;
+
+    setIsDeletingComment(true);
+    setDeleteCommentError(null);
+    try {
+      await deleteComment(client, { commentId });
+      await reloadComments(prDetail.pullRequestId);
+    } catch (err) {
+      setDeleteCommentError(formatDeleteCommentError(err));
+    } finally {
+      setIsDeletingComment(false);
+    }
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -416,7 +453,7 @@ export function App({ client, initialRepo }: AppProps) {
         process.exit(0);
       }
       setScreen("repos");
-    } else {
+    } /* v8 ignore next */ else {
       process.exit(0);
     }
   }
@@ -507,6 +544,14 @@ export function App({ client, initialRepo }: AppProps) {
           commitDiffTexts={commitDiffTexts}
           isLoadingCommitDiff={isLoadingCommitDiff}
           onLoadCommitDiff={handleLoadCommitDiff}
+          onUpdateComment={handleUpdateComment}
+          isUpdatingComment={isUpdatingComment}
+          updateCommentError={updateCommentError}
+          onClearUpdateCommentError={() => setUpdateCommentError(null)}
+          onDeleteComment={handleDeleteComment}
+          isDeletingComment={isDeletingComment}
+          deleteCommentError={deleteCommentError}
+          onClearDeleteCommentError={() => setDeleteCommentError(null)}
         />
       );
   }
@@ -521,7 +566,7 @@ export function App({ client, initialRepo }: AppProps) {
  */
 function formatErrorMessage(
   err: unknown,
-  context?: "comment" | "reply" | "approval" | "merge" | "close",
+  context?: "comment" | "reply" | "approval" | "merge" | "close" | "edit" | "delete",
   approvalAction?: "approve" | "revoke",
 ): string {
   if (!(err instanceof Error)) {
@@ -543,6 +588,32 @@ function formatErrorMessage(
     }
     if (name === "InvalidCommentIdException") {
       return "Invalid comment ID format.";
+    }
+  }
+
+  // Edit-specific errors
+  if (context === "edit") {
+    if (name === "CommentNotCreatedByCallerException") {
+      return "You can only edit your own comments.";
+    }
+    if (name === "CommentContentSizeLimitExceededException") {
+      return "Comment exceeds the 10,240 character limit.";
+    }
+    if (name === "CommentDeletedException") {
+      return "Comment has already been deleted.";
+    }
+    if (name === "CommentDoesNotExistException") {
+      return "Comment no longer exists.";
+    }
+  }
+
+  // Delete-specific errors
+  if (context === "delete") {
+    if (name === "CommentDeletedException") {
+      return "Comment has already been deleted.";
+    }
+    if (name === "CommentDoesNotExistException") {
+      return "Comment no longer exists.";
     }
   }
 
@@ -671,6 +742,14 @@ function formatMergeError(err: unknown): string {
 
 function formatCloseError(err: unknown): string {
   return formatErrorMessage(err, "close");
+}
+
+function formatUpdateCommentError(err: unknown): string {
+  return formatErrorMessage(err, "edit");
+}
+
+function formatDeleteCommentError(err: unknown): string {
+  return formatErrorMessage(err, "delete");
 }
 
 function formatError(err: unknown): string {

@@ -60,4 +60,15 @@ describe("Help", () => {
     stdin.write("\r");
     expect(onClose).toHaveBeenCalled();
   });
+
+  // v0.7: Comment edit/delete keybindings
+  it("shows e Edit comment keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Edit comment");
+  });
+
+  it("shows d Delete comment keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Delete comment");
+  });
 });

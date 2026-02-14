@@ -89,4 +89,21 @@ describe("RepositoryList", () => {
     stdin.write("?");
     expect(onHelp).toHaveBeenCalled();
   });
+
+  it("handles repos with missing repositoryId", () => {
+    const reposNoId = [
+      { repositoryName: "no-id-repo" } as any,
+      { repositoryName: "another-repo", repositoryId: undefined } as any,
+    ];
+    const { lastFrame } = render(
+      <RepositoryList
+        repositories={reposNoId}
+        onSelect={vi.fn()}
+        onQuit={vi.fn()}
+        onHelp={vi.fn()}
+      />,
+    );
+    expect(lastFrame()).toContain("no-id-repo");
+    expect(lastFrame()).toContain("another-repo");
+  });
 });

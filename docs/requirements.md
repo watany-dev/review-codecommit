@@ -97,9 +97,18 @@ npx review-codecommit --region <region>      # リージョン指定
 | コミットメタデータ表示 | タブヘッダーにコミットハッシュ（短縮）、メッセージ、著者、日時を表示 |
 | 遅延ロード | コミット diff は選択時にオンデマンドで取得（ローディング表示付き） |
 
+## 機能スコープ (v0.7) ✅
+
+| 機能 | 内容 |
+|------|------|
+| コメント編集 | 自分のコメントを編集（`e` キー → 既存内容プリフィル → Enter で更新） |
+| コメント削除 | コメントを削除（`d` キー → 確認プロンプト → `y` で実行） |
+| 編集後のリロード | コメント更新後にコメント一覧を自動リロード |
+| 削除後のリロード | コメント削除後にコメント一覧を自動リロード |
+| エラーハンドリング | 権限不足、他人のコメント編集不可、削除済みコメント等のエラー対応 |
+
 ### 将来対応
 
-- コメント編集・削除 → v0.7
 - フィルタ・検索 → v0.8
 
 詳細は [docs/roadmap.md](roadmap.md) を参照。
@@ -118,6 +127,8 @@ npx review-codecommit --region <region>      # リージョン指定
 | `C` | インラインコメント投稿（カーソル行） | PR詳細画面（diff行上のみ） |
 | `R` | コメント返信（カーソル行のコメントに返信） | PR詳細画面（コメント行上のみ） |
 | `o` | スレッド折りたたみ/展開切替 | PR詳細画面（コメント行上のみ） |
+| `e` | コメント編集（既存内容プリフィル） | PR詳細画面（コメント行上のみ） |
+| `d` | コメント削除（確認プロンプト表示） | PR詳細画面（コメント行上のみ） |
 | `a` | PR を承認（確認プロンプト表示） | PR詳細画面 |
 | `r` | 承認を取り消し（確認プロンプト表示） | PR詳細画面 |
 | `m` | マージ操作を開始（戦略選択） | PR詳細画面 |
@@ -198,8 +209,9 @@ npx review-codecommit --region <region>      # リージョン指定
 │     └ hanako: 他も確認してください            │
 │                                              │
 │  ↑↓ cursor  c comment  C inline  R reply     │
-│  o fold  a approve  r revoke  m merge        │
-│  Tab/S-Tab commits  x close  q back  ? help  │
+│  o fold  e edit  d delete  a approve         │
+│  r revoke  m merge  Tab/S-Tab commits        │
+│  x close  q back  ? help                     │
 └──────────────────────────────────────────────┘
 ```
 
@@ -250,6 +262,12 @@ npx review-codecommit --region <region>      # リージョン指定
 | PR既にクローズ（クローズ時） | 「Pull request is already closed.」と表示 |
 | PR不在（クローズ時） | 「Pull request not found.」と表示 |
 | アクセス拒否（クローズ時） | 「Access denied. Check your IAM policy.」と表示 |
+| 他人のコメント編集 | 「You can only edit your own comments.」と表示 |
+| 削除済みコメント編集 | 「Comment has already been deleted.」と表示 |
+| 存在しないコメント編集 | 「Comment not found.」と表示 |
+| コメント編集文字数超過 | 「Comment exceeds the 10,240 character limit.」と表示 |
+| 削除済みコメント再削除 | 「Comment has already been deleted.」と表示 |
+| 存在しないコメント削除 | 「Comment not found.」と表示 |
 
 ## テスト戦略
 

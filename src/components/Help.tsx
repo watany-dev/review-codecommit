@@ -30,6 +30,8 @@ export function Help({ onClose }: Props) {
         <Text> C Post inline comment (PR Detail)</Text>
         <Text> R Reply to comment (PR Detail)</Text>
         <Text> o Toggle thread fold (PR Detail)</Text>
+        <Text> e Edit comment (PR Detail)</Text>
+        <Text> d Delete comment (PR Detail)</Text>
         <Text> a Approve PR (PR Detail)</Text>
         <Text> r Revoke approval (PR Detail)</Text>
         <Text> m Merge PR (PR Detail)</Text>

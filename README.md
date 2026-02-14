@@ -19,6 +19,8 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 - View inline comments displayed under matching diff lines
 - Reply to comments with threaded display (`R` key)
 - Fold/unfold long comment threads (`o` key, auto-folds 4+ comments)
+- Edit comments (`e` key, with content pre-fill)
+- Delete comments (`d` key, with confirmation prompt)
 - Approve / revoke pull requests (`a`/`r` keys with confirmation prompt)
 - View approval status and approval rule evaluation
 - Merge PRs with strategy selection (Fast-forward / Squash / Three-way) (`m` key)
@@ -33,7 +35,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view open pull re
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
+- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdateComment` and `codecommit:DeleteCommentContent` for comment edit/delete, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
 
 ## Installation
 
@@ -75,6 +77,8 @@ review-codecommit --region <region>
 | `C` | Post inline comment at cursor line | PR Detail |
 | `R` | Reply to comment at cursor line | PR Detail |
 | `o` | Toggle thread fold/unfold | PR Detail |
+| `e` | Edit comment (with content pre-fill) | PR Detail |
+| `d` | Delete comment (with confirmation) | PR Detail |
 | `a` | Approve PR (with confirmation) | PR Detail |
 | `r` | Revoke approval (with confirmation) | PR Detail |
 | `m` | Merge PR (strategy selection) | PR Detail |
@@ -142,7 +146,7 @@ bun run build
 | v0.5 | Comment replies (threads) | ✅ Released |
 | v0.6 | Merge operations | ✅ Released |
 | v0.6.1 | Commit-level review | ✅ Released |
-| v0.7 | Comment edit / delete | Planned |
+| v0.7 | Comment edit / delete | ✅ Released |
 | v0.8 | PR status filter and search | Planned |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
