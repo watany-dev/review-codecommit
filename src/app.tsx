@@ -17,6 +17,7 @@ import {
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
+  getComments,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
@@ -57,6 +58,23 @@ export function App({ client, initialRepo }: AppProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
 
+  /**
+   * Wrapper for async operations with automatic loading/error state management.
+   * Eliminates repetitive try-catch-finally patterns.
+   */
+  async function withLoadingState<T>(operation: () => Promise<T>): Promise<T | undefined> {
+    setLoading(true);
+    setError(null);
+    try {
+      return await operation();
+    } catch (err) {
+      setError(formatError(err));
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (initialRepo) {
       loadPullRequests(initialRepo);
@@ -66,35 +84,21 @@ export function App({ client, initialRepo }: AppProps) {
   }, []);
 
   async function loadRepositories() {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const repos = await listRepositories(client);
       setRepositories(repos);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   async function loadPullRequests(repoName: string) {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const result = await listPullRequests(client, repoName);
       setPullRequests(result.pullRequests);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
-    setLoading(true);
-    setError(null);
-    try {
+    await withLoadingState(async () => {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
@@ -111,21 +115,27 @@ export function App({ client, initialRepo }: AppProps) {
         setApprovalEvaluation(evaluation);
       }
 
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const diff of detail.differences) {
+      // Parallelize blob content fetching for better performance
+      const blobFetches = detail.differences.map(async (diff) => {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-        const before = beforeBlobId ? await getBlobContent(client, selectedRepo, beforeBlobId) : "";
-        const after = afterBlobId ? await getBlobContent(client, selectedRepo, afterBlobId) : "";
-        texts.set(key, { before, after });
+
+        const [before, after] = await Promise.all([
+          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
+          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
+        ]);
+
+        return { key, before, after };
+      });
+
+      const blobResults = await Promise.all(blobFetches);
+      const texts = new Map<string, { before: string; after: string }>();
+      for (const result of blobResults) {
+        texts.set(result.key, { before: result.before, after: result.after });
       }
       setDiffTexts(texts);
-    } catch (err) {
-      setError(formatError(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   function handleSelectRepo(repoName: string) {
@@ -163,8 +173,9 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function reloadComments(pullRequestId: string) {
-    const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
-    setPrComments(detail.comments);
+    // Optimized: fetch only comments instead of full PR detail
+    const comments = await getComments(client, pullRequestId, selectedRepo);
+    setPrComments(comments);
   }
 
   async function handleApprove() {
@@ -296,9 +307,35 @@ export function App({ client, initialRepo }: AppProps) {
   }
 }
 
-function formatApprovalError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
+/**
+ * Unified error formatter with context-specific messages.
+ *
+ * @param err - The error to format
+ * @param context - Optional context ('comment' or 'approval' for specific errors)
+ * @returns User-friendly error message
+ */
+function formatErrorMessage(err: unknown, context?: "comment" | "approval"): string {
+  if (!(err instanceof Error)) {
+    return context ? String(err) : "An unexpected error occurred.";
+  }
+
+  const name = err.name;
+
+  // Comment-specific errors
+  if (context === "comment") {
+    if (name === "CommentContentRequiredException") {
+      return "Comment cannot be empty.";
+    }
+    if (name === "CommentContentSizeLimitExceededException") {
+      return "Comment exceeds the 10,240 character limit.";
+    }
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+  }
+
+  // Approval-specific errors
+  if (context === "approval") {
     if (name === "PullRequestDoesNotExistException") {
       return "Pull request not found.";
     }
@@ -308,64 +345,55 @@ function formatApprovalError(err: unknown): string {
     if (name === "PullRequestCannotBeApprovedByAuthorException") {
       return "Cannot approve your own pull request.";
     }
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-      return "Access denied. Check your IAM policy.";
-    }
     if (name === "PullRequestAlreadyClosedException") {
       return "Pull request is already closed.";
     }
     if (name === "EncryptionKeyAccessDeniedException") {
       return "Encryption key access denied.";
     }
-    return err.message;
   }
-  return String(err);
-}
 
-function formatCommentError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
-    if (name === "CommentContentRequiredException") {
-      return "Comment cannot be empty.";
-    }
-    if (name === "CommentContentSizeLimitExceededException") {
-      return "Comment exceeds the 10,240 character limit.";
-    }
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+  // General AWS errors
+  if (name === "CredentialsProviderError" || name === "CredentialError") {
+    return "AWS authentication failed. Run `aws configure` to set up credentials.";
+  }
+  if (name === "RepositoryDoesNotExistException") {
+    return "Repository not found.";
+  }
+
+  // Access control errors (context-aware message)
+  if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+    if (context === "comment") {
       return "Access denied. Check your IAM policy allows CodeCommit write access.";
     }
-    if (name === "PullRequestDoesNotExistException") {
-      return "Pull request not found.";
-    }
-    return err.message;
+    return "Access denied. Check your IAM policy.";
   }
-  return String(err);
+
+  // Network errors
+  if (
+    name === "NetworkingError" ||
+    err.message.includes("ECONNREFUSED") ||
+    err.message.includes("ETIMEDOUT")
+  ) {
+    return "Network error. Check your connection.";
+  }
+
+  // Default: sanitize and return original message
+  const sanitized = err.message
+    .replace(/arn:[^\s"')]+/gi, "[ARN]")
+    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  return context ? err.message : sanitized;
+}
+
+// Context-specific wrappers
+function formatCommentError(err: unknown): string {
+  return formatErrorMessage(err, "comment");
+}
+
+function formatApprovalError(err: unknown): string {
+  return formatErrorMessage(err, "approval");
 }
 
 function formatError(err: unknown): string {
-  if (err instanceof Error) {
-    const name = err.name;
-    if (name === "CredentialsProviderError" || name === "CredentialError") {
-      return "AWS authentication failed. Run `aws configure` to set up credentials.";
-    }
-    if (name === "RepositoryDoesNotExistException") {
-      return "Repository not found.";
-    }
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-      return "Access denied. Check your IAM policy allows CodeCommit access.";
-    }
-    if (
-      name === "NetworkingError" ||
-      err.message.includes("ECONNREFUSED") ||
-      err.message.includes("ETIMEDOUT")
-    ) {
-      return "Network error. Check your connection.";
-    }
-    return sanitizeErrorMessage(err.message);
-  }
-  return "An unexpected error occurred.";
-}
-
-function sanitizeErrorMessage(message: string): string {
-  return message.replace(/arn:[^\s"')]+/gi, "[ARN]").replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+  return formatErrorMessage(err);
 }

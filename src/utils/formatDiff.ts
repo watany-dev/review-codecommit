@@ -176,19 +176,3 @@ function longestCommonSubsequence(a: string[], b: string[]): string[] {
 
   return result;
 }
-
-export function formatDiffForDisplay(sections: FileDiffSection[]): string {
-  const parts: string[] = [];
-  for (const section of sections) {
-    parts.push(`--- a/${section.filePath}`);
-    parts.push(`+++ b/${section.filePath}`);
-    for (const hunk of section.hunks) {
-      parts.push(hunk.header);
-      for (const line of hunk.lines) {
-        parts.push(line.content);
-      }
-    }
-    parts.push("");
-  }
-  return parts.join("\n");
-}

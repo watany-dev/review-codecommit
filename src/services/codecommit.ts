@@ -36,11 +36,6 @@ export interface PullRequestDetail {
   comments: Comment[];
 }
 
-export interface FileDiff {
-  filePath: string;
-  content: string;
-}
-
 export function createClient(config: CodeCommitConfig): CodeCommitClient {
   const options: { region?: string; profile?: string } = {};
   if (config.region) options.region = config.region;
@@ -129,6 +124,25 @@ export async function getPullRequestDetail(
   }
 
   return { pullRequest, differences, comments };
+}
+
+export async function getComments(
+  client: CodeCommitClient,
+  pullRequestId: string,
+  repositoryName: string,
+): Promise<Comment[]> {
+  const comments: Comment[] = [];
+  const commentsCommand = new GetCommentsForPullRequestCommand({
+    pullRequestId,
+    repositoryName,
+  });
+  const commentsResponse = await client.send(commentsCommand);
+  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
+    for (const comment of thread.comments ?? []) {
+      comments.push(comment);
+    }
+  }
+  return comments;
 }
 
 export async function postComment(
