@@ -2797,4 +2797,168 @@ describe("PullRequestDetail", () => {
     expect(output).toContain("💬 taro: first comment");
     expect(output).toContain("└ watany: second comment");
   });
+
+  it("updates display when commentThreads prop changes (useMemo regression)", () => {
+    const initialThreads = [
+      {
+        location: null,
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Initial comment",
+          },
+        ],
+      },
+    ];
+
+    const { lastFrame, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={initialThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    expect(lastFrame()).toContain("Initial comment");
+
+    const updatedThreads = [
+      ...initialThreads,
+      {
+        location: null,
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "New comment after reload",
+          },
+        ],
+      },
+    ];
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={updatedThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    expect(lastFrame()).toContain("New comment after reload");
+  });
+
+  it("updates display when diffTexts prop changes (useMemo regression)", () => {
+    const emptyDiffTexts = new Map<string, { before: string; after: string }>();
+
+    const { lastFrame, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={commentThreads as any}
+        diffTexts={emptyDiffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    // Before blob fetch: no diff content lines
+    expect(lastFrame()).not.toContain("+new line");
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={commentThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    // After blob fetch: diff content appears
+    expect(lastFrame()).toContain("+new line");
+  });
+
+  it("updates display when differences prop changes (useMemo regression)", () => {
+    const { lastFrame, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={commentThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    expect(lastFrame()).toContain("src/auth.ts");
+    expect(lastFrame()).not.toContain("src/utils.ts");
+
+    const newDifferences = [
+      ...differences,
+      {
+        beforeBlob: { blobId: "b3", path: "src/utils.ts" },
+        afterBlob: { blobId: "b4", path: "src/utils.ts" },
+      },
+    ];
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={newDifferences as any}
+        commentThreads={commentThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    expect(lastFrame()).toContain("src/utils.ts");
+  });
 });

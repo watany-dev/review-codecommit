@@ -152,7 +152,10 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const lines = buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
+  const lines = useMemo(
+    () => buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads),
+    [differences, diffTexts, commentThreads, collapsedThreads],
+  );
 
   useInput((input, key) => {
     if (isCommenting || isInlineCommenting || isReplying || approvalAction) return;
