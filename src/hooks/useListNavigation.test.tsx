@@ -68,12 +68,7 @@ describe("useListNavigation", () => {
 
   it("does not move cursor below last item", async () => {
     const { stdin, lastFrame } = render(
-      <TestComponent
-        items={["a", "b"]}
-        onSelect={vi.fn()}
-        onBack={vi.fn()}
-        onHelp={vi.fn()}
-      />,
+      <TestComponent items={["a", "b"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
     );
     stdin.write("j");
     stdin.write("j");
