@@ -25,6 +25,7 @@ vi.mock("./services/codecommit.js", () => ({
 import { App } from "./app.js";
 import {
   closePullRequest,
+  deleteComment,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
@@ -40,7 +41,6 @@ import {
   postCommentReply,
   updateApprovalState,
   updateComment,
-  deleteComment,
 } from "./services/codecommit.js";
 
 const mockClient = {} as any;

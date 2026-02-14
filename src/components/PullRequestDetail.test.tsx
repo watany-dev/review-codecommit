@@ -3807,7 +3807,8 @@ describe("PullRequestDetail", () => {
       />,
     );
     expect(lastFrame()).toContain("m merge");
-    expect(lastFrame()).toContain("x close");
+    expect(lastFrame()).toContain("close");
+    expect(lastFrame()).toContain("q back");
   });
 
   it("shows merging indicator", async () => {
@@ -4253,7 +4254,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
         />,
       );
       expect(lastFrame()).not.toContain("[All changes]");
@@ -4278,7 +4279,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4307,7 +4308,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           onLoadCommitDiff={onLoadCommitDiff}
         />,
@@ -4340,7 +4341,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           onLoadCommitDiff={onLoadCommitDiff}
         />,
@@ -4384,7 +4385,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           onLoadCommitDiff={onLoadCommitDiff}
         />,
@@ -4416,7 +4417,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           onLoadCommitDiff={onLoadCommitDiff}
         />,
@@ -4456,7 +4457,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
         />,
       );
       stdin.write("\t");
@@ -4486,7 +4487,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4516,7 +4517,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4548,7 +4549,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           isLoadingCommitDiff={true}
         />,
@@ -4577,7 +4578,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           isLoadingCommitDiff={true}
         />,
@@ -4605,7 +4606,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4630,7 +4631,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4659,7 +4660,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
         />,
       );
       expect(lastFrame()).not.toContain("Tab switch");
@@ -4702,7 +4703,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
           commitDifferences={commitDifferences as any}
           commitDiffTexts={commitDiffTexts}
@@ -4736,7 +4737,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4770,7 +4771,7 @@ describe("PullRequestDetail", () => {
           {...defaultApprovalProps}
           {...defaultMergeProps}
           {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          {...defaultEditDeleteProps}
           commits={sampleCommits}
         />,
       );
@@ -4929,8 +4930,38 @@ describe("PullRequestDetail", () => {
       });
     });
 
-    it("shows update error", () => {
-      const { lastFrame } = render(
+    it("shows update error", async () => {
+      const { lastFrame, stdin, rerender } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("e");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Edit Comment:");
+      });
+      rerender(
         <PullRequestDetail
           pullRequest={pullRequest as any}
           differences={differences as any}
@@ -5080,8 +5111,38 @@ describe("PullRequestDetail", () => {
       });
     });
 
-    it("shows delete error", () => {
-      const { lastFrame } = render(
+    it("shows delete error", async () => {
+      const { lastFrame, stdin, rerender } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("d");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Delete this comment?");
+      });
+      rerender(
         <PullRequestDetail
           pullRequest={pullRequest as any}
           differences={differences as any}
