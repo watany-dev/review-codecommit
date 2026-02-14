@@ -6,6 +6,9 @@ import {
   getApprovalStates,
   getBlobContent,
   getComments,
+  getCommit,
+  getCommitDifferences,
+  getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
   listPullRequests,
@@ -1125,5 +1128,250 @@ describe("closePullRequest", () => {
         pullRequestId: "42",
       }),
     ).rejects.toThrow("already closed");
+  });
+});
+
+describe("getCommit", () => {
+  it("returns CommitInfo with correct fields", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234567890",
+        parents: ["parent123"],
+        message: "Fix login timeout\n\nDetailed description",
+        author: {
+          name: "watany",
+          email: "watany@example.com",
+          date: "1707868800",
+        },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234567890");
+    expect(result.commitId).toBe("abc1234567890");
+    expect(result.shortId).toBe("abc1234");
+    expect(result.message).toBe("Fix login timeout");
+    expect(result.authorName).toBe("watany");
+    expect(result.authorDate).toBeInstanceOf(Date);
+    expect(result.parentIds).toEqual(["parent123"]);
+  });
+
+  it("throws when commit is undefined", async () => {
+    mockSend.mockResolvedValueOnce({ commit: undefined });
+    await expect(getCommit(mockClient, "my-service", "nonexistent")).rejects.toThrow(
+      "Commit nonexistent not found.",
+    );
+  });
+
+  it("extracts first line of multiline message", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234",
+        parents: [],
+        message: "First line\nSecond line\nThird line",
+        author: { name: "watany", date: "1707868800" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234");
+    expect(result.message).toBe("First line");
+  });
+
+  it("defaults authorName to unknown when not set", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234",
+        parents: [],
+        message: "test",
+        author: { date: "1707868800" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234");
+    expect(result.authorName).toBe("unknown");
+  });
+
+  it("defaults authorDate to now when not set", async () => {
+    const before = Date.now();
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234",
+        parents: [],
+        message: "test",
+        author: { name: "watany" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234");
+    expect(result.authorDate.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("handles empty message", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234",
+        parents: [],
+        message: undefined,
+        author: { name: "watany", date: "1707868800" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234");
+    expect(result.message).toBe("");
+  });
+
+  it("handles undefined parents", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "abc1234",
+        parents: undefined,
+        message: "test",
+        author: { name: "watany", date: "1707868800" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "abc1234");
+    expect(result.parentIds).toEqual([]);
+  });
+
+  it("falls back to input commitId when commit.commitId is undefined", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: undefined,
+        parents: [],
+        message: "test",
+        author: { name: "watany", date: "1707868800" },
+      },
+    });
+
+    const result = await getCommit(mockClient, "my-service", "fallback123");
+    expect(result.commitId).toBe("fallback123");
+    expect(result.shortId).toBe("fallbac");
+  });
+});
+
+describe("getCommitsForPR", () => {
+  it("returns commits in chronological order (oldest first)", async () => {
+    // sourceCommit = commit3, mergeBase = base
+    // commit3 -> commit2 -> commit1 -> base
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "commit3",
+        parents: ["commit2"],
+        message: "Third commit",
+        author: { name: "watany", date: "1707868803" },
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "commit2",
+        parents: ["commit1"],
+        message: "Second commit",
+        author: { name: "watany", date: "1707868802" },
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "commit1",
+        parents: ["base"],
+        message: "First commit",
+        author: { name: "watany", date: "1707868801" },
+      },
+    });
+
+    const result = await getCommitsForPR(mockClient, "my-service", "commit3", "base");
+    expect(result).toHaveLength(3);
+    expect(result[0].commitId).toBe("commit1");
+    expect(result[1].commitId).toBe("commit2");
+    expect(result[2].commitId).toBe("commit3");
+  });
+
+  it("returns single commit when parent is mergeBase", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "commit1",
+        parents: ["base"],
+        message: "Only commit",
+        author: { name: "watany", date: "1707868801" },
+      },
+    });
+
+    const result = await getCommitsForPR(mockClient, "my-service", "commit1", "base");
+    expect(result).toHaveLength(1);
+    expect(result[0].commitId).toBe("commit1");
+  });
+
+  it("returns empty array when sourceCommit equals mergeBase", async () => {
+    const result = await getCommitsForPR(mockClient, "my-service", "base", "base");
+    expect(result).toHaveLength(0);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("stops when commit has no parents", async () => {
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "orphan",
+        parents: [],
+        message: "Orphan commit",
+        author: { name: "watany", date: "1707868801" },
+      },
+    });
+
+    const result = await getCommitsForPR(mockClient, "my-service", "orphan", "base");
+    expect(result).toHaveLength(1);
+    expect(result[0].commitId).toBe("orphan");
+  });
+
+  it("limits to MAX_COMMITS (100)", async () => {
+    // Create a chain of 101 commits that never reaches mergeBase
+    for (let i = 0; i < 100; i++) {
+      mockSend.mockResolvedValueOnce({
+        commit: {
+          commitId: `commit-${i}`,
+          parents: [`commit-${i + 1}`],
+          message: `Commit ${i}`,
+          author: { name: "watany", date: "1707868800" },
+        },
+      });
+    }
+
+    const result = await getCommitsForPR(mockClient, "my-service", "commit-0", "unreachable");
+    expect(result).toHaveLength(100);
+  });
+});
+
+describe("getCommitDifferences", () => {
+  it("returns differences between two commits", async () => {
+    mockSend.mockResolvedValueOnce({
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+    });
+
+    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    expect(result).toHaveLength(1);
+    expect(result[0].afterBlob?.path).toBe("src/auth.ts");
+  });
+
+  it("returns empty array when no differences", async () => {
+    mockSend.mockResolvedValueOnce({ differences: undefined });
+
+    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("passes correct commit specifiers", async () => {
+    mockSend.mockResolvedValueOnce({ differences: [] });
+
+    await getCommitDifferences(mockClient, "my-service", "parentABC", "commitDEF");
+
+    const sentCommand = mockSend.mock.calls[0][0];
+    expect(sentCommand.input).toEqual({
+      repositoryName: "my-service",
+      beforeCommitSpecifier: "parentABC",
+      afterCommitSpecifier: "commitDEF",
+    });
   });
 });
