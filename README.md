@@ -134,6 +134,35 @@ bun run build
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 
+## Release Process
+
+This project uses automated npm publishing via GitHub Actions with Trusted Publishers (OIDC).
+
+### Release Steps
+
+1. Update the `version` field in `package.json` (following [semver](https://semver.org/))
+2. Update the lockfile: `bun install`
+3. Run all CI checks locally: `bun run ci`
+4. Commit the changes: `git commit -m "chore: bump version to X.Y.Z"`
+5. Create a git tag: `git tag vX.Y.Z`
+6. Push the tag: `git push origin main vX.Y.Z`
+
+GitHub Actions will automatically:
+- Validate that the git tag matches the package.json version
+- Re-run build and test suite
+- Publish to npm with provenance attestation
+
+### Verifying Published Package
+
+After publishing, verify on npmjs.com:
+- The new version is live at https://www.npmjs.com/package/review-codecommit
+- The "Provenance" badge is displayed (links to the GitHub Actions run)
+
+You can also verify locally:
+```bash
+npx review-codecommit@X.Y.Z --version
+```
+
 ## License
 
 [MIT](LICENSE)
