@@ -8,6 +8,7 @@ vi.mock("./services/codecommit.js", () => ({
   getPullRequestDetail: vi.fn(),
   getBlobContent: vi.fn(),
   postComment: vi.fn(),
+  getComments: vi.fn(),
   getApprovalStates: vi.fn(),
   evaluateApprovalRules: vi.fn(),
   updateApprovalState: vi.fn(),
@@ -18,6 +19,7 @@ import {
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
+  getComments,
   getPullRequestDetail,
   listPullRequests,
   listRepositories,
@@ -34,6 +36,7 @@ describe("App", () => {
     vi.mocked(getPullRequestDetail).mockReset();
     vi.mocked(getBlobContent).mockReset();
     vi.mocked(postComment).mockReset();
+    vi.mocked(getComments).mockReset();
     vi.mocked(getApprovalStates).mockReset();
     vi.mocked(evaluateApprovalRules).mockReset();
     vi.mocked(updateApprovalState).mockReset();
@@ -230,7 +233,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
@@ -262,7 +265,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
@@ -373,7 +376,7 @@ describe("App", () => {
           afterBlob: { blobId: "b2", path: "src/auth.ts" },
         },
       ],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(getBlobContent)
       .mockResolvedValueOnce("const timeout = 3000;")
@@ -413,7 +416,7 @@ describe("App", () => {
           afterBlob: { blobId: "b2", path: "src/new.ts" },
         },
       ],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(getBlobContent).mockResolvedValueOnce("const x = 1;");
 
@@ -483,7 +486,7 @@ describe("App", () => {
           afterBlob: undefined,
         },
       ],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(getBlobContent).mockResolvedValueOnce("old content");
 
@@ -538,7 +541,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
@@ -582,7 +585,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(postComment).mockResolvedValue({
       commentId: "c1",
@@ -621,11 +624,16 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [
+      commentThreads: [
         {
-          commentId: "c1",
-          content: "Looks good!",
-          authorArn: "arn:aws:iam::123456789012:user/watany",
+          location: null,
+          comments: [
+            {
+              commentId: "c1",
+              content: "Looks good!",
+              authorArn: "arn:aws:iam::123456789012:user/watany",
+            },
+          ],
         },
       ],
     });
@@ -662,7 +670,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const accessError = new Error("denied");
@@ -717,7 +725,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("empty");
     err.name = "CommentContentRequiredException";
@@ -767,7 +775,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("too long");
     err.name = "CommentContentSizeLimitExceededException";
@@ -817,7 +825,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("gone");
     err.name = "PullRequestDoesNotExistException";
@@ -867,7 +875,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(postComment).mockRejectedValue(new Error("something broke"));
 
@@ -915,7 +923,7 @@ describe("App", () => {
         ],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(postComment).mockRejectedValue("raw error string");
 
@@ -956,7 +964,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
@@ -1004,7 +1012,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(getApprovalStates).mockResolvedValue([
       { userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" },
@@ -1048,7 +1056,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(updateApprovalState).mockResolvedValue(undefined);
 
@@ -1102,7 +1110,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(updateApprovalState).mockResolvedValue(undefined);
 
@@ -1149,7 +1157,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const accessError = new Error("denied");
     accessError.name = "AccessDeniedException";
@@ -1195,7 +1203,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
@@ -1237,7 +1245,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(evaluateApprovalRules).mockRejectedValue(new Error("no rules configured"));
 
@@ -1274,7 +1282,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("cannot approve own");
     err.name = "PullRequestCannotBeApprovedByAuthorException";
@@ -1317,7 +1325,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("invalid");
     err.name = "InvalidRevisionIdException";
@@ -1360,7 +1368,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("closed");
     err.name = "PullRequestAlreadyClosedException";
@@ -1403,7 +1411,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("key denied");
     err.name = "EncryptionKeyAccessDeniedException";
@@ -1446,7 +1454,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(updateApprovalState).mockRejectedValue(new Error("unknown error occurred"));
 
@@ -1487,7 +1495,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("not found");
     err.name = "PullRequestDoesNotExistException";
@@ -1530,7 +1538,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const err = new Error("required");
     err.name = "RevisionIdRequiredException";
@@ -1573,7 +1581,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const accessError = new Error("denied");
     accessError.name = "AccessDeniedException";
@@ -1623,7 +1631,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     const accessError = new Error("denied");
     accessError.name = "AccessDeniedException";
@@ -1666,7 +1674,7 @@ describe("App", () => {
         pullRequestTargets: [],
       },
       differences: [],
-      comments: [],
+      commentThreads: [],
     });
     vi.mocked(updateApprovalState).mockRejectedValue("raw string error");
 
@@ -1685,6 +1693,170 @@ describe("App", () => {
     stdin.write("y");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("raw string error");
+    });
+  });
+
+  // v0.4: Inline comment integration tests
+  it("shows inline comment error on failure", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockResolvedValueOnce("const timeout = 10000;");
+    const accessError = new Error("denied");
+    accessError.name = "AccessDeniedException";
+    vi.mocked(postComment).mockRejectedValue(accessError);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*const timeout = 3000/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    stdin.write("test inline");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(lastFrame()).toContain("Failed to post comment:");
+      expect(lastFrame()).toContain("Access denied");
+    });
+  });
+
+  it("posts inline comment successfully and reloads comments", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationCommit: "def456",
+            sourceCommit: "abc123",
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockResolvedValueOnce("const timeout = 10000;");
+    vi.mocked(postComment).mockResolvedValue({
+      commentId: "c1",
+      content: "Fix this!",
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Move cursor to a diff line, wait for render, then press C
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*const timeout = 3000/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+
+    // Mock reload after post
+    vi.mocked(getComments).mockResolvedValue([
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER",
+        },
+        comments: [
+          {
+            commentId: "c1",
+            content: "Fix this!",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+          },
+        ],
+      },
+    ]);
+
+    stdin.write("Fix this!");
+    await vi.waitFor(() => {
+      stdin.write("\r");
+      expect(postComment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          content: "Fix this!",
+          location: expect.objectContaining({
+            filePath: "src/auth.ts",
+          }),
+        }),
+      );
     });
   });
 });

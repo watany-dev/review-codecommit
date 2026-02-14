@@ -1,7 +1,6 @@
 import type {
   Approval,
   CodeCommitClient,
-  Comment,
   Difference,
   Evaluation,
   PullRequest,
@@ -14,6 +13,7 @@ import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
+  type CommentThread,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
@@ -45,13 +45,16 @@ export function App({ client, initialRepo }: AppProps) {
 
   const [prDetail, setPrDetail] = useState<PullRequest | null>(null);
   const [prDifferences, setPrDifferences] = useState<Difference[]>([]);
-  const [prComments, setPrComments] = useState<Comment[]>([]);
+  const [commentThreads, setCommentThreads] = useState<CommentThread[]>([]);
   const [diffTexts, setDiffTexts] = useState<Map<string, { before: string; after: string }>>(
     new Map(),
   );
 
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+
+  const [isPostingInlineComment, setIsPostingInlineComment] = useState(false);
+  const [inlineCommentError, setInlineCommentError] = useState<string | null>(null);
 
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
@@ -102,7 +105,7 @@ export function App({ client, initialRepo }: AppProps) {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
-      setPrComments(detail.comments);
+      setCommentThreads(detail.commentThreads);
 
       // v0.3: 承認状態を取得
       const revisionId = detail.pullRequest.revisionId;
@@ -174,8 +177,39 @@ export function App({ client, initialRepo }: AppProps) {
 
   async function reloadComments(pullRequestId: string) {
     // Optimized: fetch only comments instead of full PR detail
-    const comments = await getComments(client, pullRequestId, selectedRepo);
-    setPrComments(comments);
+    const threads = await getComments(client, pullRequestId, selectedRepo);
+    setCommentThreads(threads);
+  }
+
+  async function handlePostInlineComment(
+    content: string,
+    location: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    },
+  ) {
+    if (!prDetail) return;
+    const target = prDetail.pullRequestTargets?.[0];
+    if (!target?.destinationCommit || !target?.sourceCommit) return;
+
+    setIsPostingInlineComment(true);
+    setInlineCommentError(null);
+    try {
+      await postComment(client, {
+        pullRequestId: prDetail.pullRequestId!,
+        repositoryName: selectedRepo,
+        beforeCommitId: target.destinationCommit,
+        afterCommitId: target.sourceCommit,
+        content,
+        location,
+      });
+      await reloadComments(prDetail.pullRequestId!);
+    } catch (err) {
+      setInlineCommentError(formatCommentError(err));
+    } finally {
+      setIsPostingInlineComment(false);
+    }
   }
 
   async function handleApprove() {
@@ -287,7 +321,7 @@ export function App({ client, initialRepo }: AppProps) {
         <PullRequestDetail
           pullRequest={prDetail}
           differences={prDifferences}
-          comments={prComments}
+          commentThreads={commentThreads}
           diffTexts={diffTexts}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
@@ -295,6 +329,10 @@ export function App({ client, initialRepo }: AppProps) {
           isPostingComment={isPostingComment}
           commentError={commentError}
           onClearCommentError={() => setCommentError(null)}
+          onPostInlineComment={handlePostInlineComment}
+          isPostingInlineComment={isPostingInlineComment}
+          inlineCommentError={inlineCommentError}
+          onClearInlineCommentError={() => setInlineCommentError(null)}
           approvals={approvals}
           approvalEvaluation={approvalEvaluation}
           onApprove={handleApprove}

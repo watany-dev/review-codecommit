@@ -1,12 +1,7 @@
-import type {
-  Approval,
-  Comment,
-  Difference,
-  Evaluation,
-  PullRequest,
-} from "@aws-sdk/client-codecommit";
+import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import type { CommentThread } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
@@ -14,7 +9,7 @@ import { ConfirmPrompt } from "./ConfirmPrompt.js";
 interface Props {
   pullRequest: PullRequest;
   differences: Difference[];
-  comments: Comment[];
+  commentThreads: CommentThread[];
   diffTexts: Map<string, { before: string; after: string }>;
   onBack: () => void;
   onHelp: () => void;
@@ -22,6 +17,17 @@ interface Props {
   isPostingComment: boolean;
   commentError: string | null;
   onClearCommentError: () => void;
+  onPostInlineComment: (
+    content: string,
+    location: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    },
+  ) => void;
+  isPostingInlineComment: boolean;
+  inlineCommentError: string | null;
+  onClearInlineCommentError: () => void;
   approvals: Approval[];
   approvalEvaluation: Evaluation | null;
   onApprove: () => void;
@@ -34,7 +40,7 @@ interface Props {
 export function PullRequestDetail({
   pullRequest,
   differences,
-  comments,
+  commentThreads,
   diffTexts,
   onBack,
   onHelp,
@@ -42,6 +48,10 @@ export function PullRequestDetail({
   isPostingComment,
   commentError,
   onClearCommentError,
+  onPostInlineComment,
+  isPostingInlineComment,
+  inlineCommentError,
+  onClearInlineCommentError,
   approvals,
   approvalEvaluation,
   onApprove,
@@ -50,9 +60,16 @@ export function PullRequestDetail({
   approvalError,
   onClearApprovalError,
 }: Props) {
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [wasPosting, setWasPosting] = useState(false);
+  const [isInlineCommenting, setIsInlineCommenting] = useState(false);
+  const [inlineCommentLocation, setInlineCommentLocation] = useState<{
+    filePath: string;
+    filePosition: number;
+    relativeFileVersion: "BEFORE" | "AFTER";
+  } | null>(null);
+  const [wasPostingInline, setWasPostingInline] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
 
@@ -66,6 +83,18 @@ export function PullRequestDetail({
       setWasPosting(false);
     }
   }, [isPostingComment, commentError]);
+
+  useEffect(() => {
+    if (isPostingInlineComment) {
+      setWasPostingInline(true);
+    } else if (wasPostingInline && !inlineCommentError) {
+      setIsInlineCommenting(false);
+      setInlineCommentLocation(null);
+      setWasPostingInline(false);
+    } else {
+      setWasPostingInline(false);
+    }
+  }, [isPostingInlineComment, inlineCommentError]);
 
   useEffect(() => {
     if (isApproving) {
@@ -87,10 +116,10 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const lines = buildDisplayLines(differences, diffTexts, comments);
+  const lines = buildDisplayLines(differences, diffTexts, commentThreads);
 
   useInput((input, key) => {
-    if (isCommenting || approvalAction) return;
+    if (isCommenting || isInlineCommenting || approvalAction) return;
 
     if (input === "q" || key.escape) {
       onBack();
@@ -101,15 +130,24 @@ export function PullRequestDetail({
       return;
     }
     if (input === "j" || key.downArrow) {
-      setScrollOffset((prev) => Math.min(prev + 1, Math.max(0, lines.length - 10)));
+      setCursorIndex((prev) => Math.min(prev + 1, lines.length - 1));
       return;
     }
     if (input === "k" || key.upArrow) {
-      setScrollOffset((prev) => Math.max(prev - 1, 0));
+      setCursorIndex((prev) => Math.max(prev - 1, 0));
       return;
     }
     if (input === "c") {
       setIsCommenting(true);
+      return;
+    }
+    if (input === "C") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const location = getLocationFromLine(currentLine);
+      if (!location) return;
+      setInlineCommentLocation(location);
+      setIsInlineCommenting(true);
       return;
     }
     if (input === "a") {
@@ -122,7 +160,13 @@ export function PullRequestDetail({
     }
   });
 
-  const visibleLineCount = isCommenting || approvalAction ? 20 : 30;
+  const visibleLineCount = isCommenting || isInlineCommenting || approvalAction ? 20 : 30;
+  const scrollOffset = useMemo(() => {
+    const halfVisible = Math.floor(visibleLineCount / 2);
+    const maxOffset = Math.max(0, lines.length - visibleLineCount);
+    const idealOffset = cursorIndex - halfVisible;
+    return Math.max(0, Math.min(idealOffset, maxOffset));
+  }, [cursorIndex, lines.length, visibleLineCount]);
   const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
 
   return (
@@ -169,9 +213,16 @@ export function PullRequestDetail({
           </Box>
         )}
       <Box flexDirection="column">
-        {visibleLines.map((line, index) => (
-          <Box key={scrollOffset + index}>{renderDiffLine(line)}</Box>
-        ))}
+        {visibleLines.map((line, index) => {
+          const globalIndex = scrollOffset + index;
+          const isCursor = globalIndex === cursorIndex;
+          return (
+            <Box key={globalIndex}>
+              <Text>{isCursor ? "> " : "  "}</Text>
+              {renderDiffLine(line, isCursor)}
+            </Box>
+          );
+        })}
       </Box>
       {isCommenting && (
         <CommentInput
@@ -181,6 +232,23 @@ export function PullRequestDetail({
           error={commentError}
           onClearError={onClearCommentError}
         />
+      )}
+      {isInlineCommenting && inlineCommentLocation && (
+        <Box flexDirection="column">
+          <Text dimColor>
+            Inline comment on {inlineCommentLocation.filePath}:{inlineCommentLocation.filePosition}
+          </Text>
+          <CommentInput
+            onSubmit={(content) => onPostInlineComment(content, inlineCommentLocation)}
+            onCancel={() => {
+              setIsInlineCommenting(false);
+              setInlineCommentLocation(null);
+            }}
+            isPosting={isPostingInlineComment}
+            error={inlineCommentError}
+            onClearError={onClearInlineCommentError}
+          />
+        </Box>
       )}
       {approvalAction && (
         <ConfirmPrompt
@@ -203,9 +271,9 @@ export function PullRequestDetail({
       )}
       <Box marginTop={1}>
         <Text dimColor>
-          {isCommenting || approvalAction
+          {isCommenting || isInlineCommenting || approvalAction
             ? ""
-            : "↑↓ scroll  c comment  a approve  r revoke  q back  ? help"}
+            : "↑↓ cursor  c comment  C inline  a approve  r revoke  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -213,16 +281,38 @@ export function PullRequestDetail({
 }
 
 interface DisplayLine {
-  type: "header" | "separator" | "add" | "delete" | "context" | "comment-header" | "comment";
+  type:
+    | "header"
+    | "separator"
+    | "add"
+    | "delete"
+    | "context"
+    | "comment-header"
+    | "comment"
+    | "inline-comment";
   text: string;
+  filePath?: string;
+  beforeLineNumber?: number;
+  afterLineNumber?: number;
 }
 
 function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
-  comments: Comment[],
+  commentThreads: CommentThread[],
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
+
+  // Index inline comments by file:position:version for efficient lookup
+  const inlineThreadsByKey = new Map<string, CommentThread[]>();
+  for (const thread of commentThreads) {
+    if (thread.location) {
+      const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
+      const existing = inlineThreadsByKey.get(key) ?? [];
+      existing.push(thread);
+      inlineThreadsByKey.set(key, existing);
+    }
+  }
 
   for (const diff of differences) {
     const filePath = diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
@@ -237,17 +327,35 @@ function buildDisplayLines(
       const afterLines = texts.after.split("\n");
       const diffLines = computeSimpleDiff(beforeLines, afterLines);
       for (const dl of diffLines) {
+        dl.filePath = filePath;
         lines.push(dl);
+
+        // Insert inline comments under matching diff lines
+        const matchingThreads = findMatchingThreads(inlineThreadsByKey, filePath, dl);
+        for (const thread of matchingThreads) {
+          for (const comment of thread.comments) {
+            const author = extractAuthorName(comment.authorArn ?? "unknown");
+            const content = comment.content ?? "";
+            lines.push({
+              type: "inline-comment",
+              text: `💬 ${author}: ${content}`,
+            });
+          }
+        }
       }
     }
 
     lines.push({ type: "separator", text: "" });
   }
 
-  if (comments.length > 0) {
+  const generalComments = commentThreads
+    .filter((t) => t.location === null)
+    .flatMap((t) => t.comments);
+
+  if (generalComments.length > 0) {
     lines.push({ type: "separator", text: "─".repeat(50) });
-    lines.push({ type: "comment-header", text: `Comments (${comments.length}):` });
-    for (const comment of comments) {
+    lines.push({ type: "comment-header", text: `Comments (${generalComments.length}):` });
+    for (const comment of generalComments) {
       const author = extractAuthorName(comment.authorArn ?? "unknown");
       const content = comment.content ?? "";
       lines.push({ type: "comment", text: `${author}: ${content}` });
@@ -255,6 +363,62 @@ function buildDisplayLines(
   }
 
   return lines;
+}
+
+function findMatchingThreads(
+  threadsByKey: Map<string, CommentThread[]>,
+  filePath: string,
+  line: DisplayLine,
+): CommentThread[] {
+  const results: CommentThread[] = [];
+
+  if (line.type === "delete" && line.beforeLineNumber) {
+    const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+    results.push(...(threadsByKey.get(key) ?? []));
+  }
+
+  if (line.type === "add" && line.afterLineNumber) {
+    const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+    results.push(...(threadsByKey.get(key) ?? []));
+  }
+
+  if (line.type === "context") {
+    if (line.beforeLineNumber) {
+      const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+      results.push(...(threadsByKey.get(key) ?? []));
+    }
+    if (line.afterLineNumber) {
+      const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+      results.push(...(threadsByKey.get(key) ?? []));
+    }
+  }
+
+  return results;
+}
+
+function getLocationFromLine(line: DisplayLine): {
+  filePath: string;
+  filePosition: number;
+  relativeFileVersion: "BEFORE" | "AFTER";
+} | null {
+  if (!line.filePath) return null;
+
+  if (line.type === "delete" && line.beforeLineNumber) {
+    return {
+      filePath: line.filePath,
+      filePosition: line.beforeLineNumber,
+      relativeFileVersion: "BEFORE",
+    };
+  }
+  if ((line.type === "add" || line.type === "context") && line.afterLineNumber) {
+    return {
+      filePath: line.filePath,
+      filePosition: line.afterLineNumber,
+      relativeFileVersion: "AFTER",
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -283,7 +447,12 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
 
     // Case 1: Lines match at current position - add as context
     if (bi < beforeLines.length && ai < afterLines.length && beforeLine === afterLine) {
-      result.push({ type: "context", text: ` ${beforeLine}` });
+      result.push({
+        type: "context",
+        text: ` ${beforeLine}`,
+        beforeLineNumber: bi + 1,
+        afterLineNumber: ai + 1,
+      });
       bi++;
       ai++;
     } else {
@@ -298,7 +467,11 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
         // Optimization: look ahead to see if this line appears soon in 'after'
         const nextMatch = afterLines.indexOf(bl, ai);
         if (nextMatch !== -1 && nextMatch - ai < 5) break; // Stop if match found within 5 lines
-        result.push({ type: "delete", text: `-${bl}` });
+        result.push({
+          type: "delete",
+          text: `-${bl}`,
+          beforeLineNumber: bi + 1,
+        });
         bi++;
       }
 
@@ -311,7 +484,11 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
         // Optimization: look ahead to see if this line appears soon in 'before'
         const nextMatch = beforeLines.indexOf(al, bi);
         if (nextMatch !== -1 && nextMatch - bi < 5) break; // Stop if match found within 5 lines
-        result.push({ type: "add", text: `+${al}` });
+        result.push({
+          type: "add",
+          text: `+${al}`,
+          afterLineNumber: ai + 1,
+        });
         ai++;
       }
     }
@@ -320,7 +497,8 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
   return result;
 }
 
-function renderDiffLine(line: DisplayLine): React.ReactNode {
+function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
+  const bold = isCursor;
   switch (line.type) {
     case "header":
       return (
@@ -331,14 +509,24 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
     case "separator":
       return <Text dimColor>{line.text}</Text>;
     case "add":
-      return <Text color="green">{line.text}</Text>;
+      return (
+        <Text color="green" bold={bold}>
+          {line.text}
+        </Text>
+      );
     case "delete":
-      return <Text color="red">{line.text}</Text>;
+      return (
+        <Text color="red" bold={bold}>
+          {line.text}
+        </Text>
+      );
     case "context":
-      return <Text>{line.text}</Text>;
+      return <Text bold={bold}>{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
       return <Text> {line.text}</Text>;
+    case "inline-comment":
+      return <Text color="magenta"> {line.text}</Text>;
   }
 }
