@@ -10,7 +10,7 @@ import { Box, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
-import { PullRequestList } from "./components/PullRequestList.js";
+import { type StatusFilter, PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
   type CommentThread,
@@ -38,6 +38,23 @@ import {
 } from "./services/codecommit.js";
 
 type Screen = "repos" | "prs" | "detail";
+
+interface PaginationState {
+  currentPage: number;
+  currentToken?: string;
+  nextToken?: string;
+  previousTokens: (string | undefined)[];
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+const initialPagination: PaginationState = {
+  currentPage: 1,
+  currentToken: undefined,
+  previousTokens: [],
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
 
 interface AppProps {
   client: CodeCommitClient;
@@ -92,6 +109,11 @@ export function App({ client, initialRepo }: AppProps) {
   const [isDeletingComment, setIsDeletingComment] = useState(false);
   const [deleteCommentError, setDeleteCommentError] = useState<string | null>(null);
 
+  // v0.8: filter, search, pagination
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>(initialPagination);
+
   /**
    * Wrapper for async operations with automatic loading/error state management.
    * Eliminates repetitive try-catch-finally patterns.
@@ -124,11 +146,37 @@ export function App({ client, initialRepo }: AppProps) {
     });
   }
 
-  async function loadPullRequests(repoName: string) {
-    await withLoadingState(async () => {
-      const result = await listPullRequests(client, repoName);
-      setPullRequests(result.pullRequests);
-    });
+  async function loadPullRequests(repoName: string, status?: StatusFilter, pageToken?: string) {
+    const apiStatus = status === "MERGED" || status === "CLOSED" ? "CLOSED" : "OPEN";
+
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await listPullRequests(client, repoName, pageToken, apiStatus);
+
+      let filtered = result.pullRequests;
+      if (status === "CLOSED") {
+        filtered = result.pullRequests.filter((pr) => pr.status === "CLOSED");
+      } else if (status === "MERGED") {
+        filtered = result.pullRequests.filter((pr) => pr.status === "MERGED");
+      }
+
+      setPullRequests(filtered);
+      setPagination((prev) => ({
+        ...prev,
+        nextToken: result.nextToken,
+        hasNextPage: !!result.nextToken,
+      }));
+    } catch (err) {
+      if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
+        setError("Page token expired. Returning to first page.");
+        setPagination(initialPagination);
+      } else {
+        setError(formatError(err));
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
@@ -187,12 +235,55 @@ export function App({ client, initialRepo }: AppProps) {
   function handleSelectRepo(repoName: string) {
     setSelectedRepo(repoName);
     setScreen("prs");
-    loadPullRequests(repoName);
+    setStatusFilter("OPEN");
+    setSearchQuery("");
+    setPagination(initialPagination);
+    loadPullRequests(repoName, "OPEN");
   }
 
   function handleSelectPR(pullRequestId: string) {
     setScreen("detail");
     loadPullRequestDetail(pullRequestId);
+  }
+
+  function handleChangeStatusFilter(filter: StatusFilter) {
+    setStatusFilter(filter);
+    setSearchQuery("");
+    setPagination(initialPagination);
+    loadPullRequests(selectedRepo, filter);
+  }
+
+  function handleNextPage() {
+    if (!pagination.nextToken) return;
+
+    const nextToken = pagination.nextToken;
+
+    setPagination((prev) => ({
+      ...prev,
+      previousTokens: [...prev.previousTokens, prev.currentToken],
+      currentToken: nextToken,
+      currentPage: prev.currentPage + 1,
+      hasPreviousPage: true,
+    }));
+
+    loadPullRequests(selectedRepo, statusFilter, nextToken);
+  }
+
+  function handlePreviousPage() {
+    if (pagination.previousTokens.length === 0) return;
+
+    const newPreviousTokens = [...pagination.previousTokens];
+    const prevToken = newPreviousTokens.pop();
+
+    setPagination((prev) => ({
+      ...prev,
+      previousTokens: newPreviousTokens,
+      currentToken: prevToken,
+      currentPage: prev.currentPage - 1,
+      hasPreviousPage: newPreviousTokens.length > 0,
+    }));
+
+    loadPullRequests(selectedRepo, statusFilter, prevToken);
   }
 
   async function handlePostComment(content: string) {
@@ -452,6 +543,9 @@ export function App({ client, initialRepo }: AppProps) {
       if (initialRepo) {
         process.exit(0);
       }
+      setStatusFilter("OPEN");
+      setSearchQuery("");
+      setPagination(initialPagination);
       setScreen("repos");
     } /* v8 ignore next */ else {
       process.exit(0);
@@ -499,6 +593,17 @@ export function App({ client, initialRepo }: AppProps) {
           onSelect={handleSelectPR}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
+          statusFilter={statusFilter}
+          onChangeStatusFilter={handleChangeStatusFilter}
+          searchQuery={searchQuery}
+          onChangeSearchQuery={setSearchQuery}
+          pagination={{
+            currentPage: pagination.currentPage,
+            hasNextPage: pagination.hasNextPage,
+            hasPreviousPage: pagination.hasPreviousPage,
+          }}
+          onNextPage={handleNextPage}
+          onPreviousPage={handlePreviousPage}
         />
       );
     case "detail":
