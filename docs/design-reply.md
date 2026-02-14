@@ -623,10 +623,38 @@ function findMatchingThreadEntries(
 
 #### Props の変更
 
+v0.5 で 4 つの Props を追加する。既存の Props はすべて維持。
+
 ```typescript
 interface Props {
-  // ... 既存の Props すべて ...
-
+  pullRequest: PullRequest;
+  differences: Difference[];
+  commentThreads: CommentThread[];
+  diffTexts: Map<string, { before: string; after: string }>;
+  onBack: () => void;
+  onHelp: () => void;
+  onPostComment: (content: string) => void;
+  isPostingComment: boolean;
+  commentError: string | null;
+  onClearCommentError: () => void;
+  onPostInlineComment: (
+    content: string,
+    location: {
+      filePath: string;
+      filePosition: number;
+      relativeFileVersion: "BEFORE" | "AFTER";
+    },
+  ) => void;
+  isPostingInlineComment: boolean;
+  inlineCommentError: string | null;
+  onClearInlineCommentError: () => void;
+  approvals: Approval[];
+  approvalEvaluation: Evaluation | null;
+  onApprove: () => void;
+  onRevoke: () => void;
+  isApproving: boolean;
+  approvalError: string | null;
+  onClearApprovalError: () => void;
   // v0.5 追加
   onPostReply: (inReplyTo: string, content: string) => void;
   isPostingReply: boolean;
@@ -639,6 +667,32 @@ interface Props {
 
 ```typescript
 // 既存の import に変更なし（CommentThread は既にインポート済み）
+```
+
+#### CommentInput 再利用時のラベル問題
+
+既存の `CommentInput` コンポーネントは「New Comment:」「Posting comment...」「Failed to post comment:」のラベルがハードコードされている。返信投稿時もこれらのラベルがそのまま表示される。
+
+**対応方針**: CommentInput のラベルを props でカスタマイズ可能にすることは v0.5 のスコープ外とする。理由:
+- ラベルの不整合は機能上の影響はない（投稿自体は正しく動作する）
+- 返信入力 UI には「Replying to author: content」のコンテキスト行が表示されるため、ユーザーは返信であることを認識できる
+- v0.7（コメント編集）でも CommentInput を再利用する際にラベルカスタマイズが必要になるため、その時点でまとめて対応するのが効率的
+
+**v0.7 で検討する改善案**:
+
+```typescript
+// 将来の CommentInput Props 拡張案
+interface Props {
+  onSubmit: (content: string) => void;
+  onCancel: () => void;
+  isPosting: boolean;
+  error: string | null;
+  onClearError: () => void;
+  // v0.7 で追加検討
+  promptLabel?: string;      // デフォルト: "New Comment:"
+  postingLabel?: string;     // デフォルト: "Posting comment..."
+  errorPrefix?: string;      // デフォルト: "Failed to post comment:"
+}
 ```
 
 #### 状態管理の追加
@@ -663,27 +717,18 @@ const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
 });
 ```
 
-**`collapsedThreads` の初期化について**:
+**`collapsedThreads` の初期化とライフサイクル**:
 
-`commentThreads` が更新されたとき（コメント再取得後）、折りたたみ状態をリセットする必要がある。`useEffect` で `commentThreads` の変更を監視し、新しいスレッドが追加された場合のみ折りたたみ状態を更新する。
+`useState` の初期化コールバックでコンポーネントマウント時の `commentThreads` を元に折りたたみ状態を設定する。`PullRequestDetail` は `App` 側で `prDetail` が非 null のときのみレンダリングされるため、マウント時点で `commentThreads` は取得済みである。
 
-```typescript
-useEffect(() => {
-  setCollapsedThreads((prev) => {
-    const next = new Set(prev);
-    for (let i = 0; i < commentThreads.length; i++) {
-      // 新しいスレッドが追加された場合、しきい値に基づいて折りたたみ
-      if (!prev.has(i) && (commentThreads[i]?.comments.length ?? 0) >= FOLD_THRESHOLD) {
-        // 既に展開済みのスレッドは再折りたたみしない
-        // 初回ロード時のみ自動折りたたみ
-      }
-    }
-    return next;
-  });
-}, [commentThreads]);
-```
+**コメント再取得後（返信投稿成功後）の挙動**:
 
-実装簡略化のため、`collapsedThreads` は `commentThreads` の更新時にリセットせず、ユーザーの展開操作を保持する。新しいスレッドの折りたたみは初期化時の `useState` コールバックで処理する。
+`reloadComments()` により `commentThreads` が更新されても、`collapsedThreads` はリセットしない。ユーザーが展開したスレッドは展開されたままとする。新しい返信によりスレッドが折りたたみしきい値を超えた場合でも、手動で `o` キーを押すまで展開状態を維持する。
+
+この設計の根拠:
+- **ユーザーの意図を尊重**: 展開操作は意図的な行為であり、返信追加で自動折りたたみされるのは不自然
+- **シンプルさ**: useEffect での差分管理は複雑になりやすく、v0.5 の範囲では不要
+- **PR 詳細画面の再訪問時**: 画面遷移で `PullRequestDetail` がアンマウント→再マウントされるため、`useState` 初期化コールバックが再実行され、最新の `commentThreads` でリセットされる
 
 #### useEffect（返信投稿完了検知）
 
@@ -759,12 +804,18 @@ function getReplyTargetFromLine(line: DisplayLine): {
   // inline-comment: "💬 author: content"
   // inline-reply / comment-reply: "└ author: content"
   // comment: "author: content"
+  //
+  // 注意: 💬 は surrogate pair（U+1F4AC）のため JavaScript では 2 文字。
+  //       "💬 " は 3 文字（"💬".length === 2 + " " === 1）。
+  //       "└" は BMP 内（U+2514）のため 1 文字。"└ " は 2 文字。
   let displayText = line.text;
-  if (displayText.startsWith("💬 ")) {
-    displayText = displayText.slice(2);  // "💬 " を除去
+  const speechBalloonPrefix = "💬 ";
+  const replyPrefix = "└ ";
+  if (displayText.startsWith(speechBalloonPrefix)) {
+    displayText = displayText.slice(speechBalloonPrefix.length);  // "💬 " (3文字) を除去
   }
-  if (displayText.startsWith("└ ")) {
-    displayText = displayText.slice(2);  // "└ " を除去
+  if (displayText.startsWith(replyPrefix)) {
+    displayText = displayText.slice(replyPrefix.length);  // "└ " (2文字) を除去
   }
 
   const colonIndex = displayText.indexOf(": ");
@@ -1234,17 +1285,33 @@ v0.5 では新規依存パッケージの追加は不要。`PostCommentReplyComm
 
 **この Step の完了条件**: `postCommentReply` のテストが通過。既存テストに影響なし。
 
-### Step 2: DisplayLine 拡張 + 返信表示（構造的変更 + 機能追加 — 読み取り側）
+### Step 2: Tidy — DisplayLine 拡張 + buildDisplayLines リファクタリング（構造的変更）
 
-`DisplayLine` に `threadIndex`, `commentId` フィールドと新しいタイプ（`inline-reply`, `comment-reply`, `fold-indicator`）を追加。`buildDisplayLines` を `appendThreadLines` に分解し、返信のインデント表示を実装。`renderDiffLine` に新タイプの描画を追加。
+**Tidy First** の原則に従い、まず構造的変更のみを行う。機能的な振る舞いは変えない。
+
+1. `DisplayLine` に `threadIndex`, `commentId` フィールドと新しいタイプ（`inline-reply`, `comment-reply`, `fold-indicator`）を追加
+2. `findMatchingThreads` を `findMatchingThreadEntries` にリファクタリング（`threadIndex` を含むエントリを返すよう拡張）
+3. `buildDisplayLines` のインラインコメント表示ロジックを `appendThreadLines` ヘルパーに抽出
+4. `renderDiffLine` に新タイプのケースを追加（ただし、この時点ではまだ新タイプの DisplayLine は生成されない）
+5. 既存コメント行に `threadIndex` と `commentId` を付与
 
 **この Step で変更するファイル**:
-- `src/components/PullRequestDetail.tsx`: `DisplayLine` 拡張、`appendThreadLines` 実装、`buildDisplayLines` 変更、`renderDiffLine` に新タイプ追加
+- `src/components/PullRequestDetail.tsx`: `DisplayLine` 拡張、`findMatchingThreads` → `findMatchingThreadEntries` リネーム・拡張、`appendThreadLines` 抽出、`renderDiffLine` に新タイプ追加
+- `src/components/PullRequestDetail.test.tsx`: リファクタリング後も既存テストが通過することを確認
+
+**この Step の完了条件**: 既存テストがすべて通過。既存の表示に変化なし（構造的変更のみ）。
+
+### Step 3: 返信表示（機能追加 — 読み取り側）
+
+`appendThreadLines` で返信コメント（`inReplyTo` が設定されたコメント）を `inline-reply` / `comment-reply` タイプで表示する。
+
+**この Step で変更するファイル**:
+- `src/components/PullRequestDetail.tsx`: `appendThreadLines` に返信表示ロジックを追加
 - `src/components/PullRequestDetail.test.tsx`: 返信表示テスト追加
 
-**この Step の完了条件**: スレッド内の返信がインデント付きで表示されるテストが通過。既存テストが通過。
+**この Step の完了条件**: スレッド内の返信がインデント付きで表示されるテストが通過。
 
-### Step 3: スレッド折りたたみ（機能追加）
+### Step 4: スレッド折りたたみ（機能追加）
 
 `collapsedThreads` state を追加。`buildDisplayLines` に折りたたみ状態を渡す。`o` キーハンドラ追加。`fold-indicator` 表示。
 
@@ -1254,7 +1321,7 @@ v0.5 では新規依存パッケージの追加は不要。`PostCommentReplyComm
 
 **この Step の完了条件**: 折りたたみ/展開が正しく動作するテストが通過。
 
-### Step 4: 返信投稿（機能追加 — 書き込み側）
+### Step 5: 返信投稿（機能追加 — 書き込み側）
 
 `R` キーハンドラ追加。`getReplyTargetFromLine` 実装。返信入力 UI。App に `handlePostReply` 追加。Props 追加。
 
@@ -1266,7 +1333,7 @@ v0.5 では新規依存パッケージの追加は不要。`PostCommentReplyComm
 
 **この Step の完了条件**: 返信の投稿→リロード→表示の一連のフローがテストで通過。
 
-### Step 5: Help 更新
+### Step 6: Help 更新
 
 `R` と `o` キーバインドを追加。
 
@@ -1274,7 +1341,7 @@ v0.5 では新規依存パッケージの追加は不要。`PostCommentReplyComm
 - `src/components/Help.tsx`: `R` / `o` キーバインドの行追加
 - `src/components/Help.test.tsx`: テスト更新
 
-### Step 6: 全体テスト・カバレッジ確認
+### Step 7: 全体テスト・カバレッジ確認
 
 ```bash
 bun run ci
@@ -1282,6 +1349,6 @@ bun run ci
 
 カバレッジ 95% 以上を確認。
 
-### Step 7: ドキュメント更新
+### Step 8: ドキュメント更新
 
 要件定義書（`docs/requirements.md`）と README（`README.md`）を更新。
