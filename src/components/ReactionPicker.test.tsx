@@ -110,11 +110,7 @@ describe("ReactionPicker", () => {
   it("calls onClearError on any key when error is shown", () => {
     const onClearError = vi.fn();
     const { stdin } = render(
-      <ReactionPicker
-        {...defaultProps}
-        error="Comment not found."
-        onClearError={onClearError}
-      />,
+      <ReactionPicker {...defaultProps} error="Comment not found." onClearError={onClearError} />,
     );
     stdin.write("a");
     expect(onClearError).toHaveBeenCalled();
@@ -124,7 +120,12 @@ describe("ReactionPicker", () => {
     const onSelect = vi.fn();
     const onCancel = vi.fn();
     const { stdin } = render(
-      <ReactionPicker {...defaultProps} isProcessing={true} onSelect={onSelect} onCancel={onCancel} />,
+      <ReactionPicker
+        {...defaultProps}
+        isProcessing={true}
+        onSelect={onSelect}
+        onCancel={onCancel}
+      />,
     );
     stdin.write("\r");
     stdin.write("q");

@@ -103,7 +103,7 @@ export function ReactionPicker({
           );
         })}
       </Box>
-      <Text dimColor>←→ select  Enter send  Esc cancel</Text>
+      <Text dimColor>←→ select Enter send Esc cancel</Text>
     </Box>
   );
 }

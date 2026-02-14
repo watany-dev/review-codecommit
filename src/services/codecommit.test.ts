@@ -1610,7 +1610,10 @@ describe("getReactionsForComment", () => {
       reactionsForComment: [
         {
           reaction: { emoji: "👍", shortCode: ":thumbsup:", unicode: "U+1F44D" },
-          reactionUsers: ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/bob"],
+          reactionUsers: [
+            "arn:aws:iam::123456789012:user/alice",
+            "arn:aws:iam::123456789012:user/bob",
+          ],
           reactionsFromDeletedUsersCount: 0,
         },
         {
@@ -1661,12 +1664,35 @@ describe("getReactionsForComment", () => {
     expect(result[0].count).toBe(4);
   });
 
+  it("handles missing reaction fields gracefully", async () => {
+    mockSend.mockResolvedValueOnce({
+      reactionsForComment: [
+        {
+          reaction: {},
+          reactionUsers: undefined,
+          reactionsFromDeletedUsersCount: undefined,
+        },
+      ],
+    });
+
+    const result = await getReactionsForComment(mockClient, "comment-1");
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      emoji: "",
+      shortCode: "",
+      count: 0,
+      userArns: [],
+    });
+  });
+
   it("propagates API errors", async () => {
     const error = new Error("comment not found");
     error.name = "CommentDoesNotExistException";
     mockSend.mockRejectedValueOnce(error);
 
-    await expect(getReactionsForComment(mockClient, "comment-1")).rejects.toThrow("comment not found");
+    await expect(getReactionsForComment(mockClient, "comment-1")).rejects.toThrow(
+      "comment not found",
+    );
   });
 });
 

@@ -16,7 +16,6 @@ import {
   type CommentThread,
   type CommitInfo,
   type ConflictSummary,
-  type ReactionsByComment,
   closePullRequest,
   deleteComment,
   evaluateApprovalRules,
@@ -36,6 +35,7 @@ import {
   postComment,
   postCommentReply,
   putReaction,
+  type ReactionsByComment,
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
@@ -597,9 +597,10 @@ export function App({ client, initialRepo }: AppProps) {
       setSearchQuery("");
       setPagination(initialPagination);
       setScreen("repos");
-    } /* v8 ignore next */ else {
+    } /* v8 ignore start */ else {
       process.exit(0);
     }
+    /* v8 ignore stop */
   }
 
   if (showHelp) {

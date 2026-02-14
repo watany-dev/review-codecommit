@@ -6,8 +6,8 @@ import type {
   CommitInfo,
   ConflictSummary,
   MergeStrategy,
-  ReactionsByComment,
   ReactionSummary,
+  ReactionsByComment,
 } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
@@ -297,7 +297,13 @@ export function PullRequestDetail({
 
   const lines = useMemo(() => {
     if (viewIndex === -1) {
-      return buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads, reactionsByComment);
+      return buildDisplayLines(
+        differences,
+        diffTexts,
+        commentThreads,
+        collapsedThreads,
+        reactionsByComment,
+      );
     }
     return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set(), new Map());
   }, [
@@ -819,9 +825,10 @@ function findCommentContent(commentThreads: CommentThread[], commentId: string):
       }
     }
   }
-  /* v8 ignore next -- commentId always matches a thread entry */
+  /* v8 ignore start -- commentId always matches a thread entry */
   return "";
 }
+/* v8 ignore stop */
 
 function getReplyTargetFromLine(
   line: DisplayLine,
@@ -968,7 +975,14 @@ function buildDisplayLines(
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
-          appendThreadLines(lines, thread, threadIdx, collapsedThreads, "inline", reactionsByComment);
+          appendThreadLines(
+            lines,
+            thread,
+            threadIdx,
+            collapsedThreads,
+            "inline",
+            reactionsByComment,
+          );
         }
       }
     }
@@ -1048,9 +1062,10 @@ function getLocationFromLine(line: DisplayLine): {
     };
   }
 
-  /* v8 ignore next -- diff lines always have line numbers */
+  /* v8 ignore start -- diff lines always have line numbers */
   return null;
 }
+/* v8 ignore stop */
 
 /**
  * Computes a simplified line-by-line diff between two sets of lines.
@@ -1158,15 +1173,17 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
     case "comment":
       return (
         <Text>
-          {" "}{line.text}
-          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+          {" "}
+          {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "inline-comment":
       return (
         <Text color="magenta">
-          {" "}{line.text}
-          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+          {" "}
+          {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "inline-reply":
@@ -1174,7 +1191,7 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
         <Text color="magenta">
           {"   "}
           {line.text}
-          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "comment-reply":
@@ -1182,7 +1199,7 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
         <Text>
           {"   "}
           {line.text}
-          {line.reactionText ? <Text dimColor>  {line.reactionText}</Text> : null}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "fold-indicator":
