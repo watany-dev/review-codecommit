@@ -323,7 +323,7 @@ export async function mergePullRequest(
   params: {
     pullRequestId: string;
     repositoryName: string;
-    sourceCommitId?: string;
+    sourceCommitId?: string | undefined;
     strategy: MergeStrategy;
   },
 ): Promise<PullRequest> {

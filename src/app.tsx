@@ -13,9 +13,9 @@ import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
-  closePullRequest,
   type CommentThread,
   type ConflictSummary,
+  closePullRequest,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,

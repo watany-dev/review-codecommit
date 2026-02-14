@@ -41,6 +41,9 @@ describe("RepositoryList", () => {
       <RepositoryList repositories={repos} onSelect={vi.fn()} onQuit={vi.fn()} onHelp={vi.fn()} />,
     );
     expect(lastFrame()).toContain("> my-service");
+    // Non-selected items should have no cursor prefix
+    expect(lastFrame()).toContain("  my-frontend");
+    expect(lastFrame()).toContain("  shared-lib");
   });
 
   it("calls onSelect on enter", () => {

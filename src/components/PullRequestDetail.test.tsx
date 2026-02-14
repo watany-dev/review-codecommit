@@ -76,7 +76,9 @@ describe("PullRequestDetail", () => {
     isMerging: false,
     mergeError: null as string | null,
     onClearMergeError: vi.fn(),
-    onCheckConflicts: vi.fn().mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
+    onCheckConflicts: vi
+      .fn()
+      .mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
     onClosePR: vi.fn(),
     isClosingPR: false,
     closePRError: null as string | null,
@@ -3390,6 +3392,51 @@ describe("PullRequestDetail", () => {
     expect(onMerge).toHaveBeenCalledWith("squash");
   });
 
+  it("selects three-way strategy via j+j+Enter", async () => {
+    const onMerge = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onMerge={onMerge}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("j");
+    stdin.write("j"); // move to Three-way
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("> Three-way merge");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("three-way merge");
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("y");
+    expect(onMerge).toHaveBeenCalledWith("three-way");
+  });
+
   // v0.6: Close PR tests
   it("shows close confirmation on x key", async () => {
     const { lastFrame, stdin } = render(
@@ -3614,5 +3661,290 @@ describe("PullRequestDetail", () => {
     // They will just be input text in the comment input, not trigger merge/close
     expect(lastFrame()).not.toContain("Select merge strategy:");
     expect(lastFrame()).not.toContain("Close this pull request");
+  });
+
+  // Coverage: exercise inline comment cancel callback
+  it("cancels inline comment on Esc", async () => {
+    const onClearInlineCommentError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        onClearInlineCommentError={onClearInlineCommentError}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    // Move cursor to an actual diff line (index 2 = context " line1")
+    stdin.write("j"); // move to separator (index 1)
+    stdin.write("j"); // move to context line (index 2)
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .* line1/);
+    });
+    stdin.write("C");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Inline comment on");
+    });
+    stdin.write("\u001B"); // Esc to cancel
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Inline comment on");
+    });
+  });
+
+  // Coverage: exercise reply cancel callback
+  it("cancels reply on Esc", async () => {
+    const onClearReplyError = vi.fn();
+    const threads = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "LGTM",
+          },
+        ],
+      },
+    ];
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        onClearReplyError={onClearReplyError}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+      />,
+    );
+    // Navigate to the comment (header, separator, 5 diff lines, separator, separator, comment-header, comment)
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("taro: LGTM");
+    });
+    // Press j 10 times to reach the comment line at index 10
+    for (let i = 0; i < 10; i++) {
+      stdin.write("j");
+    }
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*taro: LGTM/);
+    });
+    stdin.write("R");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Replying to taro:");
+    });
+    stdin.write("\u001B"); // Esc to cancel
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Replying to");
+      expect(onClearReplyError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise close PR error clear callback
+  it("clears close error on dismiss", async () => {
+    const onClearClosePRError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        closePRError="Some error"
+        onClearClosePRError={onClearClosePRError}
+      />,
+    );
+    stdin.write("x");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Some error");
+    });
+    // Press enter or key to clear the error
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(onClearClosePRError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise approval error clear callback
+  it("clears approval error on dismiss", async () => {
+    const onClearApprovalError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        approvalError="Cannot approve own PR"
+        onClearApprovalError={onClearApprovalError}
+        {...defaultMergeProps}
+      />,
+    );
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Cannot approve own PR");
+    });
+    stdin.write("\r"); // dismiss error
+    await vi.waitFor(() => {
+      expect(onClearApprovalError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise handleStrategySelect catch block
+  it("returns to normal when conflict check throws", async () => {
+    const onCheckConflicts = vi.fn().mockRejectedValue(new Error("network error"));
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    // After the error, merge should be cancelled and we're back to normal
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("m merge");
+      expect(lastFrame()).not.toContain("Select merge strategy:");
+      expect(lastFrame()).not.toContain("Checking for conflicts...");
+    });
+  });
+
+  // Coverage: exercise merge cancel callback (onCancel at confirm stage)
+  it("cancels merge at confirm stage on n key", async () => {
+    const onClearMergeError = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        onClearMergeError={onClearMergeError}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    stdin.write("n"); // cancel merge
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("(y/n)");
+      expect(lastFrame()).toContain("m merge");
+      expect(onClearMergeError).toHaveBeenCalled();
+    });
+  });
+
+  // Coverage: exercise merge error clear callback
+  it("clears merge error on dismiss", async () => {
+    const onClearMergeError = vi.fn();
+    const onCheckConflicts = vi.fn().mockResolvedValue({
+      mergeable: true,
+      conflictCount: 0,
+      conflictFiles: [],
+    });
+    const { lastFrame, stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultReplyProps}
+        {...defaultApprovalProps}
+        {...defaultMergeProps}
+        mergeError="Merge failed"
+        onClearMergeError={onClearMergeError}
+        onCheckConflicts={onCheckConflicts}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Merge failed");
+    });
+    stdin.write("\r"); // dismiss error
+    await vi.waitFor(() => {
+      expect(onClearMergeError).toHaveBeenCalled();
+    });
   });
 });

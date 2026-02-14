@@ -1,8 +1,7 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useState } from "react";
-import type { ConflictSummary, MergeStrategy } from "../services/codecommit.js";
-import type { CommentThread } from "../services/codecommit.js";
+import type { CommentThread, ConflictSummary, MergeStrategy } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
@@ -226,7 +225,14 @@ export function PullRequestDetail({
   }
 
   useInput((input, key) => {
-    if (isCommenting || isInlineCommenting || isReplying || approvalAction || mergeStep || isClosing)
+    if (
+      isCommenting ||
+      isInlineCommenting ||
+      isReplying ||
+      approvalAction ||
+      mergeStep ||
+      isClosing
+    )
       return;
 
     if (input === "q" || key.escape) {
