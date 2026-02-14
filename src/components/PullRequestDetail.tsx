@@ -59,6 +59,14 @@ interface Props {
   commitDiffTexts: Map<string, { before: string; after: string }>;
   isLoadingCommitDiff: boolean;
   onLoadCommitDiff: (commitIndex: number) => void;
+  onUpdateComment: (commentId: string, content: string) => void;
+  isUpdatingComment: boolean;
+  updateCommentError: string | null;
+  onClearUpdateCommentError: () => void;
+  onDeleteComment: (commentId: string) => void;
+  isDeletingComment: boolean;
+  deleteCommentError: string | null;
+  onClearDeleteCommentError: () => void;
 }
 
 export function PullRequestDetail({
@@ -101,6 +109,14 @@ export function PullRequestDetail({
   commitDiffTexts,
   isLoadingCommitDiff,
   onLoadCommitDiff,
+  onUpdateComment,
+  isUpdatingComment,
+  updateCommentError,
+  onClearUpdateCommentError,
+  onDeleteComment,
+  isDeletingComment,
+  deleteCommentError,
+  onClearDeleteCommentError,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -138,6 +154,17 @@ export function PullRequestDetail({
     }
     return collapsed;
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTarget, setEditTarget] = useState<{
+    commentId: string;
+    content: string;
+  } | null>(null);
+  const [wasUpdating, setWasUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    commentId: string;
+  } | null>(null);
+  const [wasDeleting, setWasDeleting] = useState(false);
 
   useEffect(() => {
     if (isPostingComment) {
@@ -207,6 +234,30 @@ export function PullRequestDetail({
     }
   }, [isClosingPR, closePRError]);
 
+  useEffect(() => {
+    if (isUpdatingComment) {
+      setWasUpdating(true);
+    } else if (wasUpdating && !updateCommentError) {
+      setIsEditing(false);
+      setEditTarget(null);
+      setWasUpdating(false);
+    } else {
+      setWasUpdating(false);
+    }
+  }, [isUpdatingComment, updateCommentError]);
+
+  useEffect(() => {
+    if (isDeletingComment) {
+      setWasDeleting(true);
+    } else if (wasDeleting && !deleteCommentError) {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+      setWasDeleting(false);
+    } else {
+      setWasDeleting(false);
+    }
+  }, [isDeletingComment, deleteCommentError]);
+
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
   const prId = pullRequest.pullRequestId ?? "";
@@ -255,6 +306,8 @@ export function PullRequestDetail({
       isCommenting ||
       isInlineCommenting ||
       isReplying ||
+      isEditing ||
+      isDeleting ||
       approvalAction ||
       mergeStep ||
       isClosing
@@ -349,10 +402,36 @@ export function PullRequestDetail({
       setIsClosing(true);
       return;
     }
+    if (input === "e") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const editInfo = getEditTargetFromLine(currentLine);
+      if (!editInfo) return;
+      const content = findCommentContent(commentThreads, editInfo.commentId);
+      setEditTarget({ commentId: editInfo.commentId, content });
+      setIsEditing(true);
+      return;
+    }
+    if (input === "d") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const delInfo = getDeleteTargetFromLine(currentLine);
+      if (!delInfo) return;
+      setDeleteTarget(delInfo);
+      setIsDeleting(true);
+      return;
+    }
   });
 
   const visibleLineCount =
-    isCommenting || isInlineCommenting || isReplying || approvalAction || mergeStep || isClosing
+    isCommenting ||
+    isInlineCommenting ||
+    isReplying ||
+    isEditing ||
+    isDeleting ||
+    approvalAction ||
+    mergeStep ||
+    isClosing
       ? 20
       : 30;
   const scrollOffset = useMemo(() => {
@@ -575,20 +654,60 @@ export function PullRequestDetail({
           }}
         />
       )}
+      {isEditing && editTarget && (
+        <Box flexDirection="column">
+          <CommentInput
+            onSubmit={(content) => onUpdateComment(editTarget.commentId, content)}
+            onCancel={() => {
+              setIsEditing(false);
+              setEditTarget(null);
+              onClearUpdateCommentError();
+            }}
+            isPosting={isUpdatingComment}
+            error={updateCommentError}
+            onClearError={onClearUpdateCommentError}
+            initialValue={editTarget.content}
+            label="Edit Comment:"
+            postingMessage="Updating comment..."
+            errorPrefix="Failed to update comment:"
+          />
+        </Box>
+      )}
+      {isDeleting && deleteTarget && (
+        <ConfirmPrompt
+          message="Delete this comment?"
+          onConfirm={() => onDeleteComment(deleteTarget.commentId)}
+          onCancel={() => {
+            setIsDeleting(false);
+            setDeleteTarget(null);
+            onClearDeleteCommentError();
+          }}
+          isProcessing={isDeletingComment}
+          processingMessage="Deleting comment..."
+          error={deleteCommentError}
+          onClearError={() => {
+            onClearDeleteCommentError();
+            setIsDeleting(false);
+            setDeleteTarget(null);
+          }}
+        />
+      )}
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
           isInlineCommenting ||
           isReplying ||
+          isEditing ||
+          isDeleting ||
           approvalAction ||
           mergeStep ||
           isClosing
             ? ""
             : viewIndex === -1 && commits.length > 0
-              ? "Tab switch view  ↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"
+              ? "Tab switch view  ↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
               : viewIndex >= 0
-                ? "Tab next  S-Tab prev  ↑↓ cursor  a approve  r revoke  m merge  x close  q back  ? help"
-                : "↑↓ cursor  c comment  C inline  R reply  o fold  a approve  r revoke  m merge  x close  q back  ? help"}
+                ? "Tab next  S-Tab prev  ↑↓ cursor  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
+                : "↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"}
         </Text>
       </Box>
     </Box>
@@ -614,6 +733,32 @@ interface DisplayLine {
   afterLineNumber?: number;
   threadIndex?: number | undefined;
   commentId?: string | undefined;
+}
+
+function getEditTargetFromLine(line: DisplayLine): { commentId: string } | null {
+  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
+  if (!commentTypes.includes(line.type)) return null;
+  if (!line.commentId) return null;
+  return { commentId: line.commentId };
+}
+
+function getDeleteTargetFromLine(line: DisplayLine): { commentId: string } | null {
+  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
+  if (!commentTypes.includes(line.type)) return null;
+  if (!line.commentId) return null;
+  return { commentId: line.commentId };
+}
+
+function findCommentContent(commentThreads: CommentThread[], commentId: string): string {
+  for (const thread of commentThreads) {
+    for (const comment of thread.comments) {
+      if (comment.commentId === commentId) {
+        return comment.content ?? "";
+      }
+    }
+  }
+  /* v8 ignore next -- commentId always matches a thread entry */
+  return "";
 }
 
 function getReplyTargetFromLine(
@@ -825,6 +970,7 @@ function getLocationFromLine(line: DisplayLine): {
     };
   }
 
+  /* v8 ignore next -- diff lines always have line numbers */
   return null;
 }
 
