@@ -10,7 +10,7 @@ import { Box, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
-import { type StatusFilter, PullRequestList } from "./components/PullRequestList.js";
+import { PullRequestList, type StatusFilter } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
   type CommentThread,
@@ -41,8 +41,8 @@ type Screen = "repos" | "prs" | "detail";
 
 interface PaginationState {
   currentPage: number;
-  currentToken?: string;
-  nextToken?: string;
+  currentToken: string | undefined;
+  nextToken: string | undefined;
   previousTokens: (string | undefined)[];
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -51,6 +51,7 @@ interface PaginationState {
 const initialPagination: PaginationState = {
   currentPage: 1,
   currentToken: undefined,
+  nextToken: undefined,
   previousTokens: [],
   hasNextPage: false,
   hasPreviousPage: false,

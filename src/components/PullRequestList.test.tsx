@@ -188,11 +188,7 @@ describe("PullRequestList", () => {
         },
       ];
       const { lastFrame } = render(
-        <PullRequestList
-          {...defaultProps}
-          statusFilter="CLOSED"
-          pullRequests={closedPRs}
-        />,
+        <PullRequestList {...defaultProps} statusFilter="CLOSED" pullRequests={closedPRs} />,
       );
       expect(lastFrame()).toContain("CLOSED");
     });
@@ -208,11 +204,7 @@ describe("PullRequestList", () => {
         },
       ];
       const { lastFrame } = render(
-        <PullRequestList
-          {...defaultProps}
-          statusFilter="MERGED"
-          pullRequests={mergedPRs}
-        />,
+        <PullRequestList {...defaultProps} statusFilter="MERGED" pullRequests={mergedPRs} />,
       );
       expect(lastFrame()).toContain("MERGED");
     });
@@ -268,9 +260,7 @@ describe("PullRequestList", () => {
     });
 
     it("filters by title when searchQuery is set", () => {
-      const { lastFrame } = render(
-        <PullRequestList {...defaultProps} searchQuery="login" />,
-      );
+      const { lastFrame } = render(<PullRequestList {...defaultProps} searchQuery="login" />);
       expect(lastFrame()).toContain("fix: login timeout");
       expect(lastFrame()).not.toContain("feat: add dashboard");
       expect(lastFrame()).toContain('matching "login"');
@@ -278,24 +268,18 @@ describe("PullRequestList", () => {
     });
 
     it("filters by author name when searchQuery matches", () => {
-      const { lastFrame } = render(
-        <PullRequestList {...defaultProps} searchQuery="taro" />,
-      );
+      const { lastFrame } = render(<PullRequestList {...defaultProps} searchQuery="taro" />);
       expect(lastFrame()).toContain("feat: add dashboard");
       expect(lastFrame()).not.toContain("fix: login timeout");
     });
 
     it("is case insensitive", () => {
-      const { lastFrame } = render(
-        <PullRequestList {...defaultProps} searchQuery="LOGIN" />,
-      );
+      const { lastFrame } = render(<PullRequestList {...defaultProps} searchQuery="LOGIN" />);
       expect(lastFrame()).toContain("fix: login timeout");
     });
 
     it("shows no matching message when search has no results", () => {
-      const { lastFrame } = render(
-        <PullRequestList {...defaultProps} searchQuery="nonexistent" />,
-      );
+      const { lastFrame } = render(<PullRequestList {...defaultProps} searchQuery="nonexistent" />);
       expect(lastFrame()).toContain("No matching pull requests");
     });
 

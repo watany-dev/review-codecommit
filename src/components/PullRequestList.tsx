@@ -6,7 +6,7 @@ import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 
 export type StatusFilter = "OPEN" | "CLOSED" | "MERGED";
 
-export interface PaginationViewState {
+interface PaginationViewState {
   currentPage: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -184,7 +184,9 @@ export function PullRequestList({
       {filteredPullRequests.length === 0 ? (
         <Box>
           <Text dimColor>
-            {searchQuery ? "No matching pull requests." : `No ${label.toLowerCase()} pull requests.`}
+            {searchQuery
+              ? "No matching pull requests."
+              : `No ${label.toLowerCase()} pull requests.`}
           </Text>
         </Box>
       ) : (
