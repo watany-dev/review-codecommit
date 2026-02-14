@@ -5197,6 +5197,197 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).toContain("d delete");
     });
 
+    it("edits comment with missing commentId in threads (uses empty content)", async () => {
+      // Test where commentId is in display but not in commentThreads data
+      // This exercises findCommentContent returning ""
+      const threadsWithMismatch = [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-99",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "Mismatch",
+            },
+          ],
+        },
+      ];
+      const onUpdateComment = vi.fn();
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={threadsWithMismatch as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onUpdateComment={onUpdateComment}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("e");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Edit Comment:");
+      });
+    });
+
+    it("clears update error on cancel", async () => {
+      const onClearUpdateCommentError = vi.fn();
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onClearUpdateCommentError={onClearUpdateCommentError}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("e");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Edit Comment:");
+      });
+      stdin.write("\u001B"); // Esc to cancel
+      await vi.waitFor(() => {
+        expect(onClearUpdateCommentError).toHaveBeenCalled();
+      });
+    });
+
+    it("clears delete error on cancel", async () => {
+      const onClearDeleteCommentError = vi.fn();
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onClearDeleteCommentError={onClearDeleteCommentError}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("d");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Delete this comment?");
+      });
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(onClearDeleteCommentError).toHaveBeenCalled();
+      });
+    });
+
+    it("clears delete error via error dismiss", async () => {
+      const onClearDeleteCommentError = vi.fn();
+      const { stdin, rerender, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onClearDeleteCommentError={onClearDeleteCommentError}
+        />,
+      );
+      for (let i = 0; i < 10; i++) {
+        stdin.write("j");
+      }
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">  taro");
+      });
+      stdin.write("d");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Delete this comment?");
+      });
+      // Simulate error
+      rerender(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={commentThreadsWithId as any}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          {...defaultEditDeleteProps}
+          onClearDeleteCommentError={onClearDeleteCommentError}
+          deleteCommentError="Some error"
+        />,
+      );
+      expect(lastFrame()).toContain("Some error");
+      // Dismiss the error
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(onClearDeleteCommentError).toHaveBeenCalled();
+      });
+    });
+
     it("auto-closes edit when update completes successfully", async () => {
       const { lastFrame, stdin, rerender } = render(
         <PullRequestDetail

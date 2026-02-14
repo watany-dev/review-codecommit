@@ -62,7 +62,9 @@ export function CommentInput({
   if (error) {
     return (
       <Box flexDirection="column">
-        <Text color="red">{errorPrefix} {error}</Text>
+        <Text color="red">
+          {errorPrefix} {error}
+        </Text>
         <Text dimColor>Press any key to return</Text>
       </Box>
     );

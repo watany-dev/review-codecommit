@@ -22,5 +22,6 @@ export function formatRelativeDate(date: Date, now: Date = new Date()): string {
 
 export function extractAuthorName(authorArn: string): string {
   const parts = authorArn.split("/");
+  /* v8 ignore next -- split() always returns at least one element */
   return parts[parts.length - 1] ?? authorArn;
 }

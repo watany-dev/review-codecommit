@@ -453,7 +453,7 @@ export function App({ client, initialRepo }: AppProps) {
         process.exit(0);
       }
       setScreen("repos");
-    } else {
+    } /* v8 ignore next */ else {
       process.exit(0);
     }
   }

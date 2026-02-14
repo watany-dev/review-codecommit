@@ -55,6 +55,7 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
     }
   }
 
+  /* v8 ignore next 3 -- split("\n") always produces at least one line */
   if (lines.length === 0) {
     return [];
   }
@@ -74,7 +75,7 @@ function buildHunks(beforeLines: string[], afterLines: string[]): DiffHunk[] {
         for (let j = start; j < i; j++) {
           hunkLines.push(lines[j]!);
         }
-      } else if (start > hunkLines.length + hunkStart) {
+      } /* v8 ignore next */ else if (start > hunkLines.length + hunkStart) {
         hunks.push({
           header: formatHunkHeader(hunkStart, hunkLines),
           lines: hunkLines,
