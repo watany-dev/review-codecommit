@@ -1999,6 +1999,196 @@ describe("PullRequestDetail", () => {
     expect(output).not.toContain("└");
   });
 
+  // v0.5: Thread folding tests
+  it("auto-folds threads with 4+ comments on initial render", () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
+          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
+          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={longThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("a: root");
+    expect(output).toContain("[+3 replies]");
+    expect(output).not.toContain("reply1");
+  });
+
+  it("does not fold threads with fewer than 4 comments", () => {
+    const shortThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
+          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={shortThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("a: root");
+    expect(output).toContain("└ b: reply1");
+    expect(output).toContain("└ c: reply2");
+    expect(output).not.toContain("[+");
+  });
+
+  it("expands folded thread with o key", async () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
+          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
+          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Initially folded
+    expect(lastFrame()).toContain("[+3 replies]");
+
+    // Navigate to the comment line (sep=0, comment-header=1, comment=2)
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*a: root/);
+    });
+
+    // Press o to unfold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+      expect(lastFrame()).toContain("└ c: reply2");
+      expect(lastFrame()).toContain("└ d: reply3");
+      expect(lastFrame()).not.toContain("[+3 replies]");
+    });
+  });
+
+  it("re-folds expanded thread with o key", async () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          { commentId: "c2", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/b", content: "reply1" },
+          { commentId: "c3", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/c", content: "reply2" },
+          { commentId: "c4", inReplyTo: "c1", authorArn: "arn:aws:iam::123456789012:user/d", content: "reply3" },
+        ],
+      },
+    ];
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+
+    // Navigate to comment line
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*a: root/);
+    });
+
+    // Unfold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+    });
+
+    // Press o again to refold
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[+3 replies]");
+      expect(lastFrame()).not.toContain("reply1");
+    });
+  });
+
+  it("ignores o key on non-comment lines", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    // Cursor is on header line (no threadIndex)
+    stdin.write("o");
+    // Should not crash, no visible change
+    expect(lastFrame()).toContain("src/auth.ts");
+  });
+
   it("displays multiple comments on same line as thread", () => {
     const multiCommentThread = [
       {

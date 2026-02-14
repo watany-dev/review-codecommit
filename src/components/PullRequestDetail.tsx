@@ -72,6 +72,15 @@ export function PullRequestDetail({
   const [wasPostingInline, setWasPostingInline] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
   const [wasApproving, setWasApproving] = useState(false);
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
+    const collapsed = new Set<number>();
+    for (let i = 0; i < commentThreads.length; i++) {
+      if ((commentThreads[i]?.comments.length ?? 0) >= FOLD_THRESHOLD) {
+        collapsed.add(i);
+      }
+    }
+    return collapsed;
+  });
 
   useEffect(() => {
     if (isPostingComment) {
@@ -116,8 +125,7 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const emptyCollapsed = useMemo(() => new Set<number>(), []);
-  const lines = buildDisplayLines(differences, diffTexts, commentThreads, emptyCollapsed);
+  const lines = buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
 
   useInput((input, key) => {
     if (isCommenting || isInlineCommenting || approvalAction) return;
@@ -149,6 +157,21 @@ export function PullRequestDetail({
       if (!location) return;
       setInlineCommentLocation(location);
       setIsInlineCommenting(true);
+      return;
+    }
+    if (input === "o") {
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      if (currentLine.threadIndex === undefined) return;
+      setCollapsedThreads((prev) => {
+        const next = new Set(prev);
+        if (next.has(currentLine.threadIndex!)) {
+          next.delete(currentLine.threadIndex!);
+        } else {
+          next.add(currentLine.threadIndex!);
+        }
+        return next;
+      });
       return;
     }
     if (input === "a") {
