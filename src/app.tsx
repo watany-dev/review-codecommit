@@ -473,8 +473,10 @@ function formatErrorMessage(
   // Default: sanitize and return original message
   const sanitized = err.message
     .replace(/arn:[^\s"')]+/gi, "[ARN]")
-    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
-  return context ? err.message : sanitized;
+    .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]")
+    .replace(/AKIA[0-9A-Z]{16}/g, "[ACCESS_KEY]")
+    .replace(/(?:us|eu|ap|sa|ca|me|af)-[a-z]+-\d+/g, "[REGION]");
+  return sanitized;
 }
 
 // Context-specific wrappers

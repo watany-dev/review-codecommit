@@ -292,6 +292,8 @@ export async function evaluateApprovalRules(
   return response.evaluation ?? null;
 }
 
+const MAX_BLOB_SIZE = 1024 * 1024; // 1MB limit for TUI display
+
 export async function getBlobContent(
   client: CodeCommitClient,
   repositoryName: string,
@@ -300,6 +302,9 @@ export async function getBlobContent(
   const command = new GetBlobCommand({ repositoryName, blobId });
   const response = await client.send(command);
   if (response.content) {
+    if (response.content.byteLength > MAX_BLOB_SIZE) {
+      return "[File too large to display]";
+    }
     return new TextDecoder().decode(response.content);
   }
   return "";
