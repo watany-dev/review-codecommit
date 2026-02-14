@@ -641,7 +641,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -700,7 +700,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -736,7 +736,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -923,7 +923,7 @@ describe("PullRequestDetail", () => {
         isApproving={true}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     await vi.waitFor(() => {
@@ -951,7 +951,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     // Prompt should be closed, approval state updated
@@ -1005,7 +1005,7 @@ describe("PullRequestDetail", () => {
         isApproving={true}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
 
@@ -1030,7 +1030,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError="Access denied. Check your IAM policy."
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     // Error should be displayed in prompt
@@ -1060,7 +1060,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={onClearApprovalError}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     // Enter approve mode
@@ -1090,7 +1090,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError="Some error"
         onClearApprovalError={onClearApprovalError}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Some error");
@@ -1913,7 +1913,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -1940,7 +1940,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     const output = lastFrame();
@@ -1975,7 +1975,7 @@ describe("PullRequestDetail", () => {
         isApproving={false}
         approvalError={null}
         onClearApprovalError={vi.fn()}
-      {...defaultCommitProps}
+        {...defaultCommitProps}
       />,
     );
     expect(lastFrame()).toContain("Rules:");
@@ -4259,6 +4259,45 @@ describe("PullRequestDetail", () => {
       });
       expect(lastFrame()).toContain("ccc9012");
       expect(onLoadCommitDiff).toHaveBeenCalledWith(2);
+    });
+
+    it("Shift+Tab goes from commit 2 to commit 1 (non-wrapping)", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onPostComment={vi.fn()}
+          isPostingComment={false}
+          commentError={null}
+          onClearCommentError={vi.fn()}
+          {...defaultInlineCommentProps}
+          {...defaultReplyProps}
+          {...defaultApprovalProps}
+          {...defaultMergeProps}
+          {...defaultCommitProps}
+          commits={sampleCommits}
+          onLoadCommitDiff={onLoadCommitDiff}
+        />,
+      );
+      // Go to commit 2
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 2/3]");
+      });
+      // Shift+Tab back to commit 1
+      stdin.write("\u001b[Z");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
     });
 
     it("Tab does nothing when commits are empty", async () => {

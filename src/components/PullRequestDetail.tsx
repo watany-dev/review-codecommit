@@ -2,8 +2,8 @@ import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/cli
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useState } from "react";
 import type {
-  CommitInfo,
   CommentThread,
+  CommitInfo,
   ConflictSummary,
   MergeStrategy,
 } from "../services/codecommit.js";

@@ -1033,6 +1033,22 @@ describe("getMergeConflicts", () => {
     });
   });
 
+  it("uses (unknown) for conflict files with missing filePath", async () => {
+    mockSend.mockResolvedValueOnce({
+      mergeable: false,
+      conflictMetadataList: [{ filePath: undefined, numberOfConflicts: 1 }],
+    });
+
+    const result = await getMergeConflicts(mockClient, {
+      repositoryName: "my-service",
+      sourceCommitId: "abc123",
+      destinationCommitId: "def456",
+      strategy: "squash",
+    });
+
+    expect(result.conflictFiles).toEqual(["(unknown)"]);
+  });
+
   it("maps merge strategy to correct mergeOption", async () => {
     mockSend.mockResolvedValueOnce({ mergeable: true, conflictMetadataList: [] });
     await getMergeConflicts(mockClient, {

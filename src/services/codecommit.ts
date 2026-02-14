@@ -437,7 +437,7 @@ export async function getCommit(
   return {
     commitId: commit.commitId ?? commitId,
     shortId: (commit.commitId ?? commitId).slice(0, 7),
-    message: (commit.message ?? "").split("\n")[0],
+    message: (commit.message ?? "").split("\n")[0] ?? "",
     authorName: commit.author?.name ?? "unknown",
     authorDate: commit.author?.date ? new Date(commit.author.date) : new Date(),
     parentIds: commit.parents ?? [],
