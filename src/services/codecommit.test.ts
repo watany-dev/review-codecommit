@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createClient,
   evaluateApprovalRules,
   getApprovalStates,
   getBlobContent,
@@ -19,6 +20,14 @@ const mockClient = {
 
 beforeEach(() => {
   mockSend.mockReset();
+});
+
+describe("createClient", () => {
+  it("returns a CodeCommitClient instance with provided config", () => {
+    const client = createClient({ profile: "dev", region: "ap-northeast-1" });
+    expect(client).toBeInstanceOf(Object);
+    expect(client.send).toBeDefined();
+  });
 });
 
 describe("listRepositories", () => {
