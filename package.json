@@ -25,6 +25,7 @@
     "audit": "bun audit",
     "security": "bun run dead-code && bun run audit",
     "validate": "bun run check && bun run lint && bun run format:check && bun run test:coverage",
+    "ci": "bun run lint && bun run format:check && bun run check && bun run dead-code && bun run audit && bun run test:coverage && bun run build",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {

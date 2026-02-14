@@ -18,20 +18,35 @@ titmouse is a TUI tool for reviewing AWS CodeCommit pull requests in the termina
 ## Common Commands
 
 ```bash
-bun run build        # Build for production (bun build + tsc declarations)
-bun run test         # Run unit tests
+bun run build         # Build for production (bun build + tsc declarations)
+bun run test          # Run unit tests
 bun run test:coverage # Run tests with coverage (95% threshold)
-bun run test:watch   # Run tests in watch mode
-bun run lint         # Check for lint errors
-bun run check        # TypeScript type check
+bun run test:watch    # Run tests in watch mode
+bun run lint          # Check for lint errors (oxlint)
+bun run format:check  # Check formatting (Biome)
+bun run check         # TypeScript type check
+bun run dead-code     # Detect unused exports (knip)
+bun run audit         # Dependency vulnerability audit
+bun run ci            # Run ALL CI checks locally (recommended before push)
 ```
 
 ## Completion Requirements
 
-Before committing, run:
+Before committing, **must** run `bun run ci` to execute all checks that CI will run:
 ```bash
-bun run lint && bun run check && bun run test:coverage
+bun run ci
 ```
+
+This runs the following in order (matching the GitHub Actions pipeline exactly):
+1. `lint` — oxlint
+2. `format:check` — Biome formatting
+3. `check` — TypeScript type check
+4. `dead-code` — knip unused export detection
+5. `audit` — dependency vulnerability check
+6. `test:coverage` — Vitest with 95% coverage threshold
+7. `build` — production build
+
+**Do not skip any of these steps.** CI failures on push are caused by missing checks locally.
 
 ## プロジェクト基本方針
 
