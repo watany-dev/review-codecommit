@@ -215,6 +215,9 @@ export function PullRequestDetail({
 interface DisplayLine {
   type: "header" | "separator" | "add" | "delete" | "context" | "comment-header" | "comment";
   text: string;
+  filePath?: string;
+  beforeLineNumber?: number;
+  afterLineNumber?: number;
 }
 
 function buildDisplayLines(
@@ -237,6 +240,7 @@ function buildDisplayLines(
       const afterLines = texts.after.split("\n");
       const diffLines = computeSimpleDiff(beforeLines, afterLines);
       for (const dl of diffLines) {
+        dl.filePath = filePath;
         lines.push(dl);
       }
     }
@@ -287,7 +291,12 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
 
     // Case 1: Lines match at current position - add as context
     if (bi < beforeLines.length && ai < afterLines.length && beforeLine === afterLine) {
-      result.push({ type: "context", text: ` ${beforeLine}` });
+      result.push({
+        type: "context",
+        text: ` ${beforeLine}`,
+        beforeLineNumber: bi + 1,
+        afterLineNumber: ai + 1,
+      });
       bi++;
       ai++;
     } else {
@@ -302,7 +311,11 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
         // Optimization: look ahead to see if this line appears soon in 'after'
         const nextMatch = afterLines.indexOf(bl, ai);
         if (nextMatch !== -1 && nextMatch - ai < 5) break; // Stop if match found within 5 lines
-        result.push({ type: "delete", text: `-${bl}` });
+        result.push({
+          type: "delete",
+          text: `-${bl}`,
+          beforeLineNumber: bi + 1,
+        });
         bi++;
       }
 
@@ -315,7 +328,11 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
         // Optimization: look ahead to see if this line appears soon in 'before'
         const nextMatch = beforeLines.indexOf(al, bi);
         if (nextMatch !== -1 && nextMatch - bi < 5) break; // Stop if match found within 5 lines
-        result.push({ type: "add", text: `+${al}` });
+        result.push({
+          type: "add",
+          text: `+${al}`,
+          afterLineNumber: ai + 1,
+        });
         ai++;
       }
     }
