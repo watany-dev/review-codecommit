@@ -35,10 +35,15 @@ describe("PullRequestDetail", () => {
     ],
   ]);
 
-  const comments = [
+  const commentThreads = [
     {
-      authorArn: "arn:aws:iam::123456789012:user/taro",
-      content: "LGTM",
+      location: null,
+      comments: [
+        {
+          authorArn: "arn:aws:iam::123456789012:user/taro",
+          content: "LGTM",
+        },
+      ],
     },
   ];
 
@@ -57,7 +62,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -78,7 +83,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -99,7 +104,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -120,7 +125,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -139,7 +144,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -159,7 +164,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -180,7 +185,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -207,7 +212,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={minimalPR as any}
         differences={[]}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -226,7 +231,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={[{ beforeBlob: undefined, afterBlob: undefined }] as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -252,7 +257,7 @@ describe("PullRequestDetail", () => {
             },
           ] as any
         }
-        comments={[]}
+        commentThreads={[]}
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -271,7 +276,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -293,7 +298,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
@@ -314,7 +319,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={onHelp}
@@ -346,7 +351,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={manyDiffs as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={texts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -367,7 +372,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -387,7 +392,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -410,7 +415,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
@@ -436,7 +441,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -455,7 +460,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -471,7 +476,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -492,7 +497,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -514,7 +519,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -532,7 +537,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={comments as any}
+        commentThreads={commentThreads as any}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -553,7 +558,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -581,7 +586,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -601,7 +606,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -635,7 +640,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -669,7 +674,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -689,7 +694,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -711,7 +716,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -734,7 +739,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
@@ -759,7 +764,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -779,7 +784,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -801,7 +806,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -827,7 +832,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -856,7 +861,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -875,7 +880,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -898,7 +903,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -926,7 +931,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -954,7 +959,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -985,7 +990,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
@@ -1012,7 +1017,7 @@ describe("PullRequestDetail", () => {
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
-        comments={[]}
+        commentThreads={[]}
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}

@@ -30,10 +30,19 @@ export interface PullRequestSummary {
   creationDate: Date;
 }
 
+export interface CommentThread {
+  location: {
+    filePath: string;
+    filePosition: number;
+    relativeFileVersion: "BEFORE" | "AFTER";
+  } | null;
+  comments: Comment[];
+}
+
 export interface PullRequestDetail {
   pullRequest: PullRequest;
   differences: Difference[];
-  comments: Comment[];
+  commentThreads: CommentThread[];
 }
 
 export function createClient(config: CodeCommitConfig): CodeCommitClient {
@@ -111,38 +120,56 @@ export async function getPullRequestDetail(
     differences.push(...(diffResponse.differences ?? []));
   }
 
-  const comments: Comment[] = [];
+  const commentThreads: CommentThread[] = [];
   const commentsCommand = new GetCommentsForPullRequestCommand({
     pullRequestId,
     repositoryName,
   });
   const commentsResponse = await client.send(commentsCommand);
   for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    for (const comment of thread.comments ?? []) {
-      comments.push(comment);
-    }
+    const location = thread.location?.filePath
+      ? {
+          filePath: thread.location.filePath,
+          filePosition: thread.location.filePosition ?? 0,
+          relativeFileVersion:
+            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+        }
+      : null;
+    commentThreads.push({
+      location,
+      comments: thread.comments ?? [],
+    });
   }
 
-  return { pullRequest, differences, comments };
+  return { pullRequest, differences, commentThreads };
 }
 
 export async function getComments(
   client: CodeCommitClient,
   pullRequestId: string,
   repositoryName: string,
-): Promise<Comment[]> {
-  const comments: Comment[] = [];
+): Promise<CommentThread[]> {
+  const commentThreads: CommentThread[] = [];
   const commentsCommand = new GetCommentsForPullRequestCommand({
     pullRequestId,
     repositoryName,
   });
   const commentsResponse = await client.send(commentsCommand);
   for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    for (const comment of thread.comments ?? []) {
-      comments.push(comment);
-    }
+    const location = thread.location?.filePath
+      ? {
+          filePath: thread.location.filePath,
+          filePosition: thread.location.filePosition ?? 0,
+          relativeFileVersion:
+            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+        }
+      : null;
+    commentThreads.push({
+      location,
+      comments: thread.comments ?? [],
+    });
   }
-  return comments;
+  return commentThreads;
 }
 
 export async function postComment(

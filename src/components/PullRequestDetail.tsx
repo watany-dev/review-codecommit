@@ -1,12 +1,12 @@
 import type {
   Approval,
-  Comment,
   Difference,
   Evaluation,
   PullRequest,
 } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useState } from "react";
+import type { CommentThread } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
@@ -14,7 +14,7 @@ import { ConfirmPrompt } from "./ConfirmPrompt.js";
 interface Props {
   pullRequest: PullRequest;
   differences: Difference[];
-  comments: Comment[];
+  commentThreads: CommentThread[];
   diffTexts: Map<string, { before: string; after: string }>;
   onBack: () => void;
   onHelp: () => void;
@@ -34,7 +34,7 @@ interface Props {
 export function PullRequestDetail({
   pullRequest,
   differences,
-  comments,
+  commentThreads,
   diffTexts,
   onBack,
   onHelp,
@@ -87,7 +87,7 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
-  const lines = buildDisplayLines(differences, diffTexts, comments);
+  const lines = buildDisplayLines(differences, diffTexts, commentThreads);
 
   useInput((input, key) => {
     if (isCommenting || approvalAction) return;
@@ -220,7 +220,7 @@ interface DisplayLine {
 function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
-  comments: Comment[],
+  commentThreads: CommentThread[],
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
@@ -244,10 +244,14 @@ function buildDisplayLines(
     lines.push({ type: "separator", text: "" });
   }
 
-  if (comments.length > 0) {
+  const generalComments = commentThreads
+    .filter((t) => t.location === null)
+    .flatMap((t) => t.comments);
+
+  if (generalComments.length > 0) {
     lines.push({ type: "separator", text: "─".repeat(50) });
-    lines.push({ type: "comment-header", text: `Comments (${comments.length}):` });
-    for (const comment of comments) {
+    lines.push({ type: "comment-header", text: `Comments (${generalComments.length}):` });
+    for (const comment of generalComments) {
       const author = extractAuthorName(comment.authorArn ?? "unknown");
       const content = comment.content ?? "";
       lines.push({ type: "comment", text: `${author}: ${content}` });

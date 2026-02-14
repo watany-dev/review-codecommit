@@ -122,8 +122,9 @@ describe("getPullRequestDetail", () => {
     const detail = await getPullRequestDetail(mockClient, "42", "my-service");
     expect(detail.pullRequest.title).toBe("fix: login timeout");
     expect(detail.differences).toHaveLength(1);
-    expect(detail.comments).toHaveLength(1);
-    expect(detail.comments[0].content).toBe("LGTM");
+    expect(detail.commentThreads).toHaveLength(1);
+    expect(detail.commentThreads[0].location).toBeNull();
+    expect(detail.commentThreads[0].comments[0].content).toBe("LGTM");
   });
 });
 
@@ -193,7 +194,7 @@ describe("getPullRequestDetail edge cases", () => {
 
     const detail = await getPullRequestDetail(mockClient, "42", "my-service");
     expect(detail.differences).toHaveLength(0);
-    expect(detail.comments).toHaveLength(0);
+    expect(detail.commentThreads).toHaveLength(0);
   });
 
   it("handles undefined differences in response", async () => {
@@ -231,7 +232,7 @@ describe("getPullRequestDetail edge cases", () => {
     });
 
     const detail = await getPullRequestDetail(mockClient, "42", "my-service");
-    expect(detail.comments).toHaveLength(0);
+    expect(detail.commentThreads).toHaveLength(0);
   });
 
   it("handles thread with no comments", async () => {
@@ -246,7 +247,8 @@ describe("getPullRequestDetail edge cases", () => {
     });
 
     const detail = await getPullRequestDetail(mockClient, "42", "my-service");
-    expect(detail.comments).toHaveLength(0);
+    expect(detail.commentThreads).toHaveLength(1);
+    expect(detail.commentThreads[0].comments).toHaveLength(0);
   });
 });
 
@@ -300,7 +302,7 @@ describe("postComment", () => {
 });
 
 describe("getComments", () => {
-  it("returns comments from API response", async () => {
+  it("returns comment threads from API response", async () => {
     mockSend.mockResolvedValueOnce({
       commentsForPullRequestData: [
         {
@@ -322,10 +324,12 @@ describe("getComments", () => {
       ],
     });
 
-    const comments = await getComments(mockClient, "42", "my-service");
-    expect(comments).toHaveLength(2);
-    expect(comments[0].content).toBe("First comment");
-    expect(comments[1].content).toBe("Second comment");
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].location).toBeNull();
+    expect(threads[0].comments).toHaveLength(2);
+    expect(threads[0].comments[0].content).toBe("First comment");
+    expect(threads[0].comments[1].content).toBe("Second comment");
   });
 
   it("handles empty comments data", async () => {
@@ -333,8 +337,8 @@ describe("getComments", () => {
       commentsForPullRequestData: undefined,
     });
 
-    const comments = await getComments(mockClient, "42", "my-service");
-    expect(comments).toHaveLength(0);
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(0);
   });
 
   it("handles thread with no comments", async () => {
@@ -342,8 +346,55 @@ describe("getComments", () => {
       commentsForPullRequestData: [{ comments: undefined }],
     });
 
-    const comments = await getComments(mockClient, "42", "my-service");
-    expect(comments).toHaveLength(0);
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].comments).toHaveLength(0);
+  });
+
+  it("returns location for inline comment threads", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          location: {
+            filePath: "src/auth.ts",
+            filePosition: 10,
+            relativeFileVersion: "AFTER",
+          },
+          comments: [
+            { commentId: "c1", content: "inline comment" },
+          ],
+        },
+        {
+          comments: [
+            { commentId: "c2", content: "general comment" },
+          ],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(2);
+    expect(threads[0].location).toEqual({
+      filePath: "src/auth.ts",
+      filePosition: 10,
+      relativeFileVersion: "AFTER",
+    });
+    expect(threads[1].location).toBeNull();
+  });
+
+  it("treats location without filePath as general comment", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          location: { filePath: undefined, filePosition: 5 },
+          comments: [{ commentId: "c1", content: "comment" }],
+        },
+      ],
+    });
+
+    const threads = await getComments(mockClient, "42", "my-service");
+    expect(threads).toHaveLength(1);
+    expect(threads[0].location).toBeNull();
   });
 });
 
