@@ -1817,6 +1817,188 @@ describe("PullRequestDetail", () => {
     expect(output).toContain("unknown");
   });
 
+  // v0.5: Reply display tests
+  it("displays inline reply with indent under root comment", () => {
+    const threadWithReply = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 2,
+          relativeFileVersion: "BEFORE" as const,
+        },
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "This value should come from config",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "Will fix in next PR",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threadWithReply as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: This value should come from config");
+    expect(output).toContain("└ watany: Will fix in next PR");
+  });
+
+  it("displays general comment reply with indent", () => {
+    const threadWithReply = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "Extended timeout",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Use a constant instead?",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threadWithReply as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("watany: Extended timeout");
+    expect(output).toContain("└ taro: Use a constant instead?");
+    expect(output).toContain("Comments (2):");
+  });
+
+  it("displays mixed inline and general threads with replies", () => {
+    const mixedThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "inline root",
+          },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "inline reply",
+          },
+        ],
+      },
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c3",
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "general root",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c3",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "general reply",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={mixedThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: inline root");
+    expect(output).toContain("└ watany: inline reply");
+    expect(output).toContain("hanako: general root");
+    expect(output).toContain("└ taro: general reply");
+  });
+
+  it("renders thread with no replies (backward compat with v0.4)", () => {
+    const singleCommentThread = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "solo comment",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={singleCommentThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultInlineCommentProps}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("watany: solo comment");
+    expect(output).not.toContain("└");
+  });
+
   it("displays multiple comments on same line as thread", () => {
     const multiCommentThread = [
       {
