@@ -10,6 +10,8 @@ interface Props {
   onClearError: () => void;
 }
 
+export const COMMENT_MAX_LENGTH = 10240;
+
 export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearError }: Props) {
   const [value, setValue] = useState("");
 
@@ -23,12 +25,15 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
     }
   });
 
-  const COMMENT_MAX_LENGTH = 10240;
+  function handleChange(newValue: string) {
+    if (newValue.length <= COMMENT_MAX_LENGTH) {
+      setValue(newValue);
+    }
+  }
 
   function handleSubmit(text: string) {
     const trimmed = text.trim();
     if (trimmed.length === 0) return;
-    if (trimmed.length > COMMENT_MAX_LENGTH) return;
     onSubmit(trimmed);
   }
 
@@ -54,7 +59,7 @@ export function CommentInput({ onSubmit, onCancel, isPosting, error, onClearErro
       <Text bold>New Comment:</Text>
       <Box>
         <Text>&gt; </Text>
-        <TextInput value={value} onChange={setValue} onSubmit={handleSubmit} />
+        <TextInput value={value} onChange={handleChange} onSubmit={handleSubmit} />
       </Box>
       <Text dimColor>
         Enter submit Esc cancel ({value.trim().length}/{COMMENT_MAX_LENGTH})

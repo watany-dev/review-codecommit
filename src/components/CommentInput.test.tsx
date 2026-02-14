@@ -1,7 +1,7 @@
 import { render } from "ink-testing-library";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { CommentInput } from "./CommentInput.js";
+import { COMMENT_MAX_LENGTH, CommentInput } from "./CommentInput.js";
 
 describe("CommentInput", () => {
   it("renders input form with label and hints", () => {
@@ -55,9 +55,9 @@ describe("CommentInput", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("does not call onSubmit when text exceeds max length", async () => {
+  it("truncates input at max length boundary", async () => {
     const onSubmit = vi.fn();
-    const { stdin } = render(
+    const { stdin, lastFrame } = render(
       <CommentInput
         onSubmit={onSubmit}
         onCancel={vi.fn()}
@@ -66,11 +66,17 @@ describe("CommentInput", () => {
         onClearError={vi.fn()}
       />,
     );
-    const oversizedText = "a".repeat(10241);
-    stdin.write(oversizedText);
+    // Write exactly at limit
+    const maxText = "a".repeat(COMMENT_MAX_LENGTH);
+    stdin.write(maxText);
     await vi.waitFor(() => {
-      stdin.write("\r");
-      expect(onSubmit).not.toHaveBeenCalled();
+      expect(lastFrame()).toContain(`${COMMENT_MAX_LENGTH}/${COMMENT_MAX_LENGTH}`);
+    });
+    // Try to write one more char - should be rejected by handleChange
+    stdin.write("b");
+    await vi.waitFor(() => {
+      // Counter should still show max, not max+1
+      expect(lastFrame()).toContain(`${COMMENT_MAX_LENGTH}/${COMMENT_MAX_LENGTH}`);
     });
   });
 
