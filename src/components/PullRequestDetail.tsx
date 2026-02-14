@@ -213,7 +213,15 @@ export function PullRequestDetail({
 }
 
 interface DisplayLine {
-  type: "header" | "separator" | "add" | "delete" | "context" | "comment-header" | "comment";
+  type:
+    | "header"
+    | "separator"
+    | "add"
+    | "delete"
+    | "context"
+    | "comment-header"
+    | "comment"
+    | "inline-comment";
   text: string;
   filePath?: string;
   beforeLineNumber?: number;
@@ -226,6 +234,17 @@ function buildDisplayLines(
   commentThreads: CommentThread[],
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
+
+  // Index inline comments by file:position:version for efficient lookup
+  const inlineThreadsByKey = new Map<string, CommentThread[]>();
+  for (const thread of commentThreads) {
+    if (thread.location) {
+      const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
+      const existing = inlineThreadsByKey.get(key) ?? [];
+      existing.push(thread);
+      inlineThreadsByKey.set(key, existing);
+    }
+  }
 
   for (const diff of differences) {
     const filePath = diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
@@ -242,6 +261,19 @@ function buildDisplayLines(
       for (const dl of diffLines) {
         dl.filePath = filePath;
         lines.push(dl);
+
+        // Insert inline comments under matching diff lines
+        const matchingThreads = findMatchingThreads(inlineThreadsByKey, filePath, dl);
+        for (const thread of matchingThreads) {
+          for (const comment of thread.comments) {
+            const author = extractAuthorName(comment.authorArn ?? "unknown");
+            const content = comment.content ?? "";
+            lines.push({
+              type: "inline-comment",
+              text: `💬 ${author}: ${content}`,
+            });
+          }
+        }
       }
     }
 
@@ -263,6 +295,37 @@ function buildDisplayLines(
   }
 
   return lines;
+}
+
+function findMatchingThreads(
+  threadsByKey: Map<string, CommentThread[]>,
+  filePath: string,
+  line: DisplayLine,
+): CommentThread[] {
+  const results: CommentThread[] = [];
+
+  if (line.type === "delete" && line.beforeLineNumber) {
+    const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+    results.push(...(threadsByKey.get(key) ?? []));
+  }
+
+  if (line.type === "add" && line.afterLineNumber) {
+    const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+    results.push(...(threadsByKey.get(key) ?? []));
+  }
+
+  if (line.type === "context") {
+    if (line.beforeLineNumber) {
+      const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+      results.push(...(threadsByKey.get(key) ?? []));
+    }
+    if (line.afterLineNumber) {
+      const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+      results.push(...(threadsByKey.get(key) ?? []));
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -361,5 +424,7 @@ function renderDiffLine(line: DisplayLine): React.ReactNode {
       return <Text bold>{line.text}</Text>;
     case "comment":
       return <Text> {line.text}</Text>;
+    case "inline-comment":
+      return <Text color="magenta">  {line.text}</Text>;
   }
 }

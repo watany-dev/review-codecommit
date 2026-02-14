@@ -1036,4 +1036,161 @@ describe("PullRequestDetail", () => {
     // Should not show approval prompt
     expect(lastFrame()).not.toContain("Approve this pull request?");
   });
+
+  // v0.4: Inline comment display tests
+  it("displays inline comments under matching diff lines", () => {
+    const inlineThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 2,
+          relativeFileVersion: "BEFORE" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "This value should come from config",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={inlineThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: This value should come from config");
+  });
+
+  it("displays inline comments on add lines", () => {
+    const inlineThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 2,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "Good change",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={inlineThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 hanako: Good change");
+  });
+
+  it("shows both inline and general comments", () => {
+    const mixedThreads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 1,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "inline note",
+          },
+        ],
+      },
+      {
+        location: null,
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "general LGTM",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={mixedThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: inline note");
+    expect(output).toContain("general LGTM");
+    expect(output).toContain("Comments (1):");
+  });
+
+  it("displays multiple comments on same line as thread", () => {
+    const multiCommentThread = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 2,
+          relativeFileVersion: "BEFORE" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "first comment",
+          },
+          {
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            content: "second comment",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={multiCommentThread as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onPostComment={vi.fn()}
+        isPostingComment={false}
+        commentError={null}
+        onClearCommentError={vi.fn()}
+        {...defaultApprovalProps}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).toContain("💬 taro: first comment");
+    expect(output).toContain("💬 watany: second comment");
+  });
 });
