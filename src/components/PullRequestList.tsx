@@ -140,7 +140,7 @@ export function PullRequestList({
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          titmouse
+          review-codecommit
         </Text>
         <Text> — </Text>
         <Text bold>{repositoryName}</Text>
