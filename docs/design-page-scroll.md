@@ -47,8 +47,36 @@ useInput((input, key) => {
 - ユーザー入力の外部送信: なし（カーソル位置の内部 state 更新のみ）
 - AWS 認証情報の取り扱い: 変更なし
 - 入力値の検証: `Math.min` / `Math.max` による境界チェックのみ（既存パターンと同一）
+- 整数オーバーフロー: `lines.length` は JavaScript の安全な整数範囲内（diff が数百万行になることは想定外）
+- `Ctrl+d` と EOF: 一般的なターミナルでは `Ctrl+d` は EOF（プロセス終了）だが、Ink は stdin を raw mode で扱うため EOF シグナルにはならず、通常のキー入力として `useInput` に到達する。アプリケーションの予期しない終了は発生しない
 
 ## 設計
+
+### データフロー
+
+本機能は既存のカーソル→スクロール→描画のパイプラインに乗る。新たなデータフローの追加はない。
+
+```
+キー入力 (Ctrl+d / Ctrl+u / G)
+  │
+  ▼
+useInput ハンドラ
+  │  setCursorIndex((prev) => Math.min/max(...))
+  ▼
+cursorIndex (React state)
+  │
+  ├──▶ scrollOffset (useMemo: cursorIndex → ビューポート中央に保つ計算)
+  │       │
+  │       ▼
+  │     visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount)
+  │       │
+  │       ▼
+  │     描画: visibleLines.map(...) で各行を <Box> + <Text> でレンダリング
+  │
+  └──▶ カーソルマーカー: globalIndex === cursorIndex の行に "> " を表示
+```
+
+新規キーバインドが変更するのは `setCursorIndex` の呼び出しのみ。`scrollOffset` の計算と描画ロジックは既存のまま変更不要。
 
 ### 変更対象ファイル
 
