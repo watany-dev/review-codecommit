@@ -47,3 +47,114 @@ export function parseAwsProfiles(configContent: string): string[] {
   }
   return profiles.sort();
 }
+
+export function generateBashCompletion(): string {
+  return `# bash completion for review-codecommit
+_review_codecommit() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="\${COMP_WORDS[COMP_CWORD]}"
+    prev="\${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="--profile --region --help --version --completions"
+
+    case "\${prev}" in
+        --profile)
+            local profiles=""
+            if [ -f "\${HOME}/.aws/config" ]; then
+                profiles=$(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')
+            fi
+            COMPREPLY=( $(compgen -W "\${profiles}" -- "\${cur}") )
+            return 0
+            ;;
+        --region)
+            local regions="${CODECOMMIT_REGIONS.join(" ")}"
+            COMPREPLY=( $(compgen -W "\${regions}" -- "\${cur}") )
+            return 0
+            ;;
+        --completions)
+            COMPREPLY=( $(compgen -W "bash zsh fish" -- "\${cur}") )
+            return 0
+            ;;
+    esac
+
+    if [[ "\${cur}" == -* ]]; then
+        COMPREPLY=( $(compgen -W "\${opts}" -- "\${cur}") )
+        return 0
+    fi
+}
+
+complete -F _review_codecommit review-codecommit
+`;
+}
+
+export function generateZshCompletion(): string {
+  const regionsArray = CODECOMMIT_REGIONS.map((r) => `"${r}"`).join(" ");
+  return `#compdef review-codecommit
+# zsh completion for review-codecommit
+
+_review_codecommit() {
+    local -a opts regions profiles
+
+    opts=(
+        '--profile[AWS profile to use]:profile:->profile'
+        '--region[AWS region to use]:region:->region'
+        '--help[Show help message]'
+        '--version[Show version number]'
+        '--completions[Generate shell completion script]:shell:(bash zsh fish)'
+    )
+
+    _arguments -s $opts '*:repository:' && return
+
+    case "$state" in
+        profile)
+            profiles=()
+            if [[ -f "\${HOME}/.aws/config" ]]; then
+                profiles=(\${(f)"$(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')"})
+            fi
+            _describe 'AWS profile' profiles
+            ;;
+        region)
+            regions=(${regionsArray})
+            _describe 'AWS region' regions
+            ;;
+    esac
+}
+
+_review_codecommit "$@"
+`;
+}
+
+export function generateFishCompletion(): string {
+  const regionCompletions = CODECOMMIT_REGIONS.map(
+    (r) => `complete -c review-codecommit -l region -xa "${r}"`,
+  ).join("\n");
+
+  return `# fish completion for review-codecommit
+
+# Disable file completion by default
+complete -c review-codecommit -f
+
+# Options
+complete -c review-codecommit -l profile -x -d "AWS profile to use" -a "(test -f ~/.aws/config; and grep -E '^\\[profile |^\\[default\\]' ~/.aws/config | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')"
+complete -c review-codecommit -l help -d "Show help message"
+complete -c review-codecommit -s h -d "Show help message"
+complete -c review-codecommit -l version -d "Show version number"
+complete -c review-codecommit -s v -d "Show version number"
+complete -c review-codecommit -l completions -xa "bash zsh fish" -d "Generate shell completion script"
+
+# Regions
+${regionCompletions}
+`;
+}
+
+export function generateCompletion(shell: ShellType): string {
+  switch (shell) {
+    case "bash":
+      return generateBashCompletion();
+    case "zsh":
+      return generateZshCompletion();
+    case "fish":
+      return generateFishCompletion();
+  }
+}
