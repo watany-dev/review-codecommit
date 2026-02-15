@@ -111,4 +111,10 @@ describe("Help", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("React to comment");
   });
+
+  it("shows h/l reaction navigation keybindings", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Previous reaction");
+    expect(lastFrame()).toContain("Next reaction");
+  });
 });

@@ -149,7 +149,7 @@ describe("ReactionPicker", () => {
 
   it("shows footer hint text", () => {
     const { lastFrame } = render(<ReactionPicker {...defaultProps} />);
-    expect(lastFrame()).toContain("←→ select");
+    expect(lastFrame()).toContain("←→/h/l select");
     expect(lastFrame()).toContain("Enter send");
     expect(lastFrame()).toContain("Esc cancel");
   });

@@ -58,6 +58,8 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="e" description="Edit comment" />
         <KeyRow keyName="d" description="Delete comment" />
         <KeyRow keyName="g" description="React to comment" />
+        <KeyRow keyName="← / h" description="Previous reaction" />
+        <KeyRow keyName="→ / l" description="Next reaction" />
       </Box>
       <Box flexDirection="column" marginTop={1}>
         <SectionHeader title="PR Actions (PR Detail)" />
