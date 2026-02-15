@@ -460,6 +460,26 @@ export function PullRequestDetail({
       setCursorIndex((prev) => Math.max(prev - 1, 0));
       return;
     }
+    // Ctrl+d: half page down
+    if (key.ctrl && input === "d") {
+      if (lines.length === 0) return;
+      const halfPage = Math.floor(visibleLineCount / 2);
+      setCursorIndex((prev) => Math.min(prev + halfPage, lines.length - 1));
+      return;
+    }
+    // Ctrl+u: half page up
+    if (key.ctrl && input === "u") {
+      if (lines.length === 0) return;
+      const halfPage = Math.floor(visibleLineCount / 2);
+      setCursorIndex((prev) => Math.max(prev - halfPage, 0));
+      return;
+    }
+    // G: jump to last line
+    if (input === "G") {
+      if (lines.length === 0) return;
+      setCursorIndex(lines.length - 1);
+      return;
+    }
     if (input === "c") {
       if (viewIndex >= 0) return;
       setIsCommenting(true);
