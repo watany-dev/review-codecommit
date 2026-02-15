@@ -31,7 +31,7 @@ describe("Help", () => {
     expect(output).toContain("Revoke approval");
     expect(output).toContain("Merge PR");
     expect(output).toContain("Close PR without merge");
-    expect(output).toContain("S-Tab");
+    expect(output).toContain("Shift+Tab");
     expect(output).toContain("Previous commit");
   });
 

@@ -66,7 +66,7 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="m" description="Merge PR" />
         <KeyRow keyName="x" description="Close PR without merge" />
         <KeyRow keyName="Tab" description="Switch to commit view" />
-        <KeyRow keyName="S-Tab" description="Previous commit" />
+        <KeyRow keyName="Shift+Tab" description="Previous commit" />
       </Box>
       <Box flexDirection="column" marginTop={1}>
         <SectionHeader title="PR List" />
