@@ -123,6 +123,18 @@ export function App({ client, initialRepo }: AppProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [pagination, setPagination] = useState<PaginationState>(initialPagination);
 
+  async function reloadReactions(threads: CommentThread[]) {
+    const allCommentIds = threads.flatMap((t) =>
+      t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
+    );
+    if (allCommentIds.length > 0) {
+      const reactions = await getReactionsForComments(client, allCommentIds);
+      setReactionsByComment(reactions);
+    } else {
+      setReactionsByComment(new Map());
+    }
+  }
+
   /**
    * Wrapper for async operations with automatic loading/error state management.
    * Eliminates repetitive try-catch-finally patterns.
@@ -216,16 +228,7 @@ export function App({ client, initialRepo }: AppProps) {
         setApprovalEvaluation(evaluation);
       }
 
-      // Load reactions for all comments
-      const allCommentIds = detail.commentThreads.flatMap((t) =>
-        t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
-      );
-      if (allCommentIds.length > 0) {
-        const reactions = await getReactionsForComments(client, allCommentIds);
-        setReactionsByComment(reactions);
-      } else {
-        setReactionsByComment(new Map());
-      }
+      await reloadReactions(detail.commentThreads);
 
       // Parallelize blob content fetching for better performance
       const blobFetches = detail.differences.map(async (diff) => {
@@ -352,17 +355,7 @@ export function App({ client, initialRepo }: AppProps) {
         : {}),
     });
     setCommentThreads(threads);
-
-    // Reload reactions for all comments
-    const allCommentIds = threads.flatMap((t) =>
-      t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
-    );
-    if (allCommentIds.length > 0) {
-      const reactions = await getReactionsForComments(client, allCommentIds);
-      setReactionsByComment(reactions);
-    } else {
-      setReactionsByComment(new Map());
-    }
+    await reloadReactions(threads);
   }
 
   async function handlePostInlineComment(
@@ -411,7 +404,7 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
-  async function handleApprove() {
+  async function handleApprovalAction(state: "APPROVE" | "REVOKE") {
     if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
 
     setIsApproving(true);
@@ -420,30 +413,13 @@ export function App({ client, initialRepo }: AppProps) {
       await updateApprovalState(client, {
         pullRequestId: prDetail.pullRequestId,
         revisionId: prDetail.revisionId,
-        approvalState: "APPROVE",
+        approvalState: state,
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
     } catch (err) {
-      setApprovalError(formatErrorMessage(err, "approval", "approve"));
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
-  async function handleRevoke() {
-    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
-
-    setIsApproving(true);
-    setApprovalError(null);
-    try {
-      await updateApprovalState(client, {
-        pullRequestId: prDetail.pullRequestId,
-        revisionId: prDetail.revisionId,
-        approvalState: "REVOKE",
-      });
-      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
-    } catch (err) {
-      setApprovalError(formatErrorMessage(err, "approval", "revoke"));
+      setApprovalError(
+        formatErrorMessage(err, "approval", state === "APPROVE" ? "approve" : "revoke"),
+      );
     } finally {
       setIsApproving(false);
     }
@@ -582,14 +558,7 @@ export function App({ client, initialRepo }: AppProps) {
     setReactionError(null);
     try {
       await putReaction(client, { commentId, reactionValue });
-      // Reload reactions for all comments
-      const allCommentIds = commentThreads.flatMap((t) =>
-        t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
-      );
-      if (allCommentIds.length > 0) {
-        const reactions = await getReactionsForComments(client, allCommentIds);
-        setReactionsByComment(reactions);
-      }
+      await reloadReactions(commentThreads);
     } catch (err) {
       setReactionError(formatErrorMessage(err, "reaction"));
     } finally {
@@ -678,52 +647,72 @@ export function App({ client, initialRepo }: AppProps) {
           diffTexts={diffTexts}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
-          onPostComment={handlePostComment}
-          isPostingComment={isPostingComment}
-          commentError={commentError}
-          onClearCommentError={() => setCommentError(null)}
-          onPostInlineComment={handlePostInlineComment}
-          isPostingInlineComment={isPostingInlineComment}
-          inlineCommentError={inlineCommentError}
-          onClearInlineCommentError={() => setInlineCommentError(null)}
-          onPostReply={handlePostReply}
-          isPostingReply={isPostingReply}
-          replyError={replyError}
-          onClearReplyError={() => setReplyError(null)}
-          approvals={approvals}
-          approvalEvaluation={approvalEvaluation}
-          onApprove={handleApprove}
-          onRevoke={handleRevoke}
-          isApproving={isApproving}
-          approvalError={approvalError}
-          onClearApprovalError={() => setApprovalError(null)}
-          onMerge={handleMerge}
-          isMerging={isMerging}
-          mergeError={mergeError}
-          onClearMergeError={() => setMergeError(null)}
-          onCheckConflicts={handleCheckConflicts}
-          onClosePR={handleClosePR}
-          isClosingPR={isClosingPR}
-          closePRError={closePRError}
-          onClearClosePRError={() => setClosePRError(null)}
-          commits={commits}
-          commitDifferences={commitDifferences}
-          commitDiffTexts={commitDiffTexts}
-          isLoadingCommitDiff={isLoadingCommitDiff}
-          onLoadCommitDiff={handleLoadCommitDiff}
-          onUpdateComment={handleUpdateComment}
-          isUpdatingComment={isUpdatingComment}
-          updateCommentError={updateCommentError}
-          onClearUpdateCommentError={() => setUpdateCommentError(null)}
-          onDeleteComment={handleDeleteComment}
-          isDeletingComment={isDeletingComment}
-          deleteCommentError={deleteCommentError}
-          onClearDeleteCommentError={() => setDeleteCommentError(null)}
-          reactionsByComment={reactionsByComment}
-          onReact={handleReact}
-          isReacting={isReacting}
-          reactionError={reactionError}
-          onClearReactionError={() => setReactionError(null)}
+          comment={{
+            onPost: handlePostComment,
+            isProcessing: isPostingComment,
+            error: commentError,
+            onClearError: () => setCommentError(null),
+          }}
+          inlineComment={{
+            onPost: handlePostInlineComment,
+            isProcessing: isPostingInlineComment,
+            error: inlineCommentError,
+            onClearError: () => setInlineCommentError(null),
+          }}
+          reply={{
+            onPost: handlePostReply,
+            isProcessing: isPostingReply,
+            error: replyError,
+            onClearError: () => setReplyError(null),
+          }}
+          approval={{
+            approvals,
+            evaluation: approvalEvaluation,
+            onApprove: () => handleApprovalAction("APPROVE"),
+            onRevoke: () => handleApprovalAction("REVOKE"),
+            isProcessing: isApproving,
+            error: approvalError,
+            onClearError: () => setApprovalError(null),
+          }}
+          merge={{
+            onMerge: handleMerge,
+            onCheckConflicts: handleCheckConflicts,
+            isProcessing: isMerging,
+            error: mergeError,
+            onClearError: () => setMergeError(null),
+          }}
+          close={{
+            onClose: handleClosePR,
+            isProcessing: isClosingPR,
+            error: closePRError,
+            onClearError: () => setClosePRError(null),
+          }}
+          commitView={{
+            commits,
+            differences: commitDifferences,
+            diffTexts: commitDiffTexts,
+            isLoading: isLoadingCommitDiff,
+            onLoad: handleLoadCommitDiff,
+          }}
+          editComment={{
+            onUpdate: handleUpdateComment,
+            isProcessing: isUpdatingComment,
+            error: updateCommentError,
+            onClearError: () => setUpdateCommentError(null),
+          }}
+          deleteComment={{
+            onDelete: handleDeleteComment,
+            isProcessing: isDeletingComment,
+            error: deleteCommentError,
+            onClearError: () => setDeleteCommentError(null),
+          }}
+          reaction={{
+            byComment: reactionsByComment,
+            onReact: handleReact,
+            isProcessing: isReacting,
+            error: reactionError,
+            onClearError: () => setReactionError(null),
+          }}
         />
       );
   }

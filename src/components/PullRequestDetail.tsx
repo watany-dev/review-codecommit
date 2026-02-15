@@ -15,6 +15,88 @@ import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
 
+type InlineLocation = {
+  filePath: string;
+  filePosition: number;
+  relativeFileVersion: "BEFORE" | "AFTER";
+};
+
+interface CommentAction {
+  onPost: (content: string) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface InlineCommentAction {
+  onPost: (content: string, location: InlineLocation) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface ReplyAction {
+  onPost: (inReplyTo: string, content: string) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface ApprovalProps {
+  approvals: Approval[];
+  evaluation: Evaluation | null;
+  onApprove: () => void;
+  onRevoke: () => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface MergeAction {
+  onMerge: (strategy: MergeStrategy) => void;
+  onCheckConflicts: (strategy: MergeStrategy) => Promise<ConflictSummary>;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface CloseAction {
+  onClose: () => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface CommitViewProps {
+  commits: CommitInfo[];
+  differences: Difference[];
+  diffTexts: Map<string, { before: string; after: string }>;
+  isLoading: boolean;
+  onLoad: (commitIndex: number) => void;
+}
+
+interface EditCommentAction {
+  onUpdate: (commentId: string, content: string) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface DeleteCommentAction {
+  onDelete: (commentId: string) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
+interface ReactionProps {
+  byComment: ReactionsByComment;
+  onReact: (commentId: string, reactionValue: string) => void;
+  isProcessing: boolean;
+  error: string | null;
+  onClearError: () => void;
+}
+
 interface Props {
   pullRequest: PullRequest;
   differences: Difference[];
@@ -22,59 +104,16 @@ interface Props {
   diffTexts: Map<string, { before: string; after: string }>;
   onBack: () => void;
   onHelp: () => void;
-  onPostComment: (content: string) => void;
-  isPostingComment: boolean;
-  commentError: string | null;
-  onClearCommentError: () => void;
-  onPostInlineComment: (
-    content: string,
-    location: {
-      filePath: string;
-      filePosition: number;
-      relativeFileVersion: "BEFORE" | "AFTER";
-    },
-  ) => void;
-  isPostingInlineComment: boolean;
-  inlineCommentError: string | null;
-  onClearInlineCommentError: () => void;
-  onPostReply: (inReplyTo: string, content: string) => void;
-  isPostingReply: boolean;
-  replyError: string | null;
-  onClearReplyError: () => void;
-  approvals: Approval[];
-  approvalEvaluation: Evaluation | null;
-  onApprove: () => void;
-  onRevoke: () => void;
-  isApproving: boolean;
-  approvalError: string | null;
-  onClearApprovalError: () => void;
-  onMerge: (strategy: MergeStrategy) => void;
-  isMerging: boolean;
-  mergeError: string | null;
-  onClearMergeError: () => void;
-  onCheckConflicts: (strategy: MergeStrategy) => Promise<ConflictSummary>;
-  onClosePR: () => void;
-  isClosingPR: boolean;
-  closePRError: string | null;
-  onClearClosePRError: () => void;
-  commits: CommitInfo[];
-  commitDifferences: Difference[];
-  commitDiffTexts: Map<string, { before: string; after: string }>;
-  isLoadingCommitDiff: boolean;
-  onLoadCommitDiff: (commitIndex: number) => void;
-  onUpdateComment: (commentId: string, content: string) => void;
-  isUpdatingComment: boolean;
-  updateCommentError: string | null;
-  onClearUpdateCommentError: () => void;
-  onDeleteComment: (commentId: string) => void;
-  isDeletingComment: boolean;
-  deleteCommentError: string | null;
-  onClearDeleteCommentError: () => void;
-  reactionsByComment: ReactionsByComment;
-  onReact: (commentId: string, reactionValue: string) => void;
-  isReacting: boolean;
-  reactionError: string | null;
-  onClearReactionError: () => void;
+  comment: CommentAction;
+  inlineComment: InlineCommentAction;
+  reply: ReplyAction;
+  approval: ApprovalProps;
+  merge: MergeAction;
+  close: CloseAction;
+  commitView: CommitViewProps;
+  editComment: EditCommentAction;
+  deleteComment: DeleteCommentAction;
+  reaction: ReactionProps;
 }
 
 export function PullRequestDetail({
@@ -84,52 +123,72 @@ export function PullRequestDetail({
   diffTexts,
   onBack,
   onHelp,
-  onPostComment,
-  isPostingComment,
-  commentError,
-  onClearCommentError,
-  onPostInlineComment,
-  isPostingInlineComment,
-  inlineCommentError,
-  onClearInlineCommentError,
-  onPostReply,
-  isPostingReply,
-  replyError,
-  onClearReplyError,
-  approvals,
-  approvalEvaluation,
-  onApprove,
-  onRevoke,
-  isApproving,
-  approvalError,
-  onClearApprovalError,
-  onMerge,
-  isMerging,
-  mergeError,
-  onClearMergeError,
-  onCheckConflicts,
-  onClosePR,
-  isClosingPR,
-  closePRError,
-  onClearClosePRError,
-  commits,
-  commitDifferences,
-  commitDiffTexts,
-  isLoadingCommitDiff,
-  onLoadCommitDiff,
-  onUpdateComment,
-  isUpdatingComment,
-  updateCommentError,
-  onClearUpdateCommentError,
-  onDeleteComment,
-  isDeletingComment,
-  deleteCommentError,
-  onClearDeleteCommentError,
-  reactionsByComment,
-  onReact,
-  isReacting,
-  reactionError,
-  onClearReactionError,
+  comment: {
+    onPost: onPostComment,
+    isProcessing: isPostingComment,
+    error: commentError,
+    onClearError: onClearCommentError,
+  },
+  inlineComment: {
+    onPost: onPostInlineComment,
+    isProcessing: isPostingInlineComment,
+    error: inlineCommentError,
+    onClearError: onClearInlineCommentError,
+  },
+  reply: {
+    onPost: onPostReply,
+    isProcessing: isPostingReply,
+    error: replyError,
+    onClearError: onClearReplyError,
+  },
+  approval: {
+    approvals,
+    evaluation: approvalEvaluation,
+    onApprove,
+    onRevoke,
+    isProcessing: isApproving,
+    error: approvalError,
+    onClearError: onClearApprovalError,
+  },
+  merge: {
+    onMerge,
+    onCheckConflicts,
+    isProcessing: isMerging,
+    error: mergeError,
+    onClearError: onClearMergeError,
+  },
+  close: {
+    onClose: onClosePR,
+    isProcessing: isClosingPR,
+    error: closePRError,
+    onClearError: onClearClosePRError,
+  },
+  commitView: {
+    commits,
+    differences: commitDifferences,
+    diffTexts: commitDiffTexts,
+    isLoading: isLoadingCommitDiff,
+    onLoad: onLoadCommitDiff,
+  },
+  editComment: {
+    onUpdate: onUpdateComment,
+    isProcessing: isUpdatingComment,
+    error: updateCommentError,
+    onClearError: onClearUpdateCommentError,
+  },
+  deleteComment: {
+    onDelete: onDeleteComment,
+    isProcessing: isDeletingComment,
+    error: deleteCommentError,
+    onClearError: onClearDeleteCommentError,
+  },
+  reaction: {
+    byComment: reactionsByComment,
+    onReact,
+    isProcessing: isReacting,
+    error: reactionError,
+    onClearError: onClearReactionError,
+  },
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -446,7 +505,7 @@ export function PullRequestDetail({
     if (input === "e") {
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
-      const editInfo = getEditTargetFromLine(currentLine);
+      const editInfo = getCommentIdFromLine(currentLine);
       if (!editInfo) return;
       const content = findCommentContent(commentThreads, editInfo.commentId);
       setEditTarget({ commentId: editInfo.commentId, content });
@@ -456,7 +515,7 @@ export function PullRequestDetail({
     if (input === "d") {
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
-      const delInfo = getDeleteTargetFromLine(currentLine);
+      const delInfo = getCommentIdFromLine(currentLine);
       if (!delInfo) return;
       setDeleteTarget(delInfo);
       setIsDeleting(true);
@@ -466,8 +525,7 @@ export function PullRequestDetail({
       if (viewIndex >= 0) return;
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
-      const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
-      if (!commentTypes.includes(currentLine.type)) return;
+      if (!COMMENT_LINE_TYPES.has(currentLine.type)) return;
       if (!currentLine.commentId) return;
       setReactionTarget(currentLine.commentId);
       setShowReactionPicker(true);
@@ -805,16 +863,8 @@ interface DisplayLine {
   reactionText?: string;
 }
 
-function getEditTargetFromLine(line: DisplayLine): { commentId: string } | null {
-  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
-  if (!commentTypes.includes(line.type)) return null;
-  if (!line.commentId) return null;
-  return { commentId: line.commentId };
-}
-
-function getDeleteTargetFromLine(line: DisplayLine): { commentId: string } | null {
-  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
-  if (!commentTypes.includes(line.type)) return null;
+function getCommentIdFromLine(line: DisplayLine): { commentId: string } | null {
+  if (!COMMENT_LINE_TYPES.has(line.type)) return null;
   if (!line.commentId) return null;
   return { commentId: line.commentId };
 }
@@ -835,8 +885,7 @@ function findCommentContent(commentThreads: CommentThread[], commentId: string):
 function getReplyTargetFromLine(
   line: DisplayLine,
 ): { commentId: string; author: string; content: string } | null {
-  const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
-  if (!commentTypes.includes(line.type)) return null;
+  if (!COMMENT_LINE_TYPES.has(line.type)) return null;
   if (!line.commentId) return null;
 
   // Extract author from line text
@@ -855,6 +904,13 @@ function getReplyTargetFromLine(
 
   return { commentId: line.commentId, author, content };
 }
+
+const COMMENT_LINE_TYPES = new Set<DisplayLine["type"]>([
+  "inline-comment",
+  "comment",
+  "inline-reply",
+  "comment-reply",
+]);
 
 const FOLD_THRESHOLD = 4;
 
