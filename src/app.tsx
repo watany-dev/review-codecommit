@@ -10,7 +10,7 @@ import { Box, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
-import { PullRequestList, type StatusFilter } from "./components/PullRequestList.js";
+import { PullRequestList } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
 import {
   type CommentThread,
@@ -31,6 +31,7 @@ import {
   listRepositories,
   type MergeStrategy,
   mergePullRequest,
+  type PullRequestDisplayStatus,
   type PullRequestSummary,
   postComment,
   postCommentReply,
@@ -118,7 +119,7 @@ export function App({ client, initialRepo }: AppProps) {
   const [reactionError, setReactionError] = useState<string | null>(null);
 
   // v0.8: filter, search, pagination
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
+  const [statusFilter, setStatusFilter] = useState<PullRequestDisplayStatus>("OPEN");
   const [searchQuery, setSearchQuery] = useState("");
   const [pagination, setPagination] = useState<PaginationState>(initialPagination);
 
@@ -126,13 +127,20 @@ export function App({ client, initialRepo }: AppProps) {
    * Wrapper for async operations with automatic loading/error state management.
    * Eliminates repetitive try-catch-finally patterns.
    */
-  async function withLoadingState<T>(operation: () => Promise<T>): Promise<T | undefined> {
+  async function withLoadingState<T>(
+    operation: () => Promise<T>,
+    onError?: (err: unknown) => void,
+  ): Promise<T | undefined> {
     setLoading(true);
     setError(null);
     try {
       return await operation();
     } catch (err) {
-      setError(formatError(err));
+      if (onError) {
+        onError(err);
+      } else {
+        setError(formatErrorMessage(err));
+      }
       return undefined;
     } finally {
       setLoading(false);
@@ -154,37 +162,40 @@ export function App({ client, initialRepo }: AppProps) {
     });
   }
 
-  async function loadPullRequests(repoName: string, status?: StatusFilter, pageToken?: string) {
+  async function loadPullRequests(
+    repoName: string,
+    status?: PullRequestDisplayStatus,
+    pageToken?: string,
+  ) {
     const apiStatus = status === "MERGED" || status === "CLOSED" ? "CLOSED" : "OPEN";
 
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listPullRequests(client, repoName, pageToken, apiStatus);
+    await withLoadingState(
+      async () => {
+        const result = await listPullRequests(client, repoName, pageToken, apiStatus);
 
-      let filtered = result.pullRequests;
-      if (status === "CLOSED") {
-        filtered = result.pullRequests.filter((pr) => pr.status === "CLOSED");
-      } else if (status === "MERGED") {
-        filtered = result.pullRequests.filter((pr) => pr.status === "MERGED");
-      }
+        let filtered = result.pullRequests;
+        if (status === "CLOSED") {
+          filtered = result.pullRequests.filter((pr) => pr.status === "CLOSED");
+        } else if (status === "MERGED") {
+          filtered = result.pullRequests.filter((pr) => pr.status === "MERGED");
+        }
 
-      setPullRequests(filtered);
-      setPagination((prev) => ({
-        ...prev,
-        nextToken: result.nextToken,
-        hasNextPage: !!result.nextToken,
-      }));
-    } catch (err) {
-      if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
-        setError("Page token expired. Returning to first page.");
-        setPagination(initialPagination);
-      } else {
-        setError(formatError(err));
-      }
-    } finally {
-      setLoading(false);
-    }
+        setPullRequests(filtered);
+        setPagination((prev) => ({
+          ...prev,
+          nextToken: result.nextToken,
+          hasNextPage: !!result.nextToken,
+        }));
+      },
+      (err) => {
+        if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
+          setError("Page token expired. Returning to first page.");
+          setPagination(initialPagination);
+        } else {
+          setError(formatErrorMessage(err));
+        }
+      },
+    );
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
@@ -265,7 +276,7 @@ export function App({ client, initialRepo }: AppProps) {
     loadPullRequestDetail(pullRequestId);
   }
 
-  function handleChangeStatusFilter(filter: StatusFilter) {
+  function handleChangeStatusFilter(filter: PullRequestDisplayStatus) {
     setStatusFilter(filter);
     setSearchQuery("");
     setPagination(initialPagination);
@@ -322,7 +333,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadComments(prDetail.pullRequestId!);
     } catch (err) {
-      setCommentError(formatCommentError(err));
+      setCommentError(formatErrorMessage(err, "comment"));
     } finally {
       setIsPostingComment(false);
     }
@@ -379,7 +390,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadComments(prDetail.pullRequestId!);
     } catch (err) {
-      setInlineCommentError(formatCommentError(err));
+      setInlineCommentError(formatErrorMessage(err, "comment"));
     } finally {
       setIsPostingInlineComment(false);
     }
@@ -394,7 +405,7 @@ export function App({ client, initialRepo }: AppProps) {
       await postCommentReply(client, { inReplyTo, content });
       await reloadComments(prDetail.pullRequestId);
     } catch (err) {
-      setReplyError(formatReplyError(err));
+      setReplyError(formatErrorMessage(err, "reply"));
     } finally {
       setIsPostingReply(false);
     }
@@ -413,7 +424,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
     } catch (err) {
-      setApprovalError(formatApprovalError(err, "approve"));
+      setApprovalError(formatErrorMessage(err, "approval", "approve"));
     } finally {
       setIsApproving(false);
     }
@@ -432,7 +443,7 @@ export function App({ client, initialRepo }: AppProps) {
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
     } catch (err) {
-      setApprovalError(formatApprovalError(err, "revoke"));
+      setApprovalError(formatErrorMessage(err, "approval", "revoke"));
     } finally {
       setIsApproving(false);
     }
@@ -464,7 +475,7 @@ export function App({ client, initialRepo }: AppProps) {
       setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
     } catch (err) {
-      setMergeError(formatMergeError(err));
+      setMergeError(formatErrorMessage(err, "merge"));
     } finally {
       setIsMerging(false);
     }
@@ -496,7 +507,7 @@ export function App({ client, initialRepo }: AppProps) {
       setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
     } catch (err) {
-      setClosePRError(formatCloseError(err));
+      setClosePRError(formatErrorMessage(err, "close"));
     } finally {
       setIsClosingPR(false);
     }
@@ -545,7 +556,7 @@ export function App({ client, initialRepo }: AppProps) {
       await updateComment(client, { commentId, content });
       await reloadComments(prDetail.pullRequestId);
     } catch (err) {
-      setUpdateCommentError(formatUpdateCommentError(err));
+      setUpdateCommentError(formatErrorMessage(err, "edit"));
     } finally {
       setIsUpdatingComment(false);
     }
@@ -560,7 +571,7 @@ export function App({ client, initialRepo }: AppProps) {
       await deleteComment(client, { commentId });
       await reloadComments(prDetail.pullRequestId);
     } catch (err) {
-      setDeleteCommentError(formatDeleteCommentError(err));
+      setDeleteCommentError(formatErrorMessage(err, "delete"));
     } finally {
       setIsDeletingComment(false);
     }
@@ -580,7 +591,7 @@ export function App({ client, initialRepo }: AppProps) {
         setReactionsByComment(reactions);
       }
     } catch (err) {
-      setReactionError(formatReactionError(err));
+      setReactionError(formatErrorMessage(err, "reaction"));
     } finally {
       setIsReacting(false);
     }
@@ -898,41 +909,4 @@ function formatErrorMessage(
     .replace(/AKIA[0-9A-Z]{16}/g, "[ACCESS_KEY]")
     .replace(/(?:us|eu|ap|sa|ca|me|af)-[a-z]+-\d+/g, "[REGION]");
   return sanitized;
-}
-
-// Context-specific wrappers
-function formatReplyError(err: unknown): string {
-  return formatErrorMessage(err, "reply");
-}
-
-function formatCommentError(err: unknown): string {
-  return formatErrorMessage(err, "comment");
-}
-
-function formatApprovalError(err: unknown, action: "approve" | "revoke"): string {
-  return formatErrorMessage(err, "approval", action);
-}
-
-function formatMergeError(err: unknown): string {
-  return formatErrorMessage(err, "merge");
-}
-
-function formatCloseError(err: unknown): string {
-  return formatErrorMessage(err, "close");
-}
-
-function formatUpdateCommentError(err: unknown): string {
-  return formatErrorMessage(err, "edit");
-}
-
-function formatDeleteCommentError(err: unknown): string {
-  return formatErrorMessage(err, "delete");
-}
-
-function formatReactionError(err: unknown): string {
-  return formatErrorMessage(err, "reaction");
-}
-
-function formatError(err: unknown): string {
-  return formatErrorMessage(err);
 }
