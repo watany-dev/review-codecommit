@@ -143,6 +143,49 @@ describe("parseArgs", () => {
     const result = parseArgs(["node", "cli", "-v"]);
     expect(result.version).toBe(true);
   });
+
+  it("parses --completions bash", () => {
+    const result = parseArgs(["node", "cli", "--completions", "bash"]);
+    expect(result.completions).toBe("bash");
+  });
+
+  it("parses --completions zsh", () => {
+    const result = parseArgs(["node", "cli", "--completions", "zsh"]);
+    expect(result.completions).toBe("zsh");
+  });
+
+  it("parses --completions fish", () => {
+    const result = parseArgs(["node", "cli", "--completions", "fish"]);
+    expect(result.completions).toBe("fish");
+  });
+
+  it("sets completions to empty string when no value (end of args)", () => {
+    const result = parseArgs(["node", "cli", "--completions"]);
+    expect(result.completions).toBe("");
+  });
+
+  it("parses --completions with other options", () => {
+    const result = parseArgs(["node", "cli", "--completions", "bash", "--profile", "dev"]);
+    expect(result.completions).toBe("bash");
+    expect(result.profile).toBe("dev");
+  });
+
+  it("does not consume flag as completions value", () => {
+    const result = parseArgs(["node", "cli", "--completions", "--help"]);
+    expect(result.completions).toBe("");
+    expect(result.help).toBe(true);
+  });
+
+  it("does not consume --profile flag as completions value", () => {
+    const result = parseArgs(["node", "cli", "--completions", "--profile", "dev"]);
+    expect(result.completions).toBe("");
+    expect(result.profile).toBe("dev");
+  });
+
+  it("parses --completions with invalid value (validation is not parseArgs responsibility)", () => {
+    const result = parseArgs(["node", "cli", "--completions", "invalid"]);
+    expect(result.completions).toBe("invalid");
+  });
 });
 
 // --- Property-Based Tests ---
@@ -202,6 +245,29 @@ describe("parseArgs (property-based)", () => {
       fc.property(argWord, (regionVal) => {
         const result = parseArgs(["node", "cli", "--region", regionVal]);
         expect(result.region).toBe(regionVal);
+      }),
+    );
+  });
+
+  it("correctly round-trips --completions value", () => {
+    const nonFlagWord = fc
+      .stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789_"), {
+        minLength: 1,
+        maxLength: 20,
+      });
+    fc.assert(
+      fc.property(nonFlagWord, (shellVal) => {
+        const result = parseArgs(["node", "cli", "--completions", shellVal]);
+        expect(result.completions).toBe(shellVal);
+      }),
+    );
+  });
+
+  it("sets completions to empty string when next arg is a flag", () => {
+    fc.assert(
+      fc.property(argWord, (flagName) => {
+        const result = parseArgs(["node", "cli", "--completions", `--${flagName}`]);
+        expect(result.completions).toBe("");
       }),
     );
   });

@@ -11,6 +11,7 @@ interface ParsedArgs {
   region?: string;
   help?: boolean;
   version?: boolean;
+  completions?: string;
 }
 
 const VERSION = packageJson.version;
@@ -48,6 +49,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
     } else if (arg === "--region" && nextArg) {
       result.region = nextArg;
       i++;
+    } else if (arg === "--completions") {
+      if (nextArg && !nextArg.startsWith("-")) {
+        result.completions = nextArg;
+        i++;
+      } else {
+        result.completions = "";
+      }
     } else if (arg && !arg.startsWith("-")) {
       result.repoName = arg;
     }
