@@ -400,6 +400,19 @@ export function PullRequestDetail({
     }
   }
 
+  const visibleLineCount =
+    isCommenting ||
+    isInlineCommenting ||
+    isReplying ||
+    isEditing ||
+    isDeleting ||
+    approvalAction ||
+    mergeStep ||
+    isClosing ||
+    showReactionPicker
+      ? 20
+      : 30;
+
   useInput((input, key) => {
     if (
       isCommenting ||
@@ -533,18 +546,6 @@ export function PullRequestDetail({
     }
   });
 
-  const visibleLineCount =
-    isCommenting ||
-    isInlineCommenting ||
-    isReplying ||
-    isEditing ||
-    isDeleting ||
-    approvalAction ||
-    mergeStep ||
-    isClosing ||
-    showReactionPicker
-      ? 20
-      : 30;
   const scrollOffset = useMemo(() => {
     const halfVisible = Math.floor(visibleLineCount / 2);
     const maxOffset = Math.max(0, lines.length - visibleLineCount);
