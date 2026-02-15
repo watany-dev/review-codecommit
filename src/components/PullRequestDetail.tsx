@@ -295,6 +295,11 @@ export function PullRequestDetail({
   const destRef = target?.destinationReference?.replace("refs/heads/", "") ?? "";
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
+  const approvedUsers = useMemo(
+    () => approvals.filter((a) => a.approvalState === "APPROVE"),
+    [approvals],
+  );
+
   const lines = useMemo(() => {
     if (viewIndex === -1) {
       return buildDisplayLines(
@@ -510,11 +515,8 @@ export function PullRequestDetail({
       <Box>
         <Text>
           Approvals:{" "}
-          {approvals.filter((a) => a.approvalState === "APPROVE").length > 0
-            ? `${approvals
-                .filter((a) => a.approvalState === "APPROVE")
-                .map((a) => extractAuthorName(a.userArn ?? ""))
-                .join(", ")} ✓`
+          {approvedUsers.length > 0
+            ? `${approvedUsers.map((a) => extractAuthorName(a.userArn ?? "")).join(", ")} ✓`
             : "(none)"}
         </Text>
       </Box>

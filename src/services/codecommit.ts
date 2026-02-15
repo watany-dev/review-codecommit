@@ -60,10 +60,10 @@ export interface PullRequestDetail {
 }
 
 export function createClient(config: CodeCommitConfig): CodeCommitClient {
-  const options: { region?: string; profile?: string } = {};
-  if (config.region) options.region = config.region;
-  if (config.profile) options.profile = config.profile;
-  return new CodeCommitClient(options);
+  return new CodeCommitClient({
+    ...(config.region && { region: config.region }),
+    ...(config.profile && { profile: config.profile }),
+  });
 }
 
 export async function listRepositories(client: CodeCommitClient): Promise<RepositoryNameIdPair[]> {
@@ -146,7 +146,7 @@ export async function getPullRequestDetail(
           )
           .then((r) => r.differences ?? [])
       : Promise.resolve([]),
-    fetchCommentThreads(client, pullRequestId, {
+    getComments(client, pullRequestId, {
       repositoryName,
       ...(hasCommits
         ? {
@@ -174,7 +174,7 @@ function sortCommentsRootFirst(comments: Comment[]): Comment[] {
   return [...root, ...replies];
 }
 
-async function fetchCommentThreads(
+export async function getComments(
   client: CodeCommitClient,
   pullRequestId: string,
   params?: {
@@ -210,18 +210,6 @@ async function fetchCommentThreads(
     });
   }
   return commentThreads;
-}
-
-export async function getComments(
-  client: CodeCommitClient,
-  pullRequestId: string,
-  params?: {
-    repositoryName?: string;
-    afterCommitId?: string;
-    beforeCommitId?: string;
-  },
-): Promise<CommentThread[]> {
-  return fetchCommentThreads(client, pullRequestId, params);
 }
 
 export async function postComment(

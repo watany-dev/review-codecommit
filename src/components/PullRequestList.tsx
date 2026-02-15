@@ -4,8 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { PullRequestDisplayStatus, PullRequestSummary } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 
-export type StatusFilter = "OPEN" | "CLOSED" | "MERGED";
-
 interface PaginationViewState {
   currentPage: number;
   hasNextPage: boolean;
@@ -18,8 +16,8 @@ interface Props {
   onSelect: (pullRequestId: string) => void;
   onBack: () => void;
   onHelp: () => void;
-  statusFilter: StatusFilter;
-  onChangeStatusFilter: (filter: StatusFilter) => void;
+  statusFilter: PullRequestDisplayStatus;
+  onChangeStatusFilter: (filter: PullRequestDisplayStatus) => void;
   searchQuery: string;
   onChangeSearchQuery: (query: string) => void;
   pagination: PaginationViewState;
@@ -27,14 +25,14 @@ interface Props {
   onPreviousPage: () => void;
 }
 
-const STATUS_CYCLE: StatusFilter[] = ["OPEN", "CLOSED", "MERGED"];
+const STATUS_CYCLE: PullRequestDisplayStatus[] = ["OPEN", "CLOSED", "MERGED"];
 
-function nextStatusFilter(current: StatusFilter): StatusFilter {
+function nextStatusFilter(current: PullRequestDisplayStatus): PullRequestDisplayStatus {
   const index = STATUS_CYCLE.indexOf(current);
   return STATUS_CYCLE[(index + 1) % STATUS_CYCLE.length]!;
 }
 
-function statusLabel(filter: StatusFilter): string {
+function statusLabel(filter: PullRequestDisplayStatus): string {
   switch (filter) {
     case "OPEN":
       return "Open";
