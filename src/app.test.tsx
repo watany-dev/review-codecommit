@@ -402,14 +402,14 @@ describe("App", () => {
 
     stdin.write("?");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("Key Bindings");
+      expect(lastFrame()).toContain("Navigation");
     });
 
     // Close help by pressing ? again
     stdin.write("?");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("my-service");
-      expect(lastFrame()).not.toContain("Key Bindings");
+      expect(lastFrame()).not.toContain("Navigation");
     });
   });
 
@@ -589,7 +589,7 @@ describe("App", () => {
 
     stdin.write("?");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("Key Bindings");
+      expect(lastFrame()).toContain("Navigation");
     });
   });
 
@@ -627,7 +627,7 @@ describe("App", () => {
 
     stdin.write("?");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("Key Bindings");
+      expect(lastFrame()).toContain("Navigation");
     });
   });
 
