@@ -68,6 +68,9 @@ review-codecommit --profile <profile-name>
 
 # Specify AWS region
 review-codecommit --region <region>
+
+# Generate shell completion script
+review-codecommit --completions bash|zsh|fish
 ```
 
 ## Shell Completion
