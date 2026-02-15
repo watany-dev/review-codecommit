@@ -44,6 +44,9 @@ export function Help({ onClose }: Props) {
         <SectionHeader title="Navigation" />
         <KeyRow keyName="j / ↓" description="Cursor down" />
         <KeyRow keyName="k / ↑" description="Cursor up" />
+        <KeyRow keyName="Ctrl+d" description="Half page down" />
+        <KeyRow keyName="Ctrl+u" description="Half page up" />
+        <KeyRow keyName="G" description="Jump to end" />
         <KeyRow keyName="Enter" description="Select / confirm" />
         <KeyRow keyName="q / Esc" description="Back / quit" />
         <KeyRow keyName="Ctrl+C" description="Exit immediately" />
