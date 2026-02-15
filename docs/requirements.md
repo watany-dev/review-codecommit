@@ -11,6 +11,7 @@ npx review-codecommit                        # リポジトリ一覧から選択
 npx review-codecommit <repo-name>            # リポジトリ指定で起動
 npx review-codecommit --profile <name>       # AWSプロファイル指定
 npx review-codecommit --region <region>      # リージョン指定
+npx review-codecommit --completions <shell>  # シェル補完スクリプト生成 (bash, zsh, fish)
 ```
 
 ## 技術スタック
@@ -128,7 +129,7 @@ npx review-codecommit --region <region>      # リージョン指定
 | リアクション自動リロード | リアクション追加/削除後に自動リロード |
 | エラーハンドリング | コメント削除済み、存在しないコメント、不正リアクション値等のエラー対応 |
 
-## 機能スコープ (v0.3.0)
+## 機能スコープ (v0.3.0) ✅
 
 | 機能 | 内容 |
 |------|------|

@@ -32,6 +32,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 - Close PRs without merging (`x` key)
 - Commit-level review with Tab/Shift+Tab navigation between "All changes" and individual commits
 - Cursor-based diff navigation with `>` marker
+- Shell completion for bash, zsh, and fish (`--completions` option)
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
 
@@ -68,6 +69,30 @@ review-codecommit --profile <profile-name>
 # Specify AWS region
 review-codecommit --region <region>
 ```
+
+## Shell Completion
+
+Generate shell completion scripts for tab completion of CLI options, AWS profiles, and regions.
+
+```bash
+# Bash
+review-codecommit --completions bash > ~/.bash_completion.d/review-codecommit
+# or add to .bashrc:
+echo 'eval "$(review-codecommit --completions bash)"' >> ~/.bashrc
+
+# Zsh
+review-codecommit --completions zsh > ~/.zsh/completions/_review-codecommit
+# or add to .zshrc:
+echo 'eval "$(review-codecommit --completions zsh)"' >> ~/.zshrc
+
+# Fish
+review-codecommit --completions fish > ~/.config/fish/completions/review-codecommit.fish
+```
+
+Completions support:
+- CLI options (`--profile`, `--region`, `--help`, `--version`, `--completions`)
+- AWS profile names (dynamically read from `~/.aws/config`)
+- AWS CodeCommit regions (25+ supported regions)
 
 ## Keybindings
 
@@ -160,6 +185,7 @@ bun run build
 | v0.7 | Comment edit / delete | ✅ Released |
 | v0.8 | PR status filter, search, and pagination | ✅ Released |
 | v0.2.0 | Emoji reactions on comments | ✅ Released |
+| v0.3.0 | Shell completion (bash, zsh, fish) | ✅ Released |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 
