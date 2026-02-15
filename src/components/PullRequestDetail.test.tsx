@@ -4641,7 +4641,7 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).toContain("Tab view");
     });
 
-    it("shows Tab next S-Tab prev in commit view", async () => {
+    it("shows Tab next Shift+Tab prev in commit view", async () => {
       const { lastFrame, stdin } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -4666,7 +4666,7 @@ describe("PullRequestDetail", () => {
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("Tab next");
       });
-      expect(lastFrame()).toContain("S-Tab prev");
+      expect(lastFrame()).toContain("Shift+Tab prev");
     });
 
     it("does not show Tab in footer when no commits", () => {

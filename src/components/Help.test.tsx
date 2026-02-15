@@ -4,34 +4,47 @@ import { describe, expect, it, vi } from "vitest";
 import { Help } from "./Help.js";
 
 describe("Help", () => {
-  it("renders key bindings", () => {
+  it("renders key bindings grouped by category", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     const output = lastFrame();
-    expect(output).toContain("Key Bindings:");
+
+    // Category headers
+    expect(output).toContain("Navigation");
+    expect(output).toContain("Comments (PR Detail)");
+    expect(output).toContain("PR Actions (PR Detail)");
+    expect(output).toContain("PR List");
+
+    // Navigation
     expect(output).toContain("j / ↓");
     expect(output).toContain("k / ↑");
     expect(output).toContain("Enter");
     expect(output).toContain("Ctrl+C");
-    expect(output).toContain("c");
+
+    // Comments
     expect(output).toContain("Post comment");
-    expect(output).toContain("C");
     expect(output).toContain("Post inline comment");
-    expect(output).toContain("R");
     expect(output).toContain("Reply to comment");
-    expect(output).toContain("o");
     expect(output).toContain("Toggle thread fold");
-    expect(output).toContain("a");
+
+    // PR Actions
     expect(output).toContain("Approve PR");
-    expect(output).toContain("r");
     expect(output).toContain("Revoke approval");
-    expect(output).toContain("m");
     expect(output).toContain("Merge PR");
-    expect(output).toContain("x");
     expect(output).toContain("Close PR without merge");
-    expect(output).toContain("Tab");
-    expect(output).toContain("Switch to commit view");
-    expect(output).toContain("S-Tab");
+    expect(output).toContain("Shift+Tab");
     expect(output).toContain("Previous commit");
+  });
+
+  it("renders category headers in correct order", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    const output = lastFrame()!;
+    const navPos = output.indexOf("Navigation");
+    const commentsPos = output.indexOf("Comments (PR Detail)");
+    const actionsPos = output.indexOf("PR Actions (PR Detail)");
+    const listPos = output.indexOf("PR List");
+    expect(navPos).toBeLessThan(commentsPos);
+    expect(commentsPos).toBeLessThan(actionsPos);
+    expect(actionsPos).toBeLessThan(listPos);
   });
 
   it("renders help title", () => {
@@ -97,5 +110,11 @@ describe("Help", () => {
   it("shows g React to comment keybinding", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("React to comment");
+  });
+
+  it("shows h/l reaction navigation keybindings", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Previous reaction");
+    expect(lastFrame()).toContain("Next reaction");
   });
 });

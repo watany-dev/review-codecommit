@@ -833,7 +833,7 @@ export function PullRequestDetail({
             : viewIndex === -1 && commits.length > 0
               ? "Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"
               : viewIndex >= 0
-                ? "Tab next S-Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
+                ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
                 : "↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"}
         </Text>
       </Box>
