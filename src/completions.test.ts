@@ -2,7 +2,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   CODECOMMIT_REGIONS,
-  type ShellType,
   generateBashCompletion,
   generateCompletion,
   generateFishCompletion,
@@ -138,7 +137,7 @@ describe("generateBashCompletion", () => {
   });
 
   it("contains file existence check", () => {
-    expect(script).toContain('if [ -f');
+    expect(script).toContain("if [ -f");
   });
 });
 

@@ -26,7 +26,7 @@ export const CODECOMMIT_REGIONS = [
   "sa-east-1",
 ] as const;
 
-export type ShellType = "bash" | "zsh" | "fish";
+type ShellType = "bash" | "zsh" | "fish";
 
 export function isValidShellType(value: string): value is ShellType {
   return value === "bash" || value === "zsh" || value === "fish";

@@ -80,9 +80,7 @@ if (parsed.version) {
 
 if (parsed.completions !== undefined) {
   if (!isValidShellType(parsed.completions)) {
-    console.error(
-      `Invalid shell type: "${parsed.completions}". Use bash, zsh, or fish.`,
-    );
+    console.error(`Invalid shell type: "${parsed.completions}". Use bash, zsh, or fish.`);
     process.exit(1);
   }
   console.log(generateCompletion(parsed.completions));

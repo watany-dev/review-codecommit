@@ -134,9 +134,7 @@ describe("cli module-level execution", () => {
 
     await import("./cli.js");
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Invalid shell type"),
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Invalid shell type"));
     expect(exitSpy).toHaveBeenCalledWith(1);
 
     errorSpy.mockRestore();
@@ -154,9 +152,7 @@ describe("cli module-level execution", () => {
 
     await import("./cli.js");
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Invalid shell type"),
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Invalid shell type"));
     expect(exitSpy).toHaveBeenCalledWith(1);
 
     errorSpy.mockRestore();
@@ -379,11 +375,10 @@ describe("parseArgs (property-based)", () => {
   });
 
   it("correctly round-trips --completions value", () => {
-    const nonFlagWord = fc
-      .stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789_"), {
-        minLength: 1,
-        maxLength: 20,
-      });
+    const nonFlagWord = fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789_"), {
+      minLength: 1,
+      maxLength: 20,
+    });
     fc.assert(
       fc.property(nonFlagWord, (shellVal) => {
         const result = parseArgs(["node", "cli", "--completions", shellVal]);
