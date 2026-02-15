@@ -26,6 +26,7 @@ import {
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
+  getReactionsForComments,
   listPullRequests,
   listRepositories,
   type MergeStrategy,
@@ -33,6 +34,8 @@ import {
   type PullRequestSummary,
   postComment,
   postCommentReply,
+  putReaction,
+  type ReactionsByComment,
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
@@ -109,6 +112,10 @@ export function App({ client, initialRepo }: AppProps) {
   const [updateCommentError, setUpdateCommentError] = useState<string | null>(null);
   const [isDeletingComment, setIsDeletingComment] = useState(false);
   const [deleteCommentError, setDeleteCommentError] = useState<string | null>(null);
+
+  const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
+  const [isReacting, setIsReacting] = useState(false);
+  const [reactionError, setReactionError] = useState<string | null>(null);
 
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
@@ -196,6 +203,17 @@ export function App({ client, initialRepo }: AppProps) {
         ]);
         setApprovals(approvalStates);
         setApprovalEvaluation(evaluation);
+      }
+
+      // Load reactions for all comments
+      const allCommentIds = detail.commentThreads.flatMap((t) =>
+        t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
+      );
+      if (allCommentIds.length > 0) {
+        const reactions = await getReactionsForComments(client, allCommentIds);
+        setReactionsByComment(reactions);
+      } else {
+        setReactionsByComment(new Map());
       }
 
       // Parallelize blob content fetching for better performance
@@ -323,6 +341,17 @@ export function App({ client, initialRepo }: AppProps) {
         : {}),
     });
     setCommentThreads(threads);
+
+    // Reload reactions for all comments
+    const allCommentIds = threads.flatMap((t) =>
+      t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
+    );
+    if (allCommentIds.length > 0) {
+      const reactions = await getReactionsForComments(client, allCommentIds);
+      setReactionsByComment(reactions);
+    } else {
+      setReactionsByComment(new Map());
+    }
   }
 
   async function handlePostInlineComment(
@@ -537,6 +566,26 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function handleReact(commentId: string, reactionValue: string) {
+    setIsReacting(true);
+    setReactionError(null);
+    try {
+      await putReaction(client, { commentId, reactionValue });
+      // Reload reactions for all comments
+      const allCommentIds = commentThreads.flatMap((t) =>
+        t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
+      );
+      if (allCommentIds.length > 0) {
+        const reactions = await getReactionsForComments(client, allCommentIds);
+        setReactionsByComment(reactions);
+      }
+    } catch (err) {
+      setReactionError(formatReactionError(err));
+    } finally {
+      setIsReacting(false);
+    }
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -548,9 +597,10 @@ export function App({ client, initialRepo }: AppProps) {
       setSearchQuery("");
       setPagination(initialPagination);
       setScreen("repos");
-    } /* v8 ignore next */ else {
+    } /* v8 ignore start */ else {
       process.exit(0);
     }
+    /* v8 ignore stop */
   }
 
   if (showHelp) {
@@ -658,6 +708,11 @@ export function App({ client, initialRepo }: AppProps) {
           isDeletingComment={isDeletingComment}
           deleteCommentError={deleteCommentError}
           onClearDeleteCommentError={() => setDeleteCommentError(null)}
+          reactionsByComment={reactionsByComment}
+          onReact={handleReact}
+          isReacting={isReacting}
+          reactionError={reactionError}
+          onClearReactionError={() => setReactionError(null)}
         />
       );
   }
@@ -672,7 +727,7 @@ export function App({ client, initialRepo }: AppProps) {
  */
 function formatErrorMessage(
   err: unknown,
-  context?: "comment" | "reply" | "approval" | "merge" | "close" | "edit" | "delete",
+  context?: "comment" | "reply" | "approval" | "merge" | "close" | "edit" | "delete" | "reaction",
   approvalAction?: "approve" | "revoke",
 ): string {
   if (!(err instanceof Error)) {
@@ -785,6 +840,22 @@ function formatErrorMessage(
     }
   }
 
+  // Reaction-specific errors
+  if (context === "reaction") {
+    if (name === "CommentDeletedException") {
+      return "Comment has already been deleted.";
+    }
+    if (name === "CommentDoesNotExistException") {
+      return "Comment no longer exists.";
+    }
+    if (name === "ReactionValueRequiredException") {
+      return "Reaction value is required.";
+    }
+    if (name === "InvalidReactionValueException") {
+      return "Invalid reaction value.";
+    }
+  }
+
   // Close-specific errors
   if (context === "close") {
     if (name === "PullRequestAlreadyClosedException") {
@@ -856,6 +927,10 @@ function formatUpdateCommentError(err: unknown): string {
 
 function formatDeleteCommentError(err: unknown): string {
   return formatErrorMessage(err, "delete");
+}
+
+function formatReactionError(err: unknown): string {
+  return formatErrorMessage(err, "reaction");
 }
 
 function formatError(err: unknown): string {

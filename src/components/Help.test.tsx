@@ -92,4 +92,10 @@ describe("Help", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("Previous page");
   });
+
+  // v0.2.0: Reaction keybinding
+  it("shows g React to comment keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("React to comment");
+  });
 });

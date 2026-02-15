@@ -20,6 +20,8 @@ vi.mock("./services/codecommit.js", () => ({
   getCommitDifferences: vi.fn(),
   updateComment: vi.fn(),
   deleteComment: vi.fn(),
+  getReactionsForComments: vi.fn(),
+  putReaction: vi.fn(),
 }));
 
 import { App } from "./app.js";
@@ -34,11 +36,13 @@ import {
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestDetail,
+  getReactionsForComments,
   listPullRequests,
   listRepositories,
   mergePullRequest,
   postComment,
   postCommentReply,
+  putReaction,
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
@@ -64,6 +68,11 @@ describe("App", () => {
     vi.mocked(getCommitDifferences).mockReset();
     vi.mocked(updateComment).mockReset();
     vi.mocked(deleteComment).mockReset();
+    vi.mocked(getReactionsForComments).mockReset();
+    vi.mocked(putReaction).mockReset();
+    // Default: no reactions
+    vi.mocked(getReactionsForComments).mockResolvedValue(new Map());
+    vi.mocked(putReaction).mockResolvedValue(undefined);
     // Default: no commits
     vi.mocked(getCommitsForPR).mockResolvedValue([]);
     vi.mocked(getCommitDifferences).mockResolvedValue([]);
@@ -1736,7 +1745,7 @@ describe("App", () => {
     stdin.write("x");
     await vi.waitFor(() => {
       expect(lastFrame()).not.toContain("Access denied");
-      expect(lastFrame()).toContain("a approve");
+      expect(lastFrame()).toContain("a/r approve");
     });
   });
 
@@ -4219,6 +4228,284 @@ describe("App", () => {
     stdin.write("n");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Page token expired");
+    });
+  });
+
+  // v0.2.0: Reaction integration test
+  it("loads reactions with PR detail and calls putReaction on g key", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature/login",
+            sourceCommit: "src1",
+            destinationCommit: "dst1",
+            mergeBase: "base1",
+          },
+        ],
+        revisionId: "rev1",
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            {
+              commentId: "comment-1",
+              authorArn: "arn:aws:iam::123456789012:user/taro",
+              content: "LGTM",
+            },
+          ],
+        },
+      ],
+    });
+    vi.mocked(getReactionsForComments).mockResolvedValueOnce(
+      new Map([["comment-1", [{ emoji: "👍", shortCode: ":thumbsup:", count: 1, userArns: [] }]]]),
+    );
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    // Select the PR
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Verify reactions loaded (badge displayed)
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("👍×1");
+    });
+
+    // Verify getReactionsForComments was called
+    expect(vi.mocked(getReactionsForComments)).toHaveBeenCalledWith(mockClient, ["comment-1"]);
+  });
+
+  it("submits reaction successfully and reloads reactions", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature/login",
+            sourceCommit: "src1",
+            destinationCommit: "dst1",
+            mergeBase: "base1",
+          },
+        ],
+        revisionId: "rev1",
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/taro", content: "OK" },
+          ],
+        },
+      ],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    for (let i = 0; i < 5; i++) stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro: OK");
+    });
+    stdin.write("g");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("React to comment:");
+    });
+
+    // Mock successful reaction and reload
+    vi.mocked(putReaction).mockResolvedValueOnce(undefined);
+    vi.mocked(getReactionsForComments).mockResolvedValueOnce(
+      new Map([["c1", [{ emoji: "👍", shortCode: ":thumbsup:", count: 1, userArns: [] }]]]),
+    );
+
+    stdin.write("\r"); // submit reaction
+    await vi.waitFor(() => {
+      expect(vi.mocked(putReaction)).toHaveBeenCalledWith(mockClient, {
+        commentId: "c1",
+        reactionValue: ":thumbsup:",
+      });
+    });
+    // Badge should appear after reactions reload
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("👍×1");
+    });
+  });
+
+  it("shows reaction error when putReaction fails with CommentDeletedException", async () => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature/login",
+            sourceCommit: "src1",
+            destinationCommit: "dst1",
+            mergeBase: "base1",
+          },
+        ],
+        revisionId: "rev1",
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/taro", content: "OK" },
+          ],
+        },
+      ],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Navigate to comment line
+    for (let i = 0; i < 5; i++) stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro: OK");
+    });
+
+    // Open reaction picker
+    stdin.write("g");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("React to comment:");
+    });
+
+    // Make putReaction fail
+    const error = new Error("deleted");
+    error.name = "CommentDeletedException";
+    vi.mocked(putReaction).mockRejectedValueOnce(error);
+
+    stdin.write("\r"); // submit reaction
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Comment has already been deleted.");
+    });
+  });
+
+  it.each([
+    { errorName: "CommentDoesNotExistException", expected: "Comment no longer exists." },
+    { errorName: "ReactionValueRequiredException", expected: "Reaction value is required." },
+    { errorName: "InvalidReactionValueException", expected: "Invalid reaction value." },
+  ])("shows $expected for $errorName", async ({ errorName, expected }) => {
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/feature/login",
+            sourceCommit: "src1",
+            destinationCommit: "dst1",
+            mergeBase: "base1",
+          },
+        ],
+        revisionId: "rev1",
+      },
+      differences: [],
+      commentThreads: [
+        {
+          location: null,
+          comments: [
+            { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/taro", content: "OK" },
+          ],
+        },
+      ],
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    for (let i = 0; i < 5; i++) stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(">  taro: OK");
+    });
+    stdin.write("g");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("React to comment:");
+    });
+
+    const error = new Error("fail");
+    error.name = errorName;
+    vi.mocked(putReaction).mockRejectedValueOnce(error);
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain(expected);
     });
   });
 });

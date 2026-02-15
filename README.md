@@ -23,6 +23,8 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 - Fold/unfold long comment threads (`o` key, auto-folds 4+ comments)
 - Edit comments (`e` key, with content pre-fill)
 - Delete comments (`d` key, with confirmation prompt)
+- React to comments with emoji (`g` key, 8 reactions: 👍👎😄🎉😕❤️🚀👀)
+- View reaction badges on comments (e.g., 👍×2 🎉×1)
 - Approve / revoke pull requests (`a`/`r` keys with confirmation prompt)
 - View approval status and approval rule evaluation
 - Merge PRs with strategy selection (Fast-forward / Squash / Three-way) (`m` key)
@@ -37,7 +39,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdateComment` and `codecommit:DeleteCommentContent` for comment edit/delete, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
+- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdateComment` and `codecommit:DeleteCommentContent` for comment edit/delete, `codecommit:PutCommentReaction` and `codecommit:GetCommentReactions` for reactions, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
 
 ## Installation
 
@@ -81,6 +83,9 @@ review-codecommit --region <region>
 | `o` | Toggle thread fold/unfold | PR Detail |
 | `e` | Edit comment (with content pre-fill) | PR Detail |
 | `d` | Delete comment (with confirmation) | PR Detail |
+| `g` | React to comment (emoji picker) | PR Detail |
+| `h` / `←` | Select previous reaction | Reaction Picker |
+| `l` / `→` | Select next reaction | Reaction Picker |
 | `a` | Approve PR (with confirmation) | PR Detail |
 | `r` | Revoke approval (with confirmation) | PR Detail |
 | `m` | Merge PR (strategy selection) | PR Detail |
@@ -154,6 +159,7 @@ bun run build
 | v0.6.1 | Commit-level review | ✅ Released |
 | v0.7 | Comment edit / delete | ✅ Released |
 | v0.8 | PR status filter, search, and pagination | ✅ Released |
+| v0.2.0 | Emoji reactions on comments | ✅ Released |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 

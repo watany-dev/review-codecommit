@@ -6,11 +6,14 @@ import type {
   CommitInfo,
   ConflictSummary,
   MergeStrategy,
+  ReactionSummary,
+  ReactionsByComment,
 } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
+import { ReactionPicker } from "./ReactionPicker.js";
 
 interface Props {
   pullRequest: PullRequest;
@@ -67,6 +70,11 @@ interface Props {
   isDeletingComment: boolean;
   deleteCommentError: string | null;
   onClearDeleteCommentError: () => void;
+  reactionsByComment: ReactionsByComment;
+  onReact: (commentId: string, reactionValue: string) => void;
+  isReacting: boolean;
+  reactionError: string | null;
+  onClearReactionError: () => void;
 }
 
 export function PullRequestDetail({
@@ -117,6 +125,11 @@ export function PullRequestDetail({
   isDeletingComment,
   deleteCommentError,
   onClearDeleteCommentError,
+  reactionsByComment,
+  onReact,
+  isReacting,
+  reactionError,
+  onClearReactionError,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -165,6 +178,9 @@ export function PullRequestDetail({
     commentId: string;
   } | null>(null);
   const [wasDeleting, setWasDeleting] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionTarget, setReactionTarget] = useState<string | null>(null);
+  const [wasReacting, setWasReacting] = useState(false);
 
   useEffect(() => {
     if (isPostingComment) {
@@ -258,6 +274,18 @@ export function PullRequestDetail({
     }
   }, [isDeletingComment, deleteCommentError]);
 
+  useEffect(() => {
+    if (isReacting) {
+      setWasReacting(true);
+    } else if (wasReacting && !reactionError) {
+      setShowReactionPicker(false);
+      setReactionTarget(null);
+      setWasReacting(false);
+    } else {
+      setWasReacting(false);
+    }
+  }, [isReacting, reactionError]);
+
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
   const prId = pullRequest.pullRequestId ?? "";
@@ -269,15 +297,22 @@ export function PullRequestDetail({
 
   const lines = useMemo(() => {
     if (viewIndex === -1) {
-      return buildDisplayLines(differences, diffTexts, commentThreads, collapsedThreads);
+      return buildDisplayLines(
+        differences,
+        diffTexts,
+        commentThreads,
+        collapsedThreads,
+        reactionsByComment,
+      );
     }
-    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set());
+    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set(), new Map());
   }, [
     viewIndex,
     differences,
     diffTexts,
     commentThreads,
     collapsedThreads,
+    reactionsByComment,
     commitDifferences,
     commitDiffTexts,
   ]);
@@ -310,7 +345,8 @@ export function PullRequestDetail({
       isDeleting ||
       approvalAction ||
       mergeStep ||
-      isClosing
+      isClosing ||
+      showReactionPicker
     )
       return;
 
@@ -421,6 +457,17 @@ export function PullRequestDetail({
       setIsDeleting(true);
       return;
     }
+    if (input === "g") {
+      if (viewIndex >= 0) return;
+      const currentLine = lines[cursorIndex];
+      if (!currentLine) return;
+      const commentTypes = ["inline-comment", "comment", "inline-reply", "comment-reply"];
+      if (!commentTypes.includes(currentLine.type)) return;
+      if (!currentLine.commentId) return;
+      setReactionTarget(currentLine.commentId);
+      setShowReactionPicker(true);
+      return;
+    }
   });
 
   const visibleLineCount =
@@ -431,7 +478,8 @@ export function PullRequestDetail({
     isDeleting ||
     approvalAction ||
     mergeStep ||
-    isClosing
+    isClosing ||
+    showReactionPicker
       ? 20
       : 30;
   const scrollOffset = useMemo(() => {
@@ -692,6 +740,24 @@ export function PullRequestDetail({
           }}
         />
       )}
+      {showReactionPicker && reactionTarget && (
+        <ReactionPicker
+          onSelect={(shortCode) => onReact(reactionTarget, shortCode)}
+          onCancel={() => {
+            setShowReactionPicker(false);
+            setReactionTarget(null);
+            onClearReactionError();
+          }}
+          isProcessing={isReacting}
+          error={reactionError}
+          onClearError={() => {
+            onClearReactionError();
+            setShowReactionPicker(false);
+            setReactionTarget(null);
+          }}
+          currentReactions={reactionsByComment.get(reactionTarget) ?? []}
+        />
+      )}
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
@@ -701,13 +767,14 @@ export function PullRequestDetail({
           isDeleting ||
           approvalAction ||
           mergeStep ||
-          isClosing
+          isClosing ||
+          showReactionPicker
             ? ""
             : viewIndex === -1 && commits.length > 0
-              ? "Tab switch view  ↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
+              ? "Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"
               : viewIndex >= 0
-                ? "Tab next  S-Tab prev  ↑↓ cursor  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"
-                : "↑↓ cursor  c comment  C inline  R reply  o fold  e edit  d delete  a approve  r revoke  m merge  x close  q back  ? help"}
+                ? "Tab next S-Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
+                : "↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"}
         </Text>
       </Box>
     </Box>
@@ -733,6 +800,7 @@ interface DisplayLine {
   afterLineNumber?: number;
   threadIndex?: number | undefined;
   commentId?: string | undefined;
+  reactionText?: string;
 }
 
 function getEditTargetFromLine(line: DisplayLine): { commentId: string } | null {
@@ -757,9 +825,10 @@ function findCommentContent(commentThreads: CommentThread[], commentId: string):
       }
     }
   }
-  /* v8 ignore next -- commentId always matches a thread entry */
+  /* v8 ignore start -- commentId always matches a thread entry */
   return "";
 }
+/* v8 ignore stop */
 
 function getReplyTargetFromLine(
   line: DisplayLine,
@@ -787,12 +856,21 @@ function getReplyTargetFromLine(
 
 const FOLD_THRESHOLD = 4;
 
+function formatReactionBadge(reactions: ReactionSummary[] | undefined): string {
+  if (!reactions || reactions.length === 0) return "";
+  return reactions
+    .filter((r) => r.count > 0)
+    .map((r) => `${r.emoji}×${r.count}`)
+    .join(" ");
+}
+
 function appendThreadLines(
   lines: DisplayLine[],
   thread: CommentThread,
   threadIndex: number,
   collapsedThreads: Set<number>,
   mode: "inline" | "general",
+  reactionsByComment: ReactionsByComment,
 ): void {
   const comments = thread.comments;
   if (comments.length === 0) return;
@@ -804,6 +882,7 @@ function appendThreadLines(
 
   const rootAuthor = extractAuthorName(rootComment.authorArn ?? "unknown");
   const rootContent = rootComment.content ?? "";
+  const rootReactionText = formatReactionBadge(reactionsByComment.get(rootComment.commentId ?? ""));
 
   if (mode === "inline") {
     lines.push({
@@ -811,6 +890,7 @@ function appendThreadLines(
       text: `💬 ${rootAuthor}: ${rootContent}`,
       threadIndex,
       commentId: rootComment.commentId,
+      reactionText: rootReactionText,
     });
   } else {
     lines.push({
@@ -818,6 +898,7 @@ function appendThreadLines(
       text: `${rootAuthor}: ${rootContent}`,
       threadIndex,
       commentId: rootComment.commentId,
+      reactionText: rootReactionText,
     });
   }
 
@@ -833,6 +914,7 @@ function appendThreadLines(
   for (const reply of replies) {
     const author = extractAuthorName(reply.authorArn ?? "unknown");
     const content = reply.content ?? "";
+    const replyReactionText = formatReactionBadge(reactionsByComment.get(reply.commentId ?? ""));
 
     if (mode === "inline") {
       lines.push({
@@ -840,6 +922,7 @@ function appendThreadLines(
         text: `└ ${author}: ${content}`,
         threadIndex,
         commentId: reply.commentId,
+        reactionText: replyReactionText,
       });
     } else {
       lines.push({
@@ -847,6 +930,7 @@ function appendThreadLines(
         text: `└ ${author}: ${content}`,
         threadIndex,
         commentId: reply.commentId,
+        reactionText: replyReactionText,
       });
     }
   }
@@ -857,6 +941,7 @@ function buildDisplayLines(
   diffTexts: Map<string, { before: string; after: string }>,
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
+  reactionsByComment: ReactionsByComment,
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
@@ -890,7 +975,14 @@ function buildDisplayLines(
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
-          appendThreadLines(lines, thread, threadIdx, collapsedThreads, "inline");
+          appendThreadLines(
+            lines,
+            thread,
+            threadIdx,
+            collapsedThreads,
+            "inline",
+            reactionsByComment,
+          );
         }
       }
     }
@@ -910,7 +1002,7 @@ function buildDisplayLines(
     lines.push({ type: "separator", text: "─".repeat(50) });
     lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
     for (const { thread, index: threadIdx } of generalThreads) {
-      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general");
+      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general", reactionsByComment);
     }
   }
 
@@ -970,9 +1062,10 @@ function getLocationFromLine(line: DisplayLine): {
     };
   }
 
-  /* v8 ignore next -- diff lines always have line numbers */
+  /* v8 ignore start -- diff lines always have line numbers */
   return null;
 }
+/* v8 ignore stop */
 
 /**
  * Computes a simplified line-by-line diff between two sets of lines.
@@ -1078,14 +1171,27 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
-      return <Text> {line.text}</Text>;
+      return (
+        <Text>
+          {" "}
+          {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
+        </Text>
+      );
     case "inline-comment":
-      return <Text color="magenta"> {line.text}</Text>;
+      return (
+        <Text color="magenta">
+          {" "}
+          {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
+        </Text>
+      );
     case "inline-reply":
       return (
         <Text color="magenta">
           {"   "}
           {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "comment-reply":
@@ -1093,6 +1199,7 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
         <Text>
           {"   "}
           {line.text}
+          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
         </Text>
       );
     case "fold-indicator":
