@@ -69,6 +69,135 @@ describe("cli module-level execution", () => {
     exitSpy.mockRestore();
     process.argv = originalArgv;
   });
+
+  it("outputs bash completion script and exits with 0 for --completions bash", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--completions", "bash"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("_review_codecommit"));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("outputs zsh completion script and exits with 0 for --completions zsh", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--completions", "zsh"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("#compdef review-codecommit"));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("outputs fish completion script and exits with 0 for --completions fish", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--completions", "fish"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("complete -c review-codecommit"));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("outputs error and exits with 1 for --completions invalid", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--completions", "invalid"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Invalid shell type"),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("outputs error and exits with 1 for --completions without value", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--completions"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Invalid shell type"),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("help takes priority over --completions", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--help", "--completions", "bash"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("review-codecommit"));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
+
+  it("help text includes --completions option", async () => {
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--help"];
+    vi.resetModules();
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await import("./cli.js");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("--completions"));
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.argv = originalArgv;
+  });
 });
 
 describe("parseArgs", () => {

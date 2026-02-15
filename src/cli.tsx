@@ -3,6 +3,7 @@ import { render } from "ink";
 import React from "react";
 import packageJson from "../package.json";
 import { App } from "./app.js";
+import { generateCompletion, isValidShellType } from "./completions.js";
 import { createClient } from "./services/codecommit.js";
 
 interface ParsedArgs {
@@ -21,10 +22,11 @@ const HELP_TEXT = `review-codecommit - A TUI tool for reviewing AWS CodeCommit p
 Usage: review-codecommit [options] [repository]
 
 Options:
-  --profile <name>   AWS profile to use
-  --region <region>   AWS region to use
-  --help, -h          Show this help message
-  --version, -v       Show version number
+  --profile <name>       AWS profile to use
+  --region <region>       AWS region to use
+  --completions <shell>   Generate completion script (bash, zsh, fish)
+  --help, -h              Show this help message
+  --version, -v           Show version number
 
 Navigation:
   j/k or arrows       Move cursor
@@ -73,6 +75,17 @@ if (parsed.help) {
 
 if (parsed.version) {
   console.log(VERSION);
+  process.exit(0);
+}
+
+if (parsed.completions !== undefined) {
+  if (!isValidShellType(parsed.completions)) {
+    console.error(
+      `Invalid shell type: "${parsed.completions}". Use bash, zsh, or fish.`,
+    );
+    process.exit(1);
+  }
+  console.log(generateCompletion(parsed.completions));
   process.exit(0);
 }
 
