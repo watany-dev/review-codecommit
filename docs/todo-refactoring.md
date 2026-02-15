@@ -83,21 +83,21 @@
 
 ## 優先度
 
-| 優先度 | 項目 | 種類 | 効果 |
-|--------|------|------|------|
-| 高 | 3.1 PullRequestDetail 分割 | リファクタ | 可読性・保守性 |
-| 高 | 3.2 App useState → useReducer | リファクタ | 可読性・保守性 |
-| 高 | 1.6 useEffect 9個 → カスタムフック | 重複排除 | ~100行削減 |
-| 高 | 1.3 Blob取得ロジック統合 | 重複排除 | ~20行削減 |
-| 中 | 1.1 getEditTarget/getDeleteTarget 統合 | 重複排除 | 関数1つ削減 |
-| 中 | 1.2 commentTypes 定数化 | 重複排除 | 4箇所統一 |
-| 中 | 1.4 リアクション再取得統合 | 重複排除 | 3箇所統一 |
-| 中 | 1.5 handleApprove/Revoke 統合 | 重複排除 | 関数1つ削減 |
-| 中 | 3.3 Props グループ化 | リファクタ | 可読性 |
-| 中 | 2.5 formatDiff.ts 整理 | デッドコード | 179行 |
-| 低 | 2.3 型定義統一 | 一貫性 | 型1つ削減 |
-| 低 | 2.1 approvals.filter 二重実行 | 不要処理 | 微パフォ改善 |
-| 低 | 2.2 getComments パススルー削除 | 不要コード | 関数1つ削減 |
-| 低 | 2.4 withLoadingState 一貫使用 | 一貫性 | コード統一 |
-| 低 | 3.5 エラーラッパーインライン化 | 不要コード | 8関数削減 |
-| 低 | 3.6 createClient 簡素化 | 過剰処理 | 3行削減 |
+| 優先度 | 項目 | 種類 | 効果 | 状態 |
+|--------|------|------|------|------|
+| 高 | 3.1 PullRequestDetail 分割 | リファクタ | 可読性・保守性 | ✅ 完了 (`utils/displayLines.ts` に抽出、1252→820行) |
+| 高 | 3.2 App useState → useReducer | リファクタ | 可読性・保守性 | ✅ 完了 (`hooks/useAsyncOps.ts` で18個のuseStateを統合) |
+| 高 | 1.6 useEffect 9個 → カスタムフック | 重複排除 | ~100行削減 | ✅ 完了 (`hooks/useAsyncDismiss.ts` に抽出) |
+| 高 | 1.3 Blob取得ロジック統合 | 重複排除 | ~20行削減 | ✅ 完了 (`fetchBlobTexts` ヘルパーに統合) |
+| 中 | 1.1 getEditTarget/getDeleteTarget 統合 | 重複排除 | 関数1つ削減 | ✅ 完了 (`getCommentIdFromLine` に統合) |
+| 中 | 1.2 commentTypes 定数化 | 重複排除 | 4箇所統一 | ✅ 完了 (`COMMENT_LINE_TYPES` 定数) |
+| 中 | 1.4 リアクション再取得統合 | 重複排除 | 3箇所統一 | |
+| 中 | 1.5 handleApprove/Revoke 統合 | 重複排除 | 関数1つ削減 | |
+| 中 | 3.3 Props グループ化 | リファクタ | 可読性 | |
+| 中 | 2.5 formatDiff.ts 整理 | デッドコード | 179行 | |
+| 低 | 2.3 型定義統一 | 一貫性 | 型1つ削減 | |
+| 低 | 2.1 approvals.filter 二重実行 | 不要処理 | 微パフォ改善 | |
+| 低 | 2.2 getComments パススルー削除 | 不要コード | 関数1つ削減 | |
+| 低 | 2.4 withLoadingState 一貫使用 | 一貫性 | コード統一 | |
+| 低 | 3.5 エラーラッパーインライン化 | 不要コード | 8関数削減 | |
+| 低 | 3.6 createClient 簡素化 | 過剰処理 | 3行削減 | |

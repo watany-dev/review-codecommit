@@ -12,6 +12,7 @@ import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList, type StatusFilter } from "./components/PullRequestList.js";
 import { RepositoryList } from "./components/RepositoryList.js";
+import { useAsyncOps } from "./hooks/useAsyncOps.js";
 import {
   type CommentThread,
   type CommitInfo,
@@ -82,24 +83,10 @@ export function App({ client, initialRepo }: AppProps) {
     new Map(),
   );
 
-  const [isPostingComment, setIsPostingComment] = useState(false);
-  const [commentError, setCommentError] = useState<string | null>(null);
-
-  const [isPostingInlineComment, setIsPostingInlineComment] = useState(false);
-  const [inlineCommentError, setInlineCommentError] = useState<string | null>(null);
+  const [asyncOps, asyncActions] = useAsyncOps();
 
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
-  const [isPostingReply, setIsPostingReply] = useState(false);
-  const [replyError, setReplyError] = useState<string | null>(null);
-
-  const [isApproving, setIsApproving] = useState(false);
-  const [approvalError, setApprovalError] = useState<string | null>(null);
-
-  const [isMerging, setIsMerging] = useState(false);
-  const [mergeError, setMergeError] = useState<string | null>(null);
-  const [isClosingPR, setIsClosingPR] = useState(false);
-  const [closePRError, setClosePRError] = useState<string | null>(null);
 
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [commitDifferences, setCommitDifferences] = useState<Difference[]>([]);
@@ -108,14 +95,7 @@ export function App({ client, initialRepo }: AppProps) {
   >(new Map());
   const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
 
-  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
-  const [updateCommentError, setUpdateCommentError] = useState<string | null>(null);
-  const [isDeletingComment, setIsDeletingComment] = useState(false);
-  const [deleteCommentError, setDeleteCommentError] = useState<string | null>(null);
-
   const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
-  const [isReacting, setIsReacting] = useState(false);
-  const [reactionError, setReactionError] = useState<string | null>(null);
 
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
@@ -187,6 +167,30 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function fetchBlobTexts(
+    diffs: Difference[],
+  ): Promise<Map<string, { before: string; after: string }>> {
+    const blobFetches = diffs.map(async (diff) => {
+      const beforeBlobId = diff.beforeBlob?.blobId;
+      const afterBlobId = diff.afterBlob?.blobId;
+      const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
+
+      const [before, after] = await Promise.all([
+        beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
+        afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
+      ]);
+
+      return { key, before, after };
+    });
+
+    const blobResults = await Promise.all(blobFetches);
+    const texts = new Map<string, { before: string; after: string }>();
+    for (const result of blobResults) {
+      texts.set(result.key, { before: result.before, after: result.after });
+    }
+    return texts;
+  }
+
   async function loadPullRequestDetail(pullRequestId: string) {
     await withLoadingState(async () => {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
@@ -216,26 +220,7 @@ export function App({ client, initialRepo }: AppProps) {
         setReactionsByComment(new Map());
       }
 
-      // Parallelize blob content fetching for better performance
-      const blobFetches = detail.differences.map(async (diff) => {
-        const beforeBlobId = diff.beforeBlob?.blobId;
-        const afterBlobId = diff.afterBlob?.blobId;
-        const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-        const [before, after] = await Promise.all([
-          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-        ]);
-
-        return { key, before, after };
-      });
-
-      const blobResults = await Promise.all(blobFetches);
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const result of blobResults) {
-        texts.set(result.key, { before: result.before, after: result.after });
-      }
-      setDiffTexts(texts);
+      setDiffTexts(await fetchBlobTexts(detail.differences));
 
       // v0.7: コミット一覧を取得
       const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
@@ -310,8 +295,7 @@ export function App({ client, initialRepo }: AppProps) {
     const target = prDetail.pullRequestTargets?.[0];
     if (!target?.destinationCommit || !target?.sourceCommit) return;
 
-    setIsPostingComment(true);
-    setCommentError(null);
+    asyncActions.start("comment");
     try {
       await postComment(client, {
         pullRequestId: prDetail.pullRequestId!,
@@ -321,10 +305,9 @@ export function App({ client, initialRepo }: AppProps) {
         content,
       });
       await reloadComments(prDetail.pullRequestId!);
+      asyncActions.done("comment");
     } catch (err) {
-      setCommentError(formatCommentError(err));
-    } finally {
-      setIsPostingComment(false);
+      asyncActions.error("comment", formatCommentError(err));
     }
   }
 
@@ -366,8 +349,7 @@ export function App({ client, initialRepo }: AppProps) {
     const target = prDetail.pullRequestTargets?.[0];
     if (!target?.destinationCommit || !target?.sourceCommit) return;
 
-    setIsPostingInlineComment(true);
-    setInlineCommentError(null);
+    asyncActions.start("inlineComment");
     try {
       await postComment(client, {
         pullRequestId: prDetail.pullRequestId!,
@@ -378,33 +360,29 @@ export function App({ client, initialRepo }: AppProps) {
         location,
       });
       await reloadComments(prDetail.pullRequestId!);
+      asyncActions.done("inlineComment");
     } catch (err) {
-      setInlineCommentError(formatCommentError(err));
-    } finally {
-      setIsPostingInlineComment(false);
+      asyncActions.error("inlineComment", formatCommentError(err));
     }
   }
 
   async function handlePostReply(inReplyTo: string, content: string) {
     if (!prDetail?.pullRequestId) return;
 
-    setIsPostingReply(true);
-    setReplyError(null);
+    asyncActions.start("reply");
     try {
       await postCommentReply(client, { inReplyTo, content });
       await reloadComments(prDetail.pullRequestId);
+      asyncActions.done("reply");
     } catch (err) {
-      setReplyError(formatReplyError(err));
-    } finally {
-      setIsPostingReply(false);
+      asyncActions.error("reply", formatReplyError(err));
     }
   }
 
   async function handleApprove() {
     if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
 
-    setIsApproving(true);
-    setApprovalError(null);
+    asyncActions.start("approve");
     try {
       await updateApprovalState(client, {
         pullRequestId: prDetail.pullRequestId,
@@ -412,18 +390,16 @@ export function App({ client, initialRepo }: AppProps) {
         approvalState: "APPROVE",
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+      asyncActions.done("approve");
     } catch (err) {
-      setApprovalError(formatApprovalError(err, "approve"));
-    } finally {
-      setIsApproving(false);
+      asyncActions.error("approve", formatApprovalError(err, "approve"));
     }
   }
 
   async function handleRevoke() {
     if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
 
-    setIsApproving(true);
-    setApprovalError(null);
+    asyncActions.start("approve");
     try {
       await updateApprovalState(client, {
         pullRequestId: prDetail.pullRequestId,
@@ -431,10 +407,9 @@ export function App({ client, initialRepo }: AppProps) {
         approvalState: "REVOKE",
       });
       await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+      asyncActions.done("approve");
     } catch (err) {
-      setApprovalError(formatApprovalError(err, "revoke"));
-    } finally {
-      setIsApproving(false);
+      asyncActions.error("approve", formatApprovalError(err, "revoke"));
     }
   }
 
@@ -451,8 +426,7 @@ export function App({ client, initialRepo }: AppProps) {
     if (!prDetail?.pullRequestId) return;
     const target = prDetail.pullRequestTargets?.[0];
 
-    setIsMerging(true);
-    setMergeError(null);
+    asyncActions.start("merge");
     try {
       await mergePullRequest(client, {
         pullRequestId: prDetail.pullRequestId,
@@ -463,10 +437,9 @@ export function App({ client, initialRepo }: AppProps) {
       // On success, remove merged PR from local state and go back to PR list
       setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
+      asyncActions.done("merge");
     } catch (err) {
-      setMergeError(formatMergeError(err));
-    } finally {
-      setIsMerging(false);
+      asyncActions.error("merge", formatMergeError(err));
     }
   }
 
@@ -486,8 +459,7 @@ export function App({ client, initialRepo }: AppProps) {
   async function handleClosePR() {
     if (!prDetail?.pullRequestId) return;
 
-    setIsClosingPR(true);
-    setClosePRError(null);
+    asyncActions.start("closePR");
     try {
       await closePullRequest(client, {
         pullRequestId: prDetail.pullRequestId,
@@ -495,10 +467,9 @@ export function App({ client, initialRepo }: AppProps) {
       // On success, remove closed PR from local state and go back to PR list
       setPullRequests((prev) => prev.filter((pr) => pr.pullRequestId !== prDetail.pullRequestId));
       setScreen("prs");
+      asyncActions.done("closePR");
     } catch (err) {
-      setClosePRError(formatCloseError(err));
-    } finally {
-      setIsClosingPR(false);
+      asyncActions.error("closePR", formatCloseError(err));
     }
   }
 
@@ -511,26 +482,7 @@ export function App({ client, initialRepo }: AppProps) {
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
-
-      const blobFetches = diffs.map(async (diff) => {
-        const beforeBlobId = diff.beforeBlob?.blobId;
-        const afterBlobId = diff.afterBlob?.blobId;
-        const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-        const [before, after] = await Promise.all([
-          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-        ]);
-
-        return { key, before, after };
-      });
-
-      const blobResults = await Promise.all(blobFetches);
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const result of blobResults) {
-        texts.set(result.key, { before: result.before, after: result.after });
-      }
-      setCommitDiffTexts(texts);
+      setCommitDiffTexts(await fetchBlobTexts(diffs));
     } finally {
       setIsLoadingCommitDiff(false);
     }
@@ -539,36 +491,31 @@ export function App({ client, initialRepo }: AppProps) {
   async function handleUpdateComment(commentId: string, content: string) {
     if (!prDetail?.pullRequestId) return;
 
-    setIsUpdatingComment(true);
-    setUpdateCommentError(null);
+    asyncActions.start("updateComment");
     try {
       await updateComment(client, { commentId, content });
       await reloadComments(prDetail.pullRequestId);
+      asyncActions.done("updateComment");
     } catch (err) {
-      setUpdateCommentError(formatUpdateCommentError(err));
-    } finally {
-      setIsUpdatingComment(false);
+      asyncActions.error("updateComment", formatUpdateCommentError(err));
     }
   }
 
   async function handleDeleteComment(commentId: string) {
     if (!prDetail?.pullRequestId) return;
 
-    setIsDeletingComment(true);
-    setDeleteCommentError(null);
+    asyncActions.start("deleteComment");
     try {
       await deleteComment(client, { commentId });
       await reloadComments(prDetail.pullRequestId);
+      asyncActions.done("deleteComment");
     } catch (err) {
-      setDeleteCommentError(formatDeleteCommentError(err));
-    } finally {
-      setIsDeletingComment(false);
+      asyncActions.error("deleteComment", formatDeleteCommentError(err));
     }
   }
 
   async function handleReact(commentId: string, reactionValue: string) {
-    setIsReacting(true);
-    setReactionError(null);
+    asyncActions.start("react");
     try {
       await putReaction(client, { commentId, reactionValue });
       // Reload reactions for all comments
@@ -579,10 +526,9 @@ export function App({ client, initialRepo }: AppProps) {
         const reactions = await getReactionsForComments(client, allCommentIds);
         setReactionsByComment(reactions);
       }
+      asyncActions.done("react");
     } catch (err) {
-      setReactionError(formatReactionError(err));
-    } finally {
-      setIsReacting(false);
+      asyncActions.error("react", formatReactionError(err));
     }
   }
 
@@ -668,51 +614,51 @@ export function App({ client, initialRepo }: AppProps) {
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
           onPostComment={handlePostComment}
-          isPostingComment={isPostingComment}
-          commentError={commentError}
-          onClearCommentError={() => setCommentError(null)}
+          isPostingComment={asyncOps.comment.isProcessing}
+          commentError={asyncOps.comment.error}
+          onClearCommentError={() => asyncActions.clearError("comment")}
           onPostInlineComment={handlePostInlineComment}
-          isPostingInlineComment={isPostingInlineComment}
-          inlineCommentError={inlineCommentError}
-          onClearInlineCommentError={() => setInlineCommentError(null)}
+          isPostingInlineComment={asyncOps.inlineComment.isProcessing}
+          inlineCommentError={asyncOps.inlineComment.error}
+          onClearInlineCommentError={() => asyncActions.clearError("inlineComment")}
           onPostReply={handlePostReply}
-          isPostingReply={isPostingReply}
-          replyError={replyError}
-          onClearReplyError={() => setReplyError(null)}
+          isPostingReply={asyncOps.reply.isProcessing}
+          replyError={asyncOps.reply.error}
+          onClearReplyError={() => asyncActions.clearError("reply")}
           approvals={approvals}
           approvalEvaluation={approvalEvaluation}
           onApprove={handleApprove}
           onRevoke={handleRevoke}
-          isApproving={isApproving}
-          approvalError={approvalError}
-          onClearApprovalError={() => setApprovalError(null)}
+          isApproving={asyncOps.approve.isProcessing}
+          approvalError={asyncOps.approve.error}
+          onClearApprovalError={() => asyncActions.clearError("approve")}
           onMerge={handleMerge}
-          isMerging={isMerging}
-          mergeError={mergeError}
-          onClearMergeError={() => setMergeError(null)}
+          isMerging={asyncOps.merge.isProcessing}
+          mergeError={asyncOps.merge.error}
+          onClearMergeError={() => asyncActions.clearError("merge")}
           onCheckConflicts={handleCheckConflicts}
           onClosePR={handleClosePR}
-          isClosingPR={isClosingPR}
-          closePRError={closePRError}
-          onClearClosePRError={() => setClosePRError(null)}
+          isClosingPR={asyncOps.closePR.isProcessing}
+          closePRError={asyncOps.closePR.error}
+          onClearClosePRError={() => asyncActions.clearError("closePR")}
           commits={commits}
           commitDifferences={commitDifferences}
           commitDiffTexts={commitDiffTexts}
           isLoadingCommitDiff={isLoadingCommitDiff}
           onLoadCommitDiff={handleLoadCommitDiff}
           onUpdateComment={handleUpdateComment}
-          isUpdatingComment={isUpdatingComment}
-          updateCommentError={updateCommentError}
-          onClearUpdateCommentError={() => setUpdateCommentError(null)}
+          isUpdatingComment={asyncOps.updateComment.isProcessing}
+          updateCommentError={asyncOps.updateComment.error}
+          onClearUpdateCommentError={() => asyncActions.clearError("updateComment")}
           onDeleteComment={handleDeleteComment}
-          isDeletingComment={isDeletingComment}
-          deleteCommentError={deleteCommentError}
-          onClearDeleteCommentError={() => setDeleteCommentError(null)}
+          isDeletingComment={asyncOps.deleteComment.isProcessing}
+          deleteCommentError={asyncOps.deleteComment.error}
+          onClearDeleteCommentError={() => asyncActions.clearError("deleteComment")}
           reactionsByComment={reactionsByComment}
           onReact={handleReact}
-          isReacting={isReacting}
-          reactionError={reactionError}
-          onClearReactionError={() => setReactionError(null)}
+          isReacting={asyncOps.react.isProcessing}
+          reactionError={asyncOps.react.error}
+          onClearReactionError={() => asyncActions.clearError("react")}
         />
       );
   }
