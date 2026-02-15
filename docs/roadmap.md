@@ -424,7 +424,7 @@ v0.1〜v0.8 で PR レビューの基本ワークフロー（閲覧→コメン�
 
 **目的**: CLI としての基本的な開発者体験を向上させる。
 
-ターミナルツールとして、タブ補完は最も基本的な利便性。`--profile`、`--region` 等のオプション補完とサブコマンド補完を提供する。
+ターミナルツールとして、タブ補完は最も基本的な利便性。`--profile`、`--region` 等のオプション補完を提供する。外部ライブラリに依存しないテンプレート文字列ベースの軽量実装。
 
 #### 機能
 
@@ -433,8 +433,15 @@ v0.1〜v0.8 で PR レビューの基本ワークフロー（閲覧→コメン�
 | bash 補完 | bash 用の補完スクリプト生成（`--completions bash`） |
 | zsh 補完 | zsh 用の補完スクリプト生成（`--completions zsh`） |
 | fish 補完 | fish 用の補完スクリプト生成（`--completions fish`） |
-| オプション補完 | `--profile`、`--region` のフラグ補完 |
-| AWS プロファイル補完 | `~/.aws/config` からプロファイル名を動的に補完 |
+| オプション補完 | `--profile`、`--region`、`--help`、`--version`、`--completions` のフラグ補完 |
+| AWS プロファイル補完 | `~/.aws/config` からプロファイル名を動的に補完（シェル実行時に取得） |
+| AWS リージョン補完 | CodeCommit がサポートするリージョンを補完（静的リスト） |
+
+#### CLI オプション追加
+
+```
+--completions <shell>   Generate completion script (bash, zsh, fish)
+```
 
 #### 使用イメージ
 
@@ -442,19 +449,27 @@ v0.1〜v0.8 で PR レビューの基本ワークフロー（閲覧→コメン�
 # 補完スクリプトの生成
 npx review-codecommit --completions bash > ~/.bash_completion.d/review-codecommit
 npx review-codecommit --completions zsh > ~/.zsh/completions/_review-codecommit
+npx review-codecommit --completions fish > ~/.config/fish/completions/review-codecommit.fish
 
 # 使用例
 npx review-codecommit --profile <Tab>
-#=> dev  staging  production
+#=> dev  staging  production    (← ~/.aws/config から動的に取得)
 
 npx review-codecommit --region <Tab>
-#=> ap-northeast-1  us-east-1  eu-west-1
+#=> ap-northeast-1  us-east-1  eu-west-1  ...
+
+npx review-codecommit --completions <Tab>
+#=> bash  zsh  fish
 ```
 
 #### 設計上の考慮点
 
 - 外部ライブラリ不要。テンプレート文字列でシェルスクリプトを生成する軽量実装
-- AWS プロファイル補完は `~/.aws/config` のパースで実現
+- AWS プロファイル補完はシェル実行時に `~/.aws/config` を grep/sed でパース（スクリプト生成時ではなく実行時）
+- リージョンリストは CodeCommit サポートリージョンをハードコーディング（API 呼び出し不要）
+- 追加の IAM 権限は不要
+
+詳細は [docs/design-shell-completion.md](design-shell-completion.md) を参照。
 
 ---
 
