@@ -1,8 +1,10 @@
 # ページスクロールキーバインドの追加
 
-> **ステータス**: 設計中（2026-02-15）
+> **✅ 実装完了**（2026-02-15）
 >
 > キーバインドレビュー [design-review-keybindings.md](design-review-keybindings.md) の **P1: 長い diff の移動手段が j/k のみ** に対する改善。
+>
+> 3 コミットで実装完了: tidy（visibleLineCount 移動）→ feat（Ctrl+d/Ctrl+u/G ハンドラ追加、テスト 7 件）→ feat（Help 画面更新、テスト 1 件）。全 566 テスト通過、カバレッジ 99.82%。
 
 ## 背景と課題
 
