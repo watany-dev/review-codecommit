@@ -48,65 +48,74 @@ describe("PullRequestDetail", () => {
   ];
 
   const defaultInlineCommentProps = {
-    onPostInlineComment: vi.fn(),
-    isPostingInlineComment: false,
-    inlineCommentError: null as string | null,
-    onClearInlineCommentError: vi.fn(),
+    onPost: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
   };
 
   const defaultReplyProps = {
-    onPostReply: vi.fn(),
-    isPostingReply: false,
-    replyError: null as string | null,
-    onClearReplyError: vi.fn(),
+    onPost: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
   };
 
   const defaultApprovalProps = {
     approvals: [] as any[],
-    approvalEvaluation: null,
+    evaluation: null,
     onApprove: vi.fn(),
     onRevoke: vi.fn(),
-    isApproving: false,
-    approvalError: null as string | null,
-    onClearApprovalError: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
   };
 
   const defaultMergeProps = {
     onMerge: vi.fn(),
-    isMerging: false,
-    mergeError: null as string | null,
-    onClearMergeError: vi.fn(),
     onCheckConflicts: vi
       .fn()
       .mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
-    onClosePR: vi.fn(),
-    isClosingPR: false,
-    closePRError: null as string | null,
-    onClearClosePRError: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
+  };
+
+  const defaultCloseProps = {
+    onClose: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
   };
 
   const defaultCommitProps = {
     commits: [] as any[],
-    commitDifferences: [] as any[],
-    commitDiffTexts: new Map<string, { before: string; after: string }>(),
-    isLoadingCommitDiff: false,
-    onLoadCommitDiff: vi.fn(),
+    differences: [] as any[],
+    diffTexts: new Map<string, { before: string; after: string }>(),
+    isLoading: false,
+    onLoad: vi.fn(),
   };
 
-  const defaultEditDeleteProps = {
-    onUpdateComment: vi.fn(),
-    isUpdatingComment: false,
-    updateCommentError: null as string | null,
-    onClearUpdateCommentError: vi.fn(),
-    onDeleteComment: vi.fn(),
-    isDeletingComment: false,
-    deleteCommentError: null as string | null,
-    onClearDeleteCommentError: vi.fn(),
-    reactionsByComment: new Map() as any,
+  const defaultEditCommentProps = {
+    onUpdate: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
+  };
+
+  const defaultDeleteCommentProps = {
+    onDelete: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
+  };
+
+  const defaultReactionProps = {
+    byComment: new Map() as any,
     onReact: vi.fn(),
-    isReacting: false,
-    reactionError: null as string | null,
-    onClearReactionError: vi.fn(),
+    isProcessing: false,
+    error: null as string | null,
+    onClearError: vi.fn(),
   };
 
   it("renders PR title and ID", () => {
@@ -118,16 +127,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -144,16 +153,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -170,16 +179,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -196,16 +205,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("src/auth.ts");
@@ -220,16 +229,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -245,16 +254,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -271,16 +280,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).not.toContain("Comments");
@@ -303,16 +312,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("(no title)");
@@ -327,16 +336,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("(unknown file)");
@@ -358,16 +367,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("src/other.ts");
@@ -382,16 +391,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("↑↓");
@@ -409,16 +418,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("q");
@@ -435,16 +444,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={onHelp}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("?");
@@ -460,16 +469,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("c");
@@ -488,16 +497,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("c");
@@ -519,16 +528,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("c comment");
@@ -543,16 +552,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={true}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Simulate posting complete (isPostingComment: true -> false, no error)
@@ -564,16 +573,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Comment mode should be closed
@@ -590,16 +599,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Enter comment mode
@@ -617,16 +626,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={true}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("Posting comment...");
@@ -640,16 +649,21 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError="Comment exceeds the 10,240 character limit."
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{
+          onPost: vi.fn(),
+          isProcessing: false,
+          error: "Comment exceeds the 10,240 character limit.",
+          onClearError: vi.fn(),
+        }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Error should be shown, comment mode still open
@@ -666,20 +680,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     const output = lastFrame();
@@ -697,16 +715,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("Approvals:");
@@ -722,25 +740,29 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={{
-          approved: true,
-          overridden: false,
-          approvalRulesSatisfied: ["RequireOneApproval"],
-          approvalRulesNotSatisfied: [],
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: {
+            approved: true,
+            overridden: false,
+            approvalRulesSatisfied: ["RequireOneApproval"],
+            approvalRulesNotSatisfied: [],
+          },
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
         }}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     const output = lastFrame();
@@ -759,25 +781,29 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={{
-          approved: false,
-          overridden: false,
-          approvalRulesSatisfied: [],
-          approvalRulesNotSatisfied: ["RequireOneApproval"],
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: {
+            approved: false,
+            overridden: false,
+            approvalRulesSatisfied: [],
+            approvalRulesNotSatisfied: ["RequireOneApproval"],
+          },
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
         }}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     const output = lastFrame();
@@ -796,16 +822,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -821,16 +847,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("a");
@@ -848,16 +874,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("r");
@@ -876,16 +902,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("a");
@@ -906,16 +932,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("a/r approve");
@@ -930,16 +956,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Enter approve mode
@@ -957,20 +983,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={true}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: true,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     await vi.waitFor(() => {
@@ -986,20 +1016,26 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[{ userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" }]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [
+            { userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" },
+          ],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     // Prompt should be closed, approval state updated
@@ -1018,16 +1054,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Enter approve mode
@@ -1042,20 +1078,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={true}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: true,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
 
@@ -1068,20 +1108,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError="Access denied. Check your IAM policy."
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: "Access denied. Check your IAM policy.",
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     // Error should be displayed in prompt
@@ -1099,20 +1143,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={onClearApprovalError}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: onClearApprovalError,
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     // Enter approve mode
@@ -1130,20 +1178,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError="Some error"
-        onClearApprovalError={onClearApprovalError}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: "Some error",
+          onClearError: onClearApprovalError,
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     expect(lastFrame()).toContain("Some error");
@@ -1164,16 +1216,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("a");
@@ -1196,16 +1248,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("c");
@@ -1242,16 +1294,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -1282,16 +1334,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -1331,16 +1383,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -1359,16 +1411,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("> ");
@@ -1383,16 +1435,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -1410,16 +1462,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("k");
@@ -1438,16 +1490,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move cursor to a diff line (skip header and separator), wait for render
@@ -1473,16 +1525,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Cursor is on header line (index 0) — no filePath/lineNumber
@@ -1509,16 +1561,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTextsAddOnly}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move to add line (header=0, separator=1, context=2, add=3)
@@ -1552,16 +1604,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTextsDeleteOnly}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move to delete line (header=0, separator=1, context=2, delete=3)
@@ -1586,16 +1638,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -1624,16 +1676,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move to separator line (index 1)
@@ -1652,16 +1704,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={onBack}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move to diff line and open inline comment
@@ -1706,16 +1758,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("💬 taro: before-context comment");
@@ -1730,16 +1782,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -1761,19 +1813,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        onPostInlineComment={vi.fn()}
-        isPostingInlineComment={true}
-        inlineCommentError={null}
-        onClearInlineCommentError={vi.fn()}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     await vi.waitFor(() => {
@@ -1789,19 +1838,21 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        onPostInlineComment={vi.fn()}
-        isPostingInlineComment={false}
-        inlineCommentError="Access denied"
-        onClearInlineCommentError={vi.fn()}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={{
+          onPost: vi.fn(),
+          isProcessing: false,
+          error: "Access denied",
+          onClearError: vi.fn(),
+        }}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Should stay open with error shown
@@ -1826,16 +1877,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Navigate past all diff lines to comment section
@@ -1859,16 +1910,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -1883,16 +1934,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move to diff line and wait for render before pressing C
@@ -1915,19 +1966,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        onPostInlineComment={vi.fn()}
-        isPostingInlineComment={true}
-        inlineCommentError={null}
-        onClearInlineCommentError={vi.fn()}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -1945,16 +1993,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Inline comment mode should be closed
@@ -1972,26 +2020,28 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={
-          {
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: {
             approved: false,
             approvalRulesSatisfied: [],
             approvalRulesNotSatisfied: [],
-          } as any
-        }
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          } as any,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     expect(lastFrame()).not.toContain("Rules:");
@@ -2006,20 +2056,24 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[{ approvalState: "APPROVE" }] as any}
-        approvalEvaluation={null}
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [{ approvalState: "APPROVE" }] as any,
+          evaluation: null,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     const output = lastFrame();
@@ -2036,26 +2090,28 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        approvals={[]}
-        approvalEvaluation={
-          {
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        approval={{
+          approvals: [],
+          evaluation: {
             approved: true,
             approvalRulesSatisfied: undefined,
             approvalRulesNotSatisfied: [{ approvalRuleName: "rule1" }],
-          } as any
-        }
-        onApprove={vi.fn()}
-        onRevoke={vi.fn()}
-        isApproving={false}
-        approvalError={null}
-        onClearApprovalError={vi.fn()}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+          } as any,
+          onApprove: vi.fn(),
+          onRevoke: vi.fn(),
+          isProcessing: false,
+          error: null,
+          onClearError: vi.fn(),
+        }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+        reply={defaultReplyProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
       />,
     );
     expect(lastFrame()).toContain("Rules:");
@@ -2084,16 +2140,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2133,16 +2189,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2177,16 +2233,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2242,16 +2298,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2282,16 +2338,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2326,16 +2382,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame()!;
@@ -2374,16 +2430,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame()!;
@@ -2427,16 +2483,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2474,16 +2530,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -2528,16 +2584,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Initially folded
@@ -2595,16 +2651,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -2651,16 +2707,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Navigate to comment (sep=0, comment-header=1, comment=2)
@@ -2684,16 +2740,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Cursor is on header line
@@ -2723,16 +2779,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={onBack}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -2771,16 +2827,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -2820,16 +2876,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -2851,19 +2907,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        onPostReply={vi.fn()}
-        isPostingReply={true}
-        replyError={null}
-        onClearReplyError={vi.fn()}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2879,16 +2932,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     await vi.waitFor(() => {
@@ -2917,16 +2970,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("j");
@@ -2948,19 +3001,16 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        onPostReply={vi.fn()}
-        isPostingReply={true}
-        replyError={null}
-        onClearReplyError={vi.fn()}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -2972,19 +3022,21 @@ describe("PullRequestDetail", () => {
         diffTexts={new Map()}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        onPostReply={vi.fn()}
-        isPostingReply={false}
-        replyError="Reply exceeds the 10,240 character limit."
-        onClearReplyError={vi.fn()}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={{
+          onPost: vi.fn(),
+          isProcessing: false,
+          error: "Reply exceeds the 10,240 character limit.",
+          onClearError: vi.fn(),
+        }}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     await vi.waitFor(() => {
@@ -3002,16 +3054,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("R reply");
@@ -3027,16 +3079,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Cursor is on header line (no threadIndex)
@@ -3073,16 +3125,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     const output = lastFrame();
@@ -3111,16 +3163,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3147,16 +3199,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3174,16 +3226,16 @@ describe("PullRequestDetail", () => {
         diffTexts={emptyDiffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3198,16 +3250,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3224,16 +3276,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3256,16 +3308,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
 
@@ -3282,16 +3334,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3317,17 +3369,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3356,18 +3407,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onMerge={onMerge}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3396,17 +3445,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3436,17 +3484,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3473,16 +3520,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3511,17 +3558,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3553,18 +3599,20 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        mergeError="Conflicts detected. Cannot auto-merge."
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{
+          ...defaultMergeProps,
+          error: "Conflicts detected. Cannot auto-merge.",
+          onCheckConflicts: onCheckConflicts,
+        }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3592,18 +3640,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onMerge={onMerge}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3638,18 +3684,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onMerge={onMerge}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3680,16 +3724,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -3708,17 +3752,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onClosePR={onClosePR}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={{ ...defaultCloseProps, onClose: onClosePR }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -3738,16 +3781,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -3770,17 +3813,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        closePRError="Pull request is already closed."
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={{ ...defaultCloseProps, error: "Pull request is already closed." }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -3798,16 +3840,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     expect(lastFrame()).toContain("m merge");
@@ -3829,18 +3871,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        isMerging={true}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, isProcessing: true, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -3862,17 +3902,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        isClosingPR={true}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={{ ...defaultCloseProps, isProcessing: true }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -3890,16 +3929,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Enter comment mode
@@ -3924,17 +3963,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        onClearInlineCommentError={onClearInlineCommentError}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={{ ...defaultInlineCommentProps, onClearError: onClearInlineCommentError }}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Move cursor to an actual diff line (index 2 = context " line1")
@@ -3977,17 +4015,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        onClearReplyError={onClearReplyError}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={{ ...defaultReplyProps, onClearError: onClearReplyError }}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     // Navigate to the comment (header, separator, 5 diff lines, separator, separator, comment-header, comment)
@@ -4024,18 +4061,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        closePRError="Some error"
-        onClearClosePRError={onClearClosePRError}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={{ ...defaultCloseProps, error: "Some error", onClearError: onClearClosePRError }}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("x");
@@ -4060,18 +4095,20 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        approvalError="Cannot approve own PR"
-        onClearApprovalError={onClearApprovalError}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={{
+          ...defaultApprovalProps,
+          error: "Cannot approve own PR",
+          onClearError: onClearApprovalError,
+        }}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("a");
@@ -4095,17 +4132,16 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{ ...defaultMergeProps, onCheckConflicts: onCheckConflicts }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -4137,18 +4173,20 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        onClearMergeError={onClearMergeError}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{
+          ...defaultMergeProps,
+          onClearError: onClearMergeError,
+          onCheckConflicts: onCheckConflicts,
+        }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -4183,19 +4221,21 @@ describe("PullRequestDetail", () => {
         diffTexts={diffTexts}
         onBack={vi.fn()}
         onHelp={vi.fn()}
-        onPostComment={vi.fn()}
-        isPostingComment={false}
-        commentError={null}
-        onClearCommentError={vi.fn()}
-        {...defaultInlineCommentProps}
-        {...defaultReplyProps}
-        {...defaultApprovalProps}
-        {...defaultMergeProps}
-        {...defaultCommitProps}
-        {...defaultEditDeleteProps}
-        mergeError="Merge failed"
-        onClearMergeError={onClearMergeError}
-        onCheckConflicts={onCheckConflicts}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{
+          ...defaultMergeProps,
+          error: "Merge failed",
+          onClearError: onClearMergeError,
+          onCheckConflicts: onCheckConflicts,
+        }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
       />,
     );
     stdin.write("m");
@@ -4249,16 +4289,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).not.toContain("[All changes]");
@@ -4274,17 +4314,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("[All changes]");
@@ -4303,18 +4342,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          onLoadCommitDiff={onLoadCommitDiff}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t");
@@ -4336,18 +4373,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          onLoadCommitDiff={onLoadCommitDiff}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       // Tab 4 times: All changes -> Commit 1 -> Commit 2 -> Commit 3 -> All changes
@@ -4380,18 +4415,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          onLoadCommitDiff={onLoadCommitDiff}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\u001b[Z"); // Shift+Tab
@@ -4412,18 +4445,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          onLoadCommitDiff={onLoadCommitDiff}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       // Go to commit 2
@@ -4452,16 +4483,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t");
@@ -4482,17 +4513,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4512,17 +4542,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4544,18 +4573,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          isLoadingCommitDiff={true}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4573,18 +4600,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          isLoadingCommitDiff={true}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).not.toContain("Loading commit diff...");
@@ -4601,17 +4626,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("Tab view");
@@ -4626,17 +4650,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4655,16 +4678,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).not.toContain("Tab switch");
@@ -4698,21 +4721,22 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
-          commitDifferences={commitDifferences as any}
-          commitDiffTexts={commitDiffTexts}
-          isLoadingCommitDiff={false}
-          onLoadCommitDiff={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          commitView={{
+            commits: sampleCommits,
+            differences: commitDifferences as any,
+            diffTexts: commitDiffTexts,
+            isLoading: false,
+            onLoad: vi.fn(),
+          }}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4732,17 +4756,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       // Move cursor down
@@ -4766,17 +4789,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          commits={sampleCommits}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("\t"); // switch to commit view
@@ -4813,16 +4835,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       await vi.waitFor(() => {
@@ -4848,16 +4870,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("e");
@@ -4874,17 +4896,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onUpdateComment={onUpdateComment}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{ ...defaultEditCommentProps, onUpdate: onUpdateComment }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -4908,16 +4929,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -4943,16 +4964,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -4973,17 +4994,19 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          updateCommentError="You can only edit your own comments."
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{
+            ...defaultEditCommentProps,
+            error: "You can only edit your own comments.",
+          }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("You can only edit your own comments.");
@@ -4998,16 +5021,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5029,16 +5052,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       stdin.write("d");
@@ -5055,17 +5078,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onDeleteComment={onDeleteComment}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{ ...defaultDeleteCommentProps, onDelete: onDeleteComment }}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5089,16 +5111,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5124,16 +5146,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -5154,17 +5176,19 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          deleteCommentError="Comment has already been deleted."
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{
+            ...defaultDeleteCommentProps,
+            error: "Comment has already been deleted.",
+          }}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("Comment has already been deleted.");
@@ -5180,16 +5204,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={onBack}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5213,16 +5237,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5246,16 +5270,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("e edit");
@@ -5286,17 +5310,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onUpdateComment={onUpdateComment}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{ ...defaultEditCommentProps, onUpdate: onUpdateComment }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -5321,17 +5344,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onClearUpdateCommentError={onClearUpdateCommentError}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{ ...defaultEditCommentProps, onClearError: onClearUpdateCommentError }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -5360,17 +5382,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onClearDeleteCommentError={onClearDeleteCommentError}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{ ...defaultDeleteCommentProps, onClearError: onClearDeleteCommentError }}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -5399,17 +5420,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onClearDeleteCommentError={onClearDeleteCommentError}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{ ...defaultDeleteCommentProps, onClearError: onClearDeleteCommentError }}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) {
@@ -5431,18 +5451,20 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onClearDeleteCommentError={onClearDeleteCommentError}
-          deleteCommentError="Some error"
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{
+            ...defaultDeleteCommentProps,
+            onClearError: onClearDeleteCommentError,
+            error: "Some error",
+          }}
+          reaction={defaultReactionProps}
         />,
       );
       expect(lastFrame()).toContain("Some error");
@@ -5462,16 +5484,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5490,17 +5512,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isUpdatingComment={true}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{ ...defaultEditCommentProps, isProcessing: true }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       rerender(
@@ -5511,17 +5532,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isUpdatingComment={false}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={{ ...defaultEditCommentProps, isProcessing: false }}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       await vi.waitFor(() => {
@@ -5538,16 +5558,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5566,17 +5586,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isDeletingComment={true}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{ ...defaultDeleteCommentProps, isProcessing: true }}
+          reaction={defaultReactionProps}
         />,
       );
       rerender(
@@ -5587,17 +5606,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isDeletingComment={false}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={{ ...defaultDeleteCommentProps, isProcessing: false }}
+          reaction={defaultReactionProps}
         />,
       );
       await vi.waitFor(() => {
@@ -5645,17 +5663,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          reactionsByComment={reactionsByComment}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{ ...defaultReactionProps, byComment: reactionsByComment }}
         />,
       );
       const output = lastFrame() ?? "";
@@ -5676,17 +5693,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          reactionsByComment={reactionsByComment}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{ ...defaultReactionProps, byComment: reactionsByComment }}
         />,
       );
       const output = lastFrame() ?? "";
@@ -5702,16 +5718,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       const output = lastFrame() ?? "";
@@ -5727,16 +5743,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       // Navigate to the comment line (scroll down to find it)
@@ -5759,16 +5775,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       // Stay on the first line (a header/diff line)
@@ -5787,17 +5803,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          onReact={onReact}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{ ...defaultReactionProps, onReact: onReact }}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5821,16 +5836,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5856,16 +5871,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
@@ -5885,17 +5900,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isReacting={true}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{ ...defaultReactionProps, isProcessing: true }}
         />,
       );
       // Simulate isReacting=false (reaction completed successfully, no error)
@@ -5907,17 +5921,16 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          isReacting={false}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{ ...defaultReactionProps, isProcessing: false }}
         />,
       );
       await vi.waitFor(() => {
@@ -5935,18 +5948,20 @@ describe("PullRequestDetail", () => {
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
-          onPostComment={vi.fn()}
-          isPostingComment={false}
-          commentError={null}
-          onClearCommentError={vi.fn()}
-          {...defaultInlineCommentProps}
-          {...defaultReplyProps}
-          {...defaultApprovalProps}
-          {...defaultMergeProps}
-          {...defaultCommitProps}
-          {...defaultEditDeleteProps}
-          reactionError="Comment deleted."
-          onClearReactionError={onClearReactionError}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={{
+            ...defaultReactionProps,
+            error: "Comment deleted.",
+            onClearError: onClearReactionError,
+          }}
         />,
       );
       for (let i = 0; i < 10; i++) stdin.write("j");
