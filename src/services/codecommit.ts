@@ -457,14 +457,33 @@ export async function getCommitsForPR(
   sourceCommit: string,
   mergeBase: string,
 ): Promise<CommitInfo[]> {
-  const commits: CommitInfo[] = [];
-  let currentId = sourceCommit;
+  if (sourceCommit === mergeBase) return [];
 
-  while (currentId !== mergeBase && commits.length < MAX_COMMITS) {
-    const commit = await getCommit(client, repositoryName, currentId);
-    commits.push(commit);
-    if (commit.parentIds.length === 0) break;
-    currentId = commit.parentIds[0]!;
+  const commits: CommitInfo[] = [];
+  const visited = new Set<string>([mergeBase]);
+  let currentBatch = [sourceCommit];
+
+  while (currentBatch.length > 0 && commits.length < MAX_COMMITS) {
+    const toFetch = currentBatch.filter((id) => !visited.has(id));
+    if (toFetch.length === 0) break;
+
+    const limited = toFetch.slice(0, MAX_COMMITS - commits.length);
+    for (const id of limited) visited.add(id);
+
+    const batchResults = await Promise.all(
+      limited.map((id) => getCommit(client, repositoryName, id)),
+    );
+    commits.push(...batchResults);
+
+    const nextBatch: string[] = [];
+    for (const commit of batchResults) {
+      for (const parentId of commit.parentIds) {
+        if (!visited.has(parentId)) {
+          nextBatch.push(parentId);
+        }
+      }
+    }
+    currentBatch = nextBatch;
   }
 
   return commits.reverse();
@@ -574,27 +593,31 @@ export async function getReactionsForComment(
   }));
 }
 
+const REACTION_FETCH_CONCURRENCY = 5;
+
 export async function getReactionsForComments(
   client: CodeCommitClient,
   commentIds: string[],
 ): Promise<ReactionsByComment> {
   const results: ReactionsByComment = new Map();
+  let index = 0;
 
-  const fetches = commentIds.map(async (commentId) => {
-    try {
-      const reactions = await getReactionsForComment(client, commentId);
-      return { commentId, reactions };
-    } catch {
-      return { commentId, reactions: [] };
-    }
-  });
-
-  const settled = await Promise.all(fetches);
-  for (const { commentId, reactions } of settled) {
-    if (reactions.length > 0) {
-      results.set(commentId, reactions);
+  async function worker() {
+    while (index < commentIds.length) {
+      const i = index++;
+      const commentId = commentIds[i]!;
+      try {
+        const reactions = await getReactionsForComment(client, commentId);
+        if (reactions.length > 0) {
+          results.set(commentId, reactions);
+        }
+      } catch {
+        // skip failed reactions
+      }
     }
   }
 
+  const workerCount = Math.min(REACTION_FETCH_CONCURRENCY, commentIds.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return results;
 }

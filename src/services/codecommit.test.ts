@@ -1526,6 +1526,47 @@ describe("getCommitsForPR", () => {
     const result = await getCommitsForPR(mockClient, "my-service", "commit-0", "unreachable");
     expect(result).toHaveLength(100);
   });
+
+  it("handles merge commits by visiting all parents via BFS", async () => {
+    // Graph: base -- A -- M (sourceCommit, merge commit)
+    //                    /
+    //               B --
+    // M.parents = [A, B], A.parents = [base], B.parents = [base]
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "M",
+        parents: ["A", "B"],
+        message: "Merge commit",
+        author: { name: "watany", date: "1707868803" },
+      },
+    });
+    // BFS level 2: A and B fetched in parallel
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "A",
+        parents: ["base"],
+        message: "Commit A",
+        author: { name: "watany", date: "1707868801" },
+      },
+    });
+    mockSend.mockResolvedValueOnce({
+      commit: {
+        commitId: "B",
+        parents: ["base"],
+        message: "Commit B",
+        author: { name: "watany", date: "1707868802" },
+      },
+    });
+
+    const result = await getCommitsForPR(mockClient, "my-service", "M", "base");
+    expect(result).toHaveLength(3);
+    const ids = result.map((c) => c.commitId);
+    expect(ids).toContain("M");
+    expect(ids).toContain("A");
+    expect(ids).toContain("B");
+    // Only 3 API calls (M, A, B) - base is never fetched
+    expect(mockSend).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("getCommitDifferences", () => {
