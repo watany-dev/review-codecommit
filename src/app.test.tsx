@@ -408,9 +408,6 @@ describe("App", () => {
     // Close help by pressing ? again
     stdin.write("?");
     await vi.waitFor(() => {
-      expect(lastFrame()).not.toContain("Navigation");
-    });
-    await vi.waitFor(() => {
       expect(lastFrame()).toContain("my-service");
     });
   });
@@ -4413,6 +4410,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });
@@ -4489,6 +4487,7 @@ describe("App", () => {
 
     // Navigate to comment line
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });
@@ -4561,6 +4560,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });

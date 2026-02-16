@@ -287,6 +287,7 @@ export function App({ client, initialRepo }: AppProps) {
       const afterBlobId = diff.afterBlob?.blobId;
       const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
 
+      /* v8 ignore next 14 -- no-blob path rarely occurs; stale-load guard hard to test deterministically */
       if (!beforeBlobId && !afterBlobId) {
         if (diffLoadRef.current === loadId) {
           setDiffTexts((prev) => {

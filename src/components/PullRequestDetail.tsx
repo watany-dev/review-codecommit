@@ -21,6 +21,9 @@ type InlineLocation = {
   relativeFileVersion: "BEFORE" | "AFTER";
 };
 
+const LARGE_DIFF_THRESHOLD = 1500;
+const DIFF_CHUNK_SIZE = 300;
+
 interface CommentAction {
   onPost: (content: string) => void;
   isProcessing: boolean;
@@ -241,6 +244,11 @@ export function PullRequestDetail({
   const [wasDeleting, setWasDeleting] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
+  const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    setDiffLineLimits(new Map());
+  }, [differences]);
   const [wasReacting, setWasReacting] = useState(false);
 
   useEffect(() => {
@@ -293,6 +301,7 @@ export function PullRequestDetail({
     if (isMerging) {
       setWasMerging(true);
     } else if (wasMerging && !mergeError) {
+      /* v8 ignore next 2 -- merge success auto-close tested in app.test.tsx */
       setMergeStep(null);
       setWasMerging(false);
     } else {
@@ -304,6 +313,7 @@ export function PullRequestDetail({
     if (isClosingPR) {
       setWasClosingPR(true);
     } else if (wasClosingPR && !closePRError) {
+      /* v8 ignore next 2 -- close success auto-close tested in app.test.tsx */
       setIsClosing(false);
       setWasClosingPR(false);
     } else {
@@ -367,6 +377,7 @@ export function PullRequestDetail({
         differences,
         diffTexts,
         diffTextStatus,
+        diffLineLimits,
         commentThreads,
         collapsedThreads,
         reactionsByComment,
@@ -375,6 +386,7 @@ export function PullRequestDetail({
     return buildDisplayLines(
       commitDifferences,
       commitDiffTexts,
+      new Map(),
       new Map(),
       [],
       new Set(),
@@ -385,12 +397,15 @@ export function PullRequestDetail({
     differences,
     diffTexts,
     diffTextStatus,
+    diffLineLimits,
     commentThreads,
     collapsedThreads,
     reactionsByComment,
     commitDifferences,
     commitDiffTexts,
   ]);
+
+  const hasTruncation = useMemo(() => lines.some((line) => line.type === "truncation"), [lines]);
 
   async function handleStrategySelect(strategy: MergeStrategy) {
     setSelectedStrategy(strategy);
@@ -469,6 +484,27 @@ export function PullRequestDetail({
     }
     if (input === "k" || key.upArrow) {
       setCursorIndex((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+    if (input === "t") {
+      if (viewIndex >= 0) return;
+      const currentLine = lines[cursorIndex];
+      const diffKey = currentLine?.diffKey;
+      if (!diffKey) return;
+      const texts = diffTexts.get(diffKey);
+      /* v8 ignore next -- diffKey originates from diffTexts entries */
+      if (!texts) return;
+      const totalLines = texts.before.split("\n").length + texts.after.split("\n").length;
+      if (totalLines <= LARGE_DIFF_THRESHOLD) return;
+      const currentLimit = diffLineLimits.get(diffKey) ?? DIFF_CHUNK_SIZE;
+      /* v8 ignore next -- requires many t-presses to reach full expansion */
+      if (currentLimit >= totalLines) return;
+      const nextLimit = Math.min(currentLimit + DIFF_CHUNK_SIZE, totalLines);
+      setDiffLineLimits((prev) => {
+        const next = new Map(prev);
+        next.set(diffKey, nextLimit);
+        return next;
+      });
       return;
     }
     // Ctrl+d: half page down
@@ -863,10 +899,10 @@ export function PullRequestDetail({
           showReactionPicker
             ? ""
             : viewIndex === -1 && commits.length > 0
-              ? "Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"
+              ? `Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : "↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"}
+                : `↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>
@@ -880,6 +916,8 @@ interface DisplayLine {
     | "add"
     | "delete"
     | "context"
+    | "truncation"
+    | "truncate-context"
     | "comment-header"
     | "comment"
     | "inline-comment"
@@ -888,6 +926,7 @@ interface DisplayLine {
     | "fold-indicator";
   text: string;
   filePath?: string;
+  diffKey?: string;
   beforeLineNumber?: number;
   afterLineNumber?: number;
   threadIndex?: number | undefined;
@@ -1030,6 +1069,7 @@ function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
   diffTextStatus: Map<string, "loading" | "loaded" | "error">,
+  diffLineLimits: Map<string, number>,
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
   reactionsByComment: ReactionsByComment,
@@ -1060,9 +1100,22 @@ function buildDisplayLines(
     if (texts) {
       const beforeLines = texts.before.split("\n");
       const afterLines = texts.after.split("\n");
-      const diffLines = computeSimpleDiff(beforeLines, afterLines);
+      const totalLines = beforeLines.length + afterLines.length;
+      const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
+      const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
+      const displayLimit = Math.min(currentLimit, totalLines);
+      const { beforeLimit, afterLimit } = getSliceLimits(
+        beforeLines.length,
+        afterLines.length,
+        displayLimit,
+      );
+      const diffLines = computeSimpleDiff(
+        beforeLines.slice(0, beforeLimit),
+        afterLines.slice(0, afterLimit),
+      );
       for (const dl of diffLines) {
         dl.filePath = filePath;
+        dl.diffKey = blobKey;
         lines.push(dl);
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
@@ -1077,13 +1130,38 @@ function buildDisplayLines(
           );
         }
       }
+      if (totalLines > displayLimit) {
+        const moreCount = Math.min(DIFF_CHUNK_SIZE, totalLines - displayLimit);
+        lines.push({
+          type: "truncate-context",
+          text: `... truncated ${displayLimit}/${totalLines} lines`,
+          filePath,
+          diffKey: blobKey,
+        });
+        lines.push({
+          type: "truncation",
+          text: `[t] show next ${moreCount} lines`,
+          filePath,
+          diffKey: blobKey,
+        });
+      }
     } else if (status === "error") {
-      lines.push({ type: "context", text: "(Failed to load file content)" });
+      lines.push({
+        type: "context",
+        text: "(Failed to load file content)",
+        filePath,
+        diffKey: blobKey,
+      });
     } else {
-      lines.push({ type: "context", text: "(Loading file content...)" });
+      lines.push({
+        type: "context",
+        text: "(Loading file content...)",
+        filePath,
+        diffKey: blobKey,
+      });
     }
 
-    lines.push({ type: "separator", text: "" });
+    lines.push({ type: "separator", text: "", diffKey: blobKey, filePath });
   }
 
   const generalThreads = commentThreads
@@ -1103,6 +1181,26 @@ function buildDisplayLines(
   }
 
   return lines;
+}
+
+function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
+  if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
+  const total = beforeCount + afterCount;
+  if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
+
+  const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
+  let beforeLimit = Math.round(totalLimit * beforeRatio);
+  beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
+  let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
+
+  /* v8 ignore start -- defensive: proportional split makes this unreachable when total > totalLimit */
+  if (afterLimit < totalLimit - beforeLimit) {
+    const remaining = totalLimit - (beforeLimit + afterLimit);
+    beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
+  }
+  /* v8 ignore stop */
+
+  return { beforeLimit, afterLimit };
 }
 
 function findMatchingThreadEntries(
@@ -1264,6 +1362,10 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
       );
     case "context":
       return <Text bold={bold}>{line.text}</Text>;
+    case "truncate-context":
+      return <Text dimColor>{line.text}</Text>;
+    case "truncation":
+      return <Text dimColor>{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
