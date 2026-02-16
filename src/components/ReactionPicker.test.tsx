@@ -168,6 +168,17 @@ describe("ReactionPicker", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
+  it("does nothing on unrelated key", () => {
+    const onSelect = vi.fn();
+    const onCancel = vi.fn();
+    const { stdin } = render(
+      <ReactionPicker {...defaultProps} onSelect={onSelect} onCancel={onCancel} />,
+    );
+    stdin.write("x");
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
   it("shows footer hint text", () => {
     const { lastFrame } = render(<ReactionPicker {...defaultProps} />);
     expect(lastFrame()).toContain("←→/h/l select");
