@@ -4645,7 +4645,7 @@ describe("PullRequestDetail", () => {
       );
       stdin.write("\t");
       // Wait a tick for async processing
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(lastFrame()).not.toContain("[Commit");
       expect(onLoadCommitDiff).not.toHaveBeenCalled();
     });
