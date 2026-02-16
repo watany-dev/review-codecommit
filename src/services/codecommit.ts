@@ -119,6 +119,29 @@ export async function listPullRequests(
   return result;
 }
 
+async function getAllDifferences(
+  client: CodeCommitClient,
+  repositoryName: string,
+  beforeCommitSpecifier: string,
+  afterCommitSpecifier: string,
+): Promise<Difference[]> {
+  const allDifferences: Difference[] = [];
+  let nextToken: string | undefined;
+  do {
+    const response = await client.send(
+      new GetDifferencesCommand({
+        repositoryName,
+        beforeCommitSpecifier,
+        afterCommitSpecifier,
+        NextToken: nextToken,
+      }),
+    );
+    allDifferences.push(...(response.differences ?? []));
+    nextToken = response.NextToken;
+  } while (nextToken);
+  return allDifferences;
+}
+
 export async function getPullRequestDetail(
   client: CodeCommitClient,
   pullRequestId: string,
@@ -134,17 +157,9 @@ export async function getPullRequestDetail(
   const target = pullRequest.pullRequestTargets?.[0];
   const hasCommits = !!(target?.sourceCommit && target?.destinationCommit);
 
-  const [diffResult, commentThreads] = await Promise.all([
+  const [differences, commentThreads] = await Promise.all([
     hasCommits
-      ? client
-          .send(
-            new GetDifferencesCommand({
-              repositoryName,
-              beforeCommitSpecifier: target!.destinationCommit!,
-              afterCommitSpecifier: target!.sourceCommit!,
-            }),
-          )
-          .then((r) => r.differences ?? [])
+      ? getAllDifferences(client, repositoryName, target!.destinationCommit!, target!.sourceCommit!)
       : Promise.resolve([]),
     getComments(client, pullRequestId, {
       repositoryName,
@@ -157,7 +172,7 @@ export async function getPullRequestDetail(
     }),
   ]);
 
-  return { pullRequest, differences: diffResult as Difference[], commentThreads };
+  return { pullRequest, differences, commentThreads };
 }
 
 function sortCommentsRootFirst(comments: Comment[]): Comment[] {
@@ -184,7 +199,7 @@ export async function getComments(
   },
 ): Promise<CommentThread[]> {
   const commentThreads: CommentThread[] = [];
-  const commentsCommand = new GetCommentsForPullRequestCommand({
+  const baseInput = {
     pullRequestId,
     ...(params?.repositoryName ? { repositoryName: params.repositoryName } : {}),
     ...(params?.afterCommitId && params?.beforeCommitId
@@ -193,22 +208,28 @@ export async function getComments(
           beforeCommitId: params.beforeCommitId,
         }
       : {}),
-  });
-  const commentsResponse = await client.send(commentsCommand);
-  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    const location = thread.location?.filePath
-      ? {
-          filePath: thread.location.filePath,
-          filePosition: thread.location.filePosition ?? 0,
-          relativeFileVersion:
-            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
-        }
-      : null;
-    commentThreads.push({
-      location,
-      comments: sortCommentsRootFirst(thread.comments ?? []),
-    });
-  }
+  };
+  let nextToken: string | undefined;
+  do {
+    const commentsResponse = await client.send(
+      new GetCommentsForPullRequestCommand({ ...baseInput, nextToken }),
+    );
+    for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
+      const location = thread.location?.filePath
+        ? {
+            filePath: thread.location.filePath,
+            filePosition: thread.location.filePosition ?? 0,
+            relativeFileVersion:
+              (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+          }
+        : null;
+      commentThreads.push({
+        location,
+        comments: sortCommentsRootFirst(thread.comments ?? []),
+      });
+    }
+    nextToken = commentsResponse.nextToken;
+  } while (nextToken);
   return commentThreads;
 }
 
@@ -475,13 +496,7 @@ export async function getCommitDifferences(
   beforeCommitId: string,
   afterCommitId: string,
 ): Promise<Difference[]> {
-  const command = new GetDifferencesCommand({
-    repositoryName,
-    beforeCommitSpecifier: beforeCommitId,
-    afterCommitSpecifier: afterCommitId,
-  });
-  const response = await client.send(command);
-  return response.differences ?? [];
+  return getAllDifferences(client, repositoryName, beforeCommitId, afterCommitId);
 }
 
 export async function updateComment(
@@ -559,22 +574,22 @@ export async function getReactionsForComments(
   commentIds: string[],
 ): Promise<ReactionsByComment> {
   const results: ReactionsByComment = new Map();
+  const concurrency = 6;
+  let index = 0;
 
-  const fetches = commentIds.map(async (commentId) => {
+  async function processNext(): Promise<void> {
+    const currentIndex = index++;
+    if (currentIndex >= commentIds.length) return;
     try {
-      const reactions = await getReactionsForComment(client, commentId);
-      return { commentId, reactions };
+      const reactions = await getReactionsForComment(client, commentIds[currentIndex]!);
+      if (reactions.length > 0) results.set(commentIds[currentIndex]!, reactions);
     } catch {
-      return { commentId, reactions: [] };
+      /* ignore individual failures */
     }
-  });
-
-  const settled = await Promise.all(fetches);
-  for (const { commentId, reactions } of settled) {
-    if (reactions.length > 0) {
-      results.set(commentId, reactions);
-    }
+    return processNext();
   }
 
+  const workerCount = Math.min(concurrency, commentIds.length);
+  await Promise.all(Array.from({ length: workerCount }, () => processNext()));
   return results;
 }

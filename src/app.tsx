@@ -226,46 +226,42 @@ export function App({ client, initialRepo }: AppProps) {
       setCommentThreads(detail.commentThreads);
       setDiffTexts(new Map());
 
-      // Parallelize independent operations: approvals, reactions, commits
-      const revisionId = detail.pullRequest.revisionId;
-      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
-      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
-
-      const approvalPromise = revisionId
-        ? Promise.all([
-            getApprovalStates(client, { pullRequestId, revisionId }),
-            evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
-          ])
-        : Promise.resolve(undefined);
-
-      const reactionsPromise = reloadReactions(detail.commentThreads);
-
-      const commitsPromise =
-        sourceCommit && mergeBase
-          ? getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase)
-          : Promise.resolve([]);
-
-      const [approvalResult, , commitList] = await Promise.all([
-        approvalPromise,
-        reactionsPromise,
-        commitsPromise,
-      ]);
-
-      if (approvalResult) {
-        setApprovals(approvalResult[0]);
-        setApprovalEvaluation(approvalResult[1]);
-      }
-
       const status = new Map<string, "loading" | "loaded" | "error">();
       for (const diff of detail.differences) {
         const key = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
         status.set(key, "loading");
       }
       setDiffTextStatus(status);
-      setCommits(commitList);
+      setCommits([]);
       setCommitDifferences([]);
       setCommitDiffTexts(new Map());
+
+      // Background: blob texts
       void loadDiffTextsInBackground(detail.differences, selectedRepo, loadId);
+
+      // Background: approvals
+      const revisionId = detail.pullRequest.revisionId;
+      if (revisionId) {
+        void Promise.all([
+          getApprovalStates(client, { pullRequestId, revisionId }),
+          evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+        ]).then(([states, evaluation]) => {
+          setApprovals(states);
+          setApprovalEvaluation(evaluation);
+        });
+      }
+
+      // Background: reactions
+      void reloadReactions(detail.commentThreads);
+
+      // Background: commits
+      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
+      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
+      if (sourceCommit && mergeBase) {
+        void getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase).then((commitList) => {
+          setCommits(commitList);
+        });
+      }
     });
   }
 
@@ -574,7 +570,15 @@ export function App({ client, initialRepo }: AppProps) {
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
 
-      const blobFetches = diffs.map(async (diff) => {
+      const texts = new Map<string, { before: string; after: string }>();
+      const concurrency = 6;
+      let index = 0;
+
+      async function processNext(): Promise<void> {
+        const currentIndex = index++;
+        if (currentIndex >= diffs.length) return;
+
+        const diff = diffs[currentIndex]!;
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
@@ -584,14 +588,12 @@ export function App({ client, initialRepo }: AppProps) {
           afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
         ]);
 
-        return { key, before, after };
-      });
-
-      const blobResults = await Promise.all(blobFetches);
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const result of blobResults) {
-        texts.set(result.key, { before: result.before, after: result.after });
+        texts.set(key, { before, after });
+        return processNext();
       }
+
+      const workerCount = Math.min(concurrency, diffs.length);
+      await Promise.all(Array.from({ length: workerCount }, () => processNext()));
       setCommitDiffTexts(texts);
     } finally {
       setIsLoadingCommitDiff(false);

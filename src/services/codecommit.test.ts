@@ -404,6 +404,35 @@ describe("getPullRequestDetail edge cases", () => {
     });
   });
 
+  it("paginates GetDifferences when NextToken is present", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        pullRequestTargets: [
+          {
+            sourceCommit: "abc",
+            destinationCommit: "def",
+          },
+        ],
+      },
+    });
+    // First page of differences (call #2)
+    mockSend.mockResolvedValueOnce({
+      differences: [{ beforeBlob: { blobId: "b1" }, afterBlob: { blobId: "b2" } }],
+      NextToken: "page2",
+    });
+    // Comments (call #3, interleaved due to Promise.all)
+    mockSend.mockResolvedValueOnce({ commentsForPullRequestData: [] });
+    // Second page of differences (call #4)
+    mockSend.mockResolvedValueOnce({
+      differences: [{ beforeBlob: { blobId: "b3" }, afterBlob: { blobId: "b4" } }],
+      NextToken: undefined,
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.differences).toHaveLength(2);
+  });
+
   it("preserves inline comment location in threads", async () => {
     mockSend.mockResolvedValueOnce({
       pullRequest: {
@@ -650,6 +679,23 @@ describe("getComments", () => {
       filePosition: 0,
       relativeFileVersion: "AFTER",
     });
+  });
+
+  it("paginates when nextToken is present", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [{ comments: [{ commentId: "c1", content: "first page" }] }],
+      nextToken: "page2",
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [{ comments: [{ commentId: "c2", content: "second page" }] }],
+      nextToken: undefined,
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads).toHaveLength(2);
+    expect(threads[0].comments[0].content).toBe("first page");
+    expect(threads[1].comments[0].content).toBe("second page");
+    expect(mockSend).toHaveBeenCalledTimes(2);
   });
 
   it("treats location without filePath as general comment", async () => {
@@ -1486,11 +1532,28 @@ describe("getCommitDifferences", () => {
     await getCommitDifferences(mockClient, "my-service", "parentABC", "commitDEF");
 
     const sentCommand = mockSend.mock.calls[0][0];
-    expect(sentCommand.input).toEqual({
-      repositoryName: "my-service",
-      beforeCommitSpecifier: "parentABC",
-      afterCommitSpecifier: "commitDEF",
+    expect(sentCommand.input).toEqual(
+      expect.objectContaining({
+        repositoryName: "my-service",
+        beforeCommitSpecifier: "parentABC",
+        afterCommitSpecifier: "commitDEF",
+      }),
+    );
+  });
+
+  it("paginates when NextToken is present", async () => {
+    mockSend.mockResolvedValueOnce({
+      differences: [{ beforeBlob: { blobId: "b1" }, afterBlob: { blobId: "b2" } }],
+      NextToken: "page2",
     });
+    mockSend.mockResolvedValueOnce({
+      differences: [{ beforeBlob: { blobId: "b3" }, afterBlob: { blobId: "b4" } }],
+      NextToken: undefined,
+    });
+
+    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    expect(result).toHaveLength(2);
+    expect(mockSend).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -1745,5 +1808,27 @@ describe("getReactionsForComments", () => {
     const result = await getReactionsForComments(mockClient, []);
     expect(result.size).toBe(0);
     expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("limits concurrency to 6 workers", async () => {
+    let activeCalls = 0;
+    let maxConcurrent = 0;
+    const ids = Array.from({ length: 12 }, (_, i) => `c${i}`);
+
+    mockSend.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          activeCalls++;
+          maxConcurrent = Math.max(maxConcurrent, activeCalls);
+          setTimeout(() => {
+            activeCalls--;
+            resolve({ reactionsForComment: [] });
+          }, 10);
+        }),
+    );
+
+    await getReactionsForComments(mockClient, ids);
+    expect(maxConcurrent).toBeLessThanOrEqual(6);
+    expect(mockSend).toHaveBeenCalledTimes(12);
   });
 });
