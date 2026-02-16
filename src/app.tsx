@@ -42,6 +42,38 @@ import {
 } from "./services/codecommit.js";
 import { formatErrorMessage } from "./utils/formatError.js";
 
+const BLOB_FETCH_CONCURRENCY = 5;
+
+async function fetchBlobTexts(
+  client: CodeCommitClient,
+  repositoryName: string,
+  differences: Difference[],
+): Promise<Map<string, { before: string; after: string }>> {
+  const texts = new Map<string, { before: string; after: string }>();
+  let index = 0;
+
+  async function worker() {
+    while (index < differences.length) {
+      const i = index++;
+      const diff = differences[i]!;
+      const beforeBlobId = diff.beforeBlob?.blobId;
+      const afterBlobId = diff.afterBlob?.blobId;
+      const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
+
+      const [before, after] = await Promise.all([
+        beforeBlobId ? getBlobContent(client, repositoryName, beforeBlobId) : Promise.resolve(""),
+        afterBlobId ? getBlobContent(client, repositoryName, afterBlobId) : Promise.resolve(""),
+      ]);
+
+      texts.set(key, { before, after });
+    }
+  }
+
+  const workerCount = Math.min(BLOB_FETCH_CONCURRENCY, differences.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return texts;
+}
+
 type Screen = "repos" | "prs" | "detail";
 
 interface PaginationState {
@@ -232,27 +264,7 @@ export function App({ client, initialRepo }: AppProps) {
 
       const reactionsPromise = reloadReactions(detail.commentThreads);
 
-      const blobPromise = (async () => {
-        const blobFetches = detail.differences.map(async (diff) => {
-          const beforeBlobId = diff.beforeBlob?.blobId;
-          const afterBlobId = diff.afterBlob?.blobId;
-          const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-          const [before, after] = await Promise.all([
-            beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-            afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-          ]);
-
-          return { key, before, after };
-        });
-
-        const blobResults = await Promise.all(blobFetches);
-        const texts = new Map<string, { before: string; after: string }>();
-        for (const result of blobResults) {
-          texts.set(result.key, { before: result.before, after: result.after });
-        }
-        return texts;
-      })();
+      const blobPromise = fetchBlobTexts(client, selectedRepo, detail.differences);
 
       const commitsPromise =
         sourceCommit && mergeBase
@@ -515,24 +527,7 @@ export function App({ client, initialRepo }: AppProps) {
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
 
-      const blobFetches = diffs.map(async (diff) => {
-        const beforeBlobId = diff.beforeBlob?.blobId;
-        const afterBlobId = diff.afterBlob?.blobId;
-        const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-        const [before, after] = await Promise.all([
-          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-        ]);
-
-        return { key, before, after };
-      });
-
-      const blobResults = await Promise.all(blobFetches);
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const result of blobResults) {
-        texts.set(result.key, { before: result.before, after: result.after });
-      }
+      const texts = await fetchBlobTexts(client, selectedRepo, diffs);
       setCommitDiffTexts(texts);
     } finally {
       setIsLoadingCommitDiff(false);
