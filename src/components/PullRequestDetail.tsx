@@ -1,6 +1,6 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CommentThread,
   CommitInfo,
@@ -245,9 +245,13 @@ export function PullRequestDetail({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
+  const [showFileList, setShowFileList] = useState(false);
+  const [fileListCursor, setFileListCursor] = useState(0);
+  const diffCacheRef = useRef<Map<string, DisplayLine[]>>(new Map());
 
   useEffect(() => {
     setDiffLineLimits(new Map());
+    diffCacheRef.current = new Map();
   }, [differences]);
   const [wasReacting, setWasReacting] = useState(false);
 
@@ -381,6 +385,7 @@ export function PullRequestDetail({
         commentThreads,
         collapsedThreads,
         reactionsByComment,
+        diffCacheRef.current,
       );
     }
     return buildDisplayLines(
@@ -406,6 +411,29 @@ export function PullRequestDetail({
   ]);
 
   const hasTruncation = useMemo(() => lines.some((line) => line.type === "truncation"), [lines]);
+
+  const headerIndices = useMemo(
+    () =>
+      lines.reduce<number[]>((acc, line, i) => {
+        if (line.type === "header") acc.push(i);
+        return acc;
+      }, []),
+    [lines],
+  );
+
+  const fileNames = useMemo(() => headerIndices.map((i) => lines[i]!.text), [headerIndices, lines]);
+
+  const filePosition = useMemo(() => {
+    if (headerIndices.length === 0) return { current: 0, total: 0 };
+    let current = 1;
+    for (let i = headerIndices.length - 1; i >= 0; i--) {
+      if (cursorIndex >= headerIndices[i]!) {
+        current = i + 1;
+        break;
+      }
+    }
+    return { current, total: headerIndices.length };
+  }, [cursorIndex, headerIndices]);
 
   async function handleStrategySelect(strategy: MergeStrategy) {
     setSelectedStrategy(strategy);
@@ -435,11 +463,28 @@ export function PullRequestDetail({
     approvalAction ||
     mergeStep ||
     isClosing ||
-    showReactionPicker
+    showReactionPicker ||
+    showFileList
       ? 20
       : 30;
 
   useInput((input, key) => {
+    // File list mode: handle its own keys before the modal guard
+    if (showFileList) {
+      if (input === "j" || key.downArrow) {
+        setFileListCursor((prev) => Math.min(prev + 1, fileNames.length - 1));
+      } else if (input === "k" || key.upArrow) {
+        setFileListCursor((prev) => Math.max(prev - 1, 0));
+      } else if (key.return) {
+        const targetIndex = headerIndices[fileListCursor];
+        if (targetIndex !== undefined) setCursorIndex(targetIndex);
+        setShowFileList(false);
+      } else if (key.escape || input === "f" || input === "q") {
+        setShowFileList(false);
+      }
+      return;
+    }
+
     if (
       isCommenting ||
       isInlineCommenting ||
@@ -525,6 +570,25 @@ export function PullRequestDetail({
     if (input === "G") {
       if (lines.length === 0) return;
       setCursorIndex(lines.length - 1);
+      return;
+    }
+    // n: next file header
+    if (input === "n") {
+      const idx = findNextHeaderIndex(lines, cursorIndex);
+      if (idx !== -1) setCursorIndex(idx);
+      return;
+    }
+    // N: previous file header
+    if (input === "N") {
+      const idx = findPrevHeaderIndex(lines, cursorIndex);
+      if (idx !== -1) setCursorIndex(idx);
+      return;
+    }
+    // f: toggle file list
+    if (input === "f") {
+      if (viewIndex >= 0) return;
+      setShowFileList(true);
+      setFileListCursor(0);
       return;
     }
     if (input === "c") {
@@ -637,6 +701,12 @@ export function PullRequestDetail({
         <Text dimColor>
           {destRef} ← {sourceRef}
         </Text>
+        {filePosition.total > 0 && (
+          <Text dimColor>
+            {" "}
+            File {filePosition.current}/{filePosition.total}
+          </Text>
+        )}
       </Box>
       <Box>
         <Text>
@@ -886,6 +956,18 @@ export function PullRequestDetail({
           currentReactions={reactionsByComment.get(reactionTarget) ?? []}
         />
       )}
+      {showFileList && (
+        <Box flexDirection="column">
+          <Text bold>Files ({fileNames.length}):</Text>
+          {fileNames.map((name, i) => (
+            <Text key={name}>
+              {i === fileListCursor ? "> " : "  "}
+              {name}
+            </Text>
+          ))}
+          <Text dimColor>j/k move Enter select Esc close</Text>
+        </Box>
+      )}
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
@@ -896,13 +978,14 @@ export function PullRequestDetail({
           approvalAction ||
           mergeStep ||
           isClosing ||
-          showReactionPicker
+          showReactionPicker ||
+          showFileList
             ? ""
             : viewIndex === -1 && commits.length > 0
-              ? `Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
+              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
+                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>
@@ -1073,6 +1156,7 @@ function buildDisplayLines(
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
   reactionsByComment: ReactionsByComment,
+  diffCache?: Map<string, DisplayLine[]>,
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
@@ -1104,15 +1188,20 @@ function buildDisplayLines(
       const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
       const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
       const displayLimit = Math.min(currentLimit, totalLines);
-      const { beforeLimit, afterLimit } = getSliceLimits(
-        beforeLines.length,
-        afterLines.length,
-        displayLimit,
-      );
-      const diffLines = computeSimpleDiff(
-        beforeLines.slice(0, beforeLimit),
-        afterLines.slice(0, afterLimit),
-      );
+      const cacheKey = `${blobKey}:${displayLimit}`;
+      let diffLines = diffCache?.get(cacheKey);
+      if (!diffLines) {
+        const { beforeLimit, afterLimit } = getSliceLimits(
+          beforeLines.length,
+          afterLines.length,
+          displayLimit,
+        );
+        diffLines = computeSimpleDiff(
+          beforeLines.slice(0, beforeLimit),
+          afterLines.slice(0, afterLimit),
+        );
+        diffCache?.set(cacheKey, diffLines);
+      }
       for (const dl of diffLines) {
         dl.filePath = filePath;
         dl.diffKey = blobKey;
@@ -1436,6 +1525,26 @@ function ConflictDisplay({
       <Text dimColor>Press any key to return</Text>
     </Box>
   );
+}
+
+function findNextHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
+  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
+    if (line.type === "header") acc.push(i);
+    return acc;
+  }, []);
+  if (headerIndices.length === 0) return -1;
+  const next = headerIndices.find((i) => i > currentIndex);
+  return next ?? headerIndices[0]!;
+}
+
+function findPrevHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
+  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
+    if (line.type === "header") acc.push(i);
+    return acc;
+  }, []);
+  if (headerIndices.length === 0) return -1;
+  const prev = [...headerIndices].reverse().find((i) => i < currentIndex);
+  return prev ?? headerIndices[headerIndices.length - 1]!;
 }
 
 function formatStrategyName(strategy: MergeStrategy): string {

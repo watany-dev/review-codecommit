@@ -47,6 +47,9 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="Ctrl+d" description="Half page down" />
         <KeyRow keyName="Ctrl+u" description="Half page up" />
         <KeyRow keyName="G" description="Jump to end" />
+        <KeyRow keyName="n" description="Next file" />
+        <KeyRow keyName="N" description="Previous file" />
+        <KeyRow keyName="f" description="File list" />
         <KeyRow keyName="Enter" description="Select / confirm" />
         <KeyRow keyName="q / Esc" description="Back / quit" />
         <KeyRow keyName="Ctrl+C" description="Exit immediately" />

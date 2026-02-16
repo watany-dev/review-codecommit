@@ -128,4 +128,19 @@ describe("Help", () => {
     expect(output).toContain("G");
     expect(output).toContain("Jump to end");
   });
+
+  it("shows n Next file keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Next file");
+  });
+
+  it("shows N Previous file keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Previous file");
+  });
+
+  it("shows f File list keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("File list");
+  });
 });

@@ -1505,6 +1505,10 @@ describe("PullRequestDetail", () => {
     );
     // Move cursor to a diff line (skip header and separator), wait for render
     stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*─/);
+    });
     stdin.write("j");
     await vi.waitFor(() => {
       // Cursor should be on context line " line1"
@@ -6490,6 +6494,494 @@ describe("PullRequestDetail", () => {
       stdin.write("G");
       // Modal should still be open
       expect(lastFrame()).toContain("Comment:");
+    });
+  });
+
+  describe("per-file diff cache", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/file1.ts" },
+        afterBlob: { blobId: "a2", path: "src/file1.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/file2.ts" },
+        afterBlob: { blobId: "b2", path: "src/file2.ts" },
+      },
+    ];
+
+    it("renders correctly when diffTexts load incrementally", () => {
+      // Start with only file1 loaded
+      const diffTexts1 = new Map([["a1:a2", { before: "old1", after: "new1" }]]);
+
+      const { lastFrame, rerender } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts1}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      expect(lastFrame()).toContain("src/file1.ts");
+      expect(lastFrame()).toContain("new1");
+      expect(lastFrame()).toContain("Loading file content...");
+
+      // Now file2 also loads
+      const diffTexts2 = new Map([
+        ["a1:a2", { before: "old1", after: "new1" }],
+        ["b1:b2", { before: "old2", after: "new2" }],
+      ]);
+
+      rerender(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts2}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Both files should now be rendered
+      expect(lastFrame()).toContain("new1");
+      expect(lastFrame()).toContain("new2");
+      expect(lastFrame()).not.toContain("Loading file content...");
+    });
+  });
+
+  describe("file navigation (n/N keys)", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("n moves cursor to next file header", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Cursor starts at first line (src/alpha.ts header)
+      expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+
+      // Press n to jump to next file header
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+
+    it("n wraps from last file to first file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Jump to second file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // Jump again should wrap to first file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+      });
+    });
+
+    it("N moves cursor to previous file header", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Move to second file first
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // N goes back to first file
+      stdin.write("N");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+      });
+    });
+
+    it("N wraps from first file to last file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Cursor starts at first header, N should wrap to last file
+      stdin.write("N");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+  });
+
+  describe("file position indicator", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("shows File 1/2 when cursor is on first file", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      expect(lastFrame()).toContain("File 1/2");
+    });
+
+    it("shows File 2/2 when cursor moves to second file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Jump to second file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("File 2/2");
+      });
+    });
+  });
+
+  describe("file list mode (f key)", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("shows file list overlay when f is pressed", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        const output = lastFrame()!;
+        expect(output).toContain("Files");
+        expect(output).toContain("src/alpha.ts");
+        expect(output).toContain("src/beta.ts");
+      });
+    });
+
+    it("navigates file list with j/k and jumps with Enter", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Open file list
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      // Move cursor down to second file
+      stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // Select with Enter - should jump to that file and close the list
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("j/k move");
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+
+    it("closes file list with Esc", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      stdin.write("\u001B"); // Esc
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("Files (2)");
+      });
+    });
+
+    it("closes file list with f key", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("Files (2)");
+      });
+    });
+
+    it("does not process other keys while file list is open", async () => {
+      const onBack = vi.fn();
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={onBack}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      // q should close file list, not trigger onBack
+      stdin.write("q");
+      await vi.waitFor(() => {
+        expect(onBack).not.toHaveBeenCalled();
+      });
     });
   });
 });
