@@ -181,17 +181,7 @@ bun run build
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| v0.1 | Browse repositories, PRs, diffs, and comments | ✅ Released |
-| v0.2 | Post comments on pull requests | ✅ Released |
-| v0.3 | Approve / Revoke operations | ✅ Released |
-| v0.4 | Inline comments (file-line specific) | ✅ Released |
-| v0.5 | Comment replies (threads) | ✅ Released |
-| v0.6 | Merge operations | ✅ Released |
-| v0.6.1 | Commit-level review | ✅ Released |
-| v0.7 | Comment edit / delete | ✅ Released |
-| v0.8 | PR status filter, search, and pagination | ✅ Released |
-| v0.2.0 | Emoji reactions on comments | ✅ Released |
-| v0.3.0 | Shell completion (bash, zsh, fish) | ✅ Released |
+| v0.1.0 | First stable release with complete review workflow | ✅ Released (2026-02-15) |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 
