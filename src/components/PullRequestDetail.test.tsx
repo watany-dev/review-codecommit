@@ -4115,7 +4115,7 @@ describe("PullRequestDetail", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Cannot approve own PR");
     });
-    stdin.write("\r"); // dismiss error
+    stdin.write("x"); // dismiss error
     await vi.waitFor(() => {
       expect(onClearApprovalError).toHaveBeenCalled();
     });
@@ -4213,7 +4213,40 @@ describe("PullRequestDetail", () => {
       conflictCount: 0,
       conflictFiles: [],
     });
-    const { lastFrame, stdin } = render(
+    const { lastFrame, stdin, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{
+          ...defaultMergeProps,
+          error: null,
+          onClearError: onClearMergeError,
+          onCheckConflicts: onCheckConflicts,
+        }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    rerender(
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
@@ -4238,15 +4271,10 @@ describe("PullRequestDetail", () => {
         reaction={defaultReactionProps}
       />,
     );
-    stdin.write("m");
-    await vi.waitFor(() => {
-      expect(lastFrame()).toContain("Select merge strategy:");
-    });
-    stdin.write("\r");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Merge failed");
     });
-    stdin.write("\r"); // dismiss error
+    stdin.write("x"); // dismiss error
     await vi.waitFor(() => {
       expect(onClearMergeError).toHaveBeenCalled();
     });
@@ -5286,27 +5314,23 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).toContain("d del");
     });
 
-    it("edits comment with missing commentId in threads (uses empty content)", async () => {
-      // Test where commentId is in display but not in commentThreads data
-      // This exercises findCommentContent returning ""
-      const threadsWithMismatch = [
+    it("does not open edit when commentId is missing", async () => {
+      const threadsWithoutId = [
         {
           location: null,
           comments: [
             {
-              commentId: "comment-99",
               authorArn: "arn:aws:iam::123456789012:user/taro",
               content: "Mismatch",
             },
           ],
         },
       ];
-      const onUpdateComment = vi.fn();
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
           differences={differences as any}
-          commentThreads={threadsWithMismatch as any}
+          commentThreads={threadsWithoutId as any}
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
@@ -5317,7 +5341,7 @@ describe("PullRequestDetail", () => {
           merge={defaultMergeProps}
           close={defaultCloseProps}
           commitView={defaultCommitProps}
-          editComment={{ ...defaultEditCommentProps, onUpdate: onUpdateComment }}
+          editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
         />,
@@ -5330,7 +5354,7 @@ describe("PullRequestDetail", () => {
       });
       stdin.write("e");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain("Edit Comment:");
+        expect(lastFrame()).not.toContain("Edit Comment:");
       });
     });
 

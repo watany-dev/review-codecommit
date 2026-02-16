@@ -102,6 +102,7 @@ interface Props {
   differences: Difference[];
   commentThreads: CommentThread[];
   diffTexts: Map<string, { before: string; after: string }>;
+  diffTextStatus?: Map<string, "loading" | "loaded" | "error">;
   onBack: () => void;
   onHelp: () => void;
   comment: CommentAction;
@@ -121,6 +122,7 @@ export function PullRequestDetail({
   differences,
   commentThreads,
   diffTexts,
+  diffTextStatus = new Map(),
   onBack,
   onHelp,
   comment: {
@@ -364,16 +366,25 @@ export function PullRequestDetail({
       return buildDisplayLines(
         differences,
         diffTexts,
+        diffTextStatus,
         commentThreads,
         collapsedThreads,
         reactionsByComment,
       );
     }
-    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set(), new Map());
+    return buildDisplayLines(
+      commitDifferences,
+      commitDiffTexts,
+      new Map(),
+      [],
+      new Set(),
+      new Map(),
+    );
   }, [
     viewIndex,
     differences,
     diffTexts,
+    diffTextStatus,
     commentThreads,
     collapsedThreads,
     reactionsByComment,
@@ -1018,6 +1029,7 @@ function appendThreadLines(
 function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
+  diffTextStatus: Map<string, "loading" | "loaded" | "error">,
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
   reactionsByComment: ReactionsByComment,
@@ -1043,6 +1055,7 @@ function buildDisplayLines(
 
     const blobKey = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
     const texts = diffTexts.get(blobKey);
+    const status = diffTextStatus.get(blobKey) ?? "loading";
 
     if (texts) {
       const beforeLines = texts.before.split("\n");
@@ -1064,6 +1077,10 @@ function buildDisplayLines(
           );
         }
       }
+    } else if (status === "error") {
+      lines.push({ type: "context", text: "(Failed to load file content)" });
+    } else {
+      lines.push({ type: "context", text: "(Loading file content...)" });
     }
 
     lines.push({ type: "separator", text: "" });

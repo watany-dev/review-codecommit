@@ -408,8 +408,10 @@ describe("App", () => {
     // Close help by pressing ? again
     stdin.write("?");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("my-service");
       expect(lastFrame()).not.toContain("Navigation");
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("my-service");
     });
   });
 
@@ -457,6 +459,11 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b1");
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b2");
+    });
   });
 
   it("loads PR detail with only afterBlob", async () => {
@@ -496,6 +503,10 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b2");
+    });
   });
 
   it("shows error when PR detail loading fails", async () => {
@@ -521,6 +532,8 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("failed to load");
     });
+
+    expect(getBlobContent).not.toHaveBeenCalled();
   });
 
   it("shows error when loading PRs fails", async () => {
@@ -567,6 +580,60 @@ describe("App", () => {
     stdin.write("\r");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
+    });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b1");
+    });
+  });
+
+  it("shows blob error state when blob fetch fails", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockRejectedValueOnce(new Error("blob failed"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(Failed to load file content)");
     });
   });
 
@@ -629,6 +696,8 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Navigation");
     });
+
+    expect(getBlobContent).not.toHaveBeenCalled();
   });
 
   it("posts comment successfully and reloads comments", async () => {
