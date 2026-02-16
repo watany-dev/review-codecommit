@@ -141,4 +141,27 @@ describe("useListNavigation", () => {
     );
     expect(lastFrame()).toBe("cursor: 0");
   });
+
+  it("does not call onSelect when pressing return on empty list", () => {
+    const onSelect = vi.fn();
+    const { stdin } = render(
+      <TestComponent items={[]} onSelect={onSelect} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    stdin.write("\r");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on unrelated key", () => {
+    const onSelect = vi.fn();
+    const onBack = vi.fn();
+    const onHelp = vi.fn();
+    const { stdin, lastFrame } = render(
+      <TestComponent items={["a", "b"]} onSelect={onSelect} onBack={onBack} onHelp={onHelp} />,
+    );
+    stdin.write("x");
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onBack).not.toHaveBeenCalled();
+    expect(onHelp).not.toHaveBeenCalled();
+    expect(lastFrame()).toBe("cursor: 0");
+  });
 });

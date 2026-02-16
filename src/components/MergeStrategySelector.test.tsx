@@ -120,6 +120,36 @@ describe("MergeStrategySelector", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
+  it("calls onCancel on q key", () => {
+    const onCancel = vi.fn();
+    const { stdin } = render(
+      <MergeStrategySelector
+        sourceRef="feature"
+        destRef="main"
+        onSelect={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+    stdin.write("q");
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("does not call onSelect or onCancel on unrelated key", () => {
+    const onSelect = vi.fn();
+    const onCancel = vi.fn();
+    const { stdin } = render(
+      <MergeStrategySelector
+        sourceRef="feature"
+        destRef="main"
+        onSelect={onSelect}
+        onCancel={onCancel}
+      />,
+    );
+    stdin.write("x");
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
   it("displays branch names in merge header", () => {
     const { lastFrame } = render(
       <MergeStrategySelector

@@ -147,6 +147,27 @@ describe("ReactionPicker", () => {
     expect(lastFrame()).toContain("🎉(1)");
   });
 
+  it("does not show count badge for reactions with count 0", () => {
+    const { lastFrame } = render(
+      <ReactionPicker
+        {...defaultProps}
+        currentReactions={[
+          { emoji: "👍", shortCode: ":thumbsup:", count: 0, userArns: [] },
+          { emoji: "🎉", shortCode: ":hooray:", count: 1, userArns: [] },
+        ]}
+      />,
+    );
+    expect(lastFrame()).not.toContain("👍(0)");
+    expect(lastFrame()).toContain("🎉(1)");
+  });
+
+  it("calls onCancel on escape key", () => {
+    const onCancel = vi.fn();
+    const { stdin } = render(<ReactionPicker {...defaultProps} onCancel={onCancel} />);
+    stdin.write("\u001B");
+    expect(onCancel).toHaveBeenCalled();
+  });
+
   it("shows footer hint text", () => {
     const { lastFrame } = render(<ReactionPicker {...defaultProps} />);
     expect(lastFrame()).toContain("←→/h/l select");
