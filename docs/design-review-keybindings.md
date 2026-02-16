@@ -45,6 +45,9 @@
 |------|-----------|------------|------|
 | `j` / `↓` | カーソル下移動 | 両方 | `PullRequestDetail` |
 | `k` / `↑` | カーソル上移動 | 両方 | `PullRequestDetail` |
+| `Ctrl+d` | 半ページ下スクロール | 両方 | `PullRequestDetail` |
+| `Ctrl+u` | 半ページ上スクロール | 両方 | `PullRequestDetail` |
+| `G` | 最終行へジャンプ | 両方 | `PullRequestDetail` |
 | `q` / `Esc` | 戻る | 両方 | `PullRequestDetail` |
 | `?` | ヘルプ表示 | 両方 | `PullRequestDetail` |
 | `c` | 一般コメント投稿 | All changes のみ | `PullRequestDetail` |
@@ -91,6 +94,9 @@
 |------|-----------|------|
 | `j` / `↓` | 下移動 | 全画面共通 |
 | `k` / `↑` | 上移動 | 全画面共通 |
+| `Ctrl+d` | 半ページ下スクロール | PR詳細画面 |
+| `Ctrl+u` | 半ページ上スクロール | PR詳細画面 |
+| `G` | 最終行へジャンプ | PR詳細画面 |
 | `h` / `←` | 左移動 | ReactionPicker のみ |
 | `l` / `→` | 右移動 | ReactionPicker のみ |
 | `Enter` | 選択/確定 | 全画面共通 |
@@ -151,11 +157,13 @@
 
 ## 問題点
 
-### P1: 長い diff の移動手段が j/k のみ
+### P1: 長い diff の移動手段が j/k のみ ✅ 解決済み
 
 **影響度: 高** — 日常的なレビュー体験に直接影響
 
-Vim 系 TUI で定番のページスクロールが未実装。数百行の diff を `j`/`k` の 1 行移動のみで読むのは実用上つらい。
+~~Vim 系 TUI で定番のページスクロールが未実装。数百行の diff を `j`/`k` の 1 行移動のみで読むのは実用上つらい。~~
+
+**→ [design-page-scroll.md](design-page-scroll.md) にて `Ctrl+d`/`Ctrl+u`/`G` を実装完了（2026-02-15）。**
 
 不足しているキー:
 
@@ -324,7 +332,7 @@ ReactionPicker のフッターも更新:
 
 | 優先度 | 提案 | 理由 | 影響範囲 |
 |-------|------|------|---------|
-| **高** | 提案 1: ページスクロール | 長い diff のレビューが事実上困難 | `PullRequestDetail.tsx`、`Help.tsx` |
+| ~~**高**~~ | ~~提案 1: ページスクロール~~ | ✅ 実装完了（[design-page-scroll.md](design-page-scroll.md)） | `PullRequestDetail.tsx`、`Help.tsx` |
 | **高** | 提案 2: フッターヒント整理 | 現状読めないので表示する意味が薄い | `PullRequestDetail.tsx` |
 | **中** | 提案 3: ヘルプ画面グルーピング | 発見性・一覧性の改善 | `Help.tsx` |
 | **低** | 提案 4: `S-Tab` 表記統一 | 小さいが確実に改善 | `Help.tsx`、`PullRequestDetail.tsx` |

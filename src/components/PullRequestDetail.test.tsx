@@ -5976,4 +5976,248 @@ describe("PullRequestDetail", () => {
       expect(onClearReactionError).toHaveBeenCalled();
     });
   });
+
+  // Page scroll keybindings
+  describe("page scroll keybindings", () => {
+    // 50-line diff for testing half-page scroll
+    const manyLines = Array.from({ length: 50 }, (_, i) => `line${i + 1}`).join("\n");
+    const manyLinesDiffTexts = new Map([
+      ["b1:b2", { before: manyLines, after: manyLines.replace("line25", "modified25") }],
+    ]);
+
+    it("moves cursor half page down with Ctrl+d", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={manyLinesDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // Initial cursor at line 0 (file header)
+      // Ctrl+d moves halfPage (15) lines down
+      stdin.write("\x04");
+      await vi.waitFor(() => {
+        const frame = lastFrame() ?? "";
+        const lines = frame.split("\n");
+        const cursorLine = lines.find((l) => l.includes("> "));
+        expect(cursorLine).toBeDefined();
+        // Cursor should not be on file header anymore (moved down)
+        expect(cursorLine).not.toContain("src/auth.ts");
+      });
+    });
+
+    it("does not scroll past last line with Ctrl+d", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // halfPage (15) > total lines (~7), should clamp to last line
+      stdin.write("\x04");
+      stdin.write("\x04");
+      await vi.waitFor(() => {
+        // Should not crash, cursor still exists
+        expect(lastFrame()).toContain("> ");
+      });
+    });
+
+    it("moves cursor half page up with Ctrl+u", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={manyLinesDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // First move down with Ctrl+d
+      stdin.write("\x04");
+      await vi.waitFor(() => {
+        const frame = lastFrame() ?? "";
+        const lines = frame.split("\n");
+        const cursorLine = lines.find((l) => l.includes("> "));
+        expect(cursorLine).not.toContain("src/auth.ts");
+      });
+      // Then move back up with Ctrl+u
+      stdin.write("\x15");
+      await vi.waitFor(() => {
+        const frame = lastFrame() ?? "";
+        const lines = frame.split("\n");
+        const cursorLine = lines.find((l) => l.includes("> "));
+        expect(cursorLine).toBeDefined();
+        // Cursor should be back at file header
+        expect(cursorLine).toContain("src/auth.ts");
+      });
+    });
+
+    it("does not scroll past first line with Ctrl+u", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // At top, Ctrl+u should keep cursor at 0
+      stdin.write("\x15");
+      stdin.write("\x15");
+      await vi.waitFor(() => {
+        const frame = lastFrame() ?? "";
+        const lines = frame.split("\n");
+        const cursorLine = lines.find((l) => l.includes("> "));
+        expect(cursorLine).toBeDefined();
+        // Cursor stays on file header
+        expect(cursorLine).toContain("src/auth.ts");
+      });
+    });
+
+    it("jumps to last line with G key", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={manyLinesDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // G jumps to last line (with 50+ display lines, bottom area is visible)
+      stdin.write("G");
+      await vi.waitFor(() => {
+        const frame = lastFrame() ?? "";
+        // After G, viewport scrolls to show the end of the diff
+        expect(frame).toContain("line50");
+        // File header should no longer be visible (scrolled past)
+        expect(frame).not.toContain("src/auth.ts");
+      });
+    });
+
+    it("does not scroll with Ctrl+d when comment modal is open", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={manyLinesDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // Open comment modal
+      stdin.write("c");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comment:");
+      });
+      // Ctrl+d should be ignored during modal
+      stdin.write("\x04");
+      // Modal should still be open
+      expect(lastFrame()).toContain("Comment:");
+    });
+
+    it("does not jump with G when comment modal is open", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // Open comment modal
+      stdin.write("c");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comment:");
+      });
+      // G should be ignored during modal
+      stdin.write("G");
+      // Modal should still be open
+      expect(lastFrame()).toContain("Comment:");
+    });
+  });
 });

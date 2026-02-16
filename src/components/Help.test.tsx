@@ -117,4 +117,15 @@ describe("Help", () => {
     expect(lastFrame()).toContain("Previous reaction");
     expect(lastFrame()).toContain("Next reaction");
   });
+
+  it("displays page scroll keybindings", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    const output = lastFrame();
+    expect(output).toContain("Ctrl+d");
+    expect(output).toContain("Half page down");
+    expect(output).toContain("Ctrl+u");
+    expect(output).toContain("Half page up");
+    expect(output).toContain("G");
+    expect(output).toContain("Jump to end");
+  });
 });

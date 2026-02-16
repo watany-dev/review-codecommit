@@ -103,6 +103,9 @@ Completions support:
 |-----|--------|--------|
 | `j` / `↓` | Move cursor down | All |
 | `k` / `↑` | Move cursor up | All |
+| `Ctrl+d` | Half page down | PR Detail |
+| `Ctrl+u` | Half page up | PR Detail |
+| `G` | Jump to end | PR Detail |
 | `Enter` | Select / confirm / submit comment | List screens / Comment input |
 | `q` / `Esc` | Go back / cancel | All / Comment input / Confirm prompt |
 | `c` | Post comment | PR Detail |
