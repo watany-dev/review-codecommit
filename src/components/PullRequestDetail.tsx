@@ -1401,6 +1401,8 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
       ai++;
     } else {
       // Case 2: Lines differ - process deletions first, then additions
+      const startBi = bi;
+      const startAi = ai;
 
       // Process deletions: consume lines from 'before' that don't match current 'after'
       while (
@@ -1434,6 +1436,26 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
           afterLineNumber: ai + 1,
         });
         ai++;
+      }
+
+      // Safety: if both loops broke without advancing, force progress to prevent infinite loop
+      if (bi === startBi && ai === startAi) {
+        if (bi < beforeLines.length) {
+          result.push({
+            type: "delete",
+            text: `-${beforeLines[bi]}`,
+            beforeLineNumber: bi + 1,
+          });
+          bi++;
+        }
+        if (ai < afterLines.length) {
+          result.push({
+            type: "add",
+            text: `+${afterLines[ai]}`,
+            afterLineNumber: ai + 1,
+          });
+          ai++;
+        }
       }
     }
   }

@@ -28,6 +28,7 @@ import {
   UpdatePullRequestApprovalStateCommand,
   UpdatePullRequestStatusCommand,
 } from "@aws-sdk/client-codecommit";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { mapWithLimit } from "../utils/mapWithLimit.js";
 
 export interface CodeCommitConfig {
@@ -64,6 +65,10 @@ export function createClient(config: CodeCommitConfig): CodeCommitClient {
   return new CodeCommitClient({
     ...(config.region && { region: config.region }),
     ...(config.profile && { profile: config.profile }),
+    requestHandler: new NodeHttpHandler({
+      requestTimeout: 10_000,
+      connectionTimeout: 5_000,
+    }),
   });
 }
 

@@ -7044,4 +7044,108 @@ describe("PullRequestDetail", () => {
       });
     });
   });
+
+  describe("diff with swapped lines (no infinite loop)", () => {
+    it("renders diff when lines are swapped (A,B -> B,A)", () => {
+      const swapDiffTexts = new Map([["b1:b2", { before: "A\nB", after: "B\nA" }]]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={swapDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("A");
+      expect(output).toContain("B");
+    });
+
+    it("renders diff with nearby duplicate lines within 5-line window", () => {
+      const nearbyDupDiffTexts = new Map([
+        [
+          "b1:b2",
+          {
+            before: "X\nY\nZ\nX\nW",
+            after: "Y\nX\nW\nZ\nX",
+          },
+        ],
+      ]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={nearbyDupDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("src/auth.ts");
+    });
+
+    it("renders diff with import-like line reordering", () => {
+      const importSwapDiffTexts = new Map([
+        [
+          "b1:b2",
+          {
+            before:
+              'import { foo } from "foo";\nimport { bar } from "bar";\nimport { baz } from "baz";',
+            after:
+              'import { bar } from "bar";\nimport { baz } from "baz";\nimport { foo } from "foo";',
+          },
+        ],
+      ]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={importSwapDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("foo");
+      expect(output).toContain("bar");
+      expect(output).toContain("baz");
+    });
+  });
 });
