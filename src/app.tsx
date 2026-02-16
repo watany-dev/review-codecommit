@@ -217,49 +217,61 @@ export function App({ client, initialRepo }: AppProps) {
       setPrDifferences(detail.differences);
       setCommentThreads(detail.commentThreads);
 
-      // v0.3: 承認状態を取得
+      // Parallelize independent operations: approvals, reactions, blobs, commits
       const revisionId = detail.pullRequest.revisionId;
-      if (revisionId) {
-        const [approvalStates, evaluation] = await Promise.all([
-          getApprovalStates(client, { pullRequestId, revisionId }),
-          evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
-        ]);
-        setApprovals(approvalStates);
-        setApprovalEvaluation(evaluation);
-      }
-
-      await reloadReactions(detail.commentThreads);
-
-      // Parallelize blob content fetching for better performance
-      const blobFetches = detail.differences.map(async (diff) => {
-        const beforeBlobId = diff.beforeBlob?.blobId;
-        const afterBlobId = diff.afterBlob?.blobId;
-        const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-        const [before, after] = await Promise.all([
-          beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-          afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-        ]);
-
-        return { key, before, after };
-      });
-
-      const blobResults = await Promise.all(blobFetches);
-      const texts = new Map<string, { before: string; after: string }>();
-      for (const result of blobResults) {
-        texts.set(result.key, { before: result.before, after: result.after });
-      }
-      setDiffTexts(texts);
-
-      // v0.7: コミット一覧を取得
       const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
       const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
-      if (sourceCommit && mergeBase) {
-        const commitList = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
-        setCommits(commitList);
-      } else {
-        setCommits([]);
+
+      const approvalPromise = revisionId
+        ? Promise.all([
+            getApprovalStates(client, { pullRequestId, revisionId }),
+            evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+          ])
+        : Promise.resolve(undefined);
+
+      const reactionsPromise = reloadReactions(detail.commentThreads);
+
+      const blobPromise = (async () => {
+        const blobFetches = detail.differences.map(async (diff) => {
+          const beforeBlobId = diff.beforeBlob?.blobId;
+          const afterBlobId = diff.afterBlob?.blobId;
+          const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
+
+          const [before, after] = await Promise.all([
+            beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
+            afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
+          ]);
+
+          return { key, before, after };
+        });
+
+        const blobResults = await Promise.all(blobFetches);
+        const texts = new Map<string, { before: string; after: string }>();
+        for (const result of blobResults) {
+          texts.set(result.key, { before: result.before, after: result.after });
+        }
+        return texts;
+      })();
+
+      const commitsPromise =
+        sourceCommit && mergeBase
+          ? getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase)
+          : Promise.resolve([]);
+
+      const [approvalResult, , texts, commitList] = await Promise.all([
+        approvalPromise,
+        reactionsPromise,
+        blobPromise,
+        commitsPromise,
+      ]);
+
+      if (approvalResult) {
+        setApprovals(approvalResult[0]);
+        setApprovalEvaluation(approvalResult[1]);
       }
+
+      setDiffTexts(texts);
+      setCommits(commitList);
       setCommitDifferences([]);
       setCommitDiffTexts(new Map());
     });
