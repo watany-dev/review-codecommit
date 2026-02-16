@@ -136,15 +136,7 @@ export async function getPullRequestDetail(
 
   const [diffResult, commentThreads] = await Promise.all([
     hasCommits
-      ? client
-          .send(
-            new GetDifferencesCommand({
-              repositoryName,
-              beforeCommitSpecifier: target!.destinationCommit!,
-              afterCommitSpecifier: target!.sourceCommit!,
-            }),
-          )
-          .then((r) => r.differences ?? [])
+      ? getAllDifferences(client, repositoryName, target!.destinationCommit!, target!.sourceCommit!)
       : Promise.resolve([]),
     getComments(client, pullRequestId, {
       repositoryName,
@@ -184,31 +176,41 @@ export async function getComments(
   },
 ): Promise<CommentThread[]> {
   const commentThreads: CommentThread[] = [];
-  const commentsCommand = new GetCommentsForPullRequestCommand({
-    pullRequestId,
-    ...(params?.repositoryName ? { repositoryName: params.repositoryName } : {}),
-    ...(params?.afterCommitId && params?.beforeCommitId
-      ? {
-          afterCommitId: params.afterCommitId,
-          beforeCommitId: params.beforeCommitId,
-        }
-      : {}),
-  });
-  const commentsResponse = await client.send(commentsCommand);
-  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    const location = thread.location?.filePath
-      ? {
-          filePath: thread.location.filePath,
-          filePosition: thread.location.filePosition ?? 0,
-          relativeFileVersion:
-            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
-        }
-      : null;
-    commentThreads.push({
-      location,
-      comments: sortCommentsRootFirst(thread.comments ?? []),
-    });
-  }
+  let nextToken: string | undefined;
+
+  do {
+    const commentsResponse = await client.send(
+      new GetCommentsForPullRequestCommand({
+        pullRequestId,
+        ...(params?.repositoryName ? { repositoryName: params.repositoryName } : {}),
+        ...(params?.afterCommitId && params?.beforeCommitId
+          ? {
+              afterCommitId: params.afterCommitId,
+              beforeCommitId: params.beforeCommitId,
+            }
+          : {}),
+        ...(nextToken ? { nextToken } : {}),
+      }),
+    );
+
+    for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
+      const location = thread.location?.filePath
+        ? {
+            filePath: thread.location.filePath,
+            filePosition: thread.location.filePosition ?? 0,
+            relativeFileVersion:
+              (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+          }
+        : null;
+      commentThreads.push({
+        location,
+        comments: sortCommentsRootFirst(thread.comments ?? []),
+      });
+    }
+
+    nextToken = commentsResponse.nextToken;
+  } while (nextToken);
+
   return commentThreads;
 }
 
@@ -468,19 +470,38 @@ export async function getCommitsForPR(
   return commits.reverse();
 }
 
+async function getAllDifferences(
+  client: CodeCommitClient,
+  repositoryName: string,
+  beforeCommitSpecifier: string,
+  afterCommitSpecifier: string,
+): Promise<Difference[]> {
+  const differences: Difference[] = [];
+  let nextToken: string | undefined;
+
+  do {
+    const response = await client.send(
+      new GetDifferencesCommand({
+        repositoryName,
+        beforeCommitSpecifier,
+        afterCommitSpecifier,
+        ...(nextToken ? { NextToken: nextToken } : {}),
+      }),
+    );
+    differences.push(...(response.differences ?? []));
+    nextToken = response.NextToken;
+  } while (nextToken);
+
+  return differences;
+}
+
 export async function getCommitDifferences(
   client: CodeCommitClient,
   repositoryName: string,
   beforeCommitId: string,
   afterCommitId: string,
 ): Promise<Difference[]> {
-  const command = new GetDifferencesCommand({
-    repositoryName,
-    beforeCommitSpecifier: beforeCommitId,
-    afterCommitSpecifier: afterCommitId,
-  });
-  const response = await client.send(command);
-  return response.differences ?? [];
+  return getAllDifferences(client, repositoryName, beforeCommitId, afterCommitId);
 }
 
 export async function updateComment(

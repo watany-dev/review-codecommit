@@ -250,6 +250,50 @@ describe("getPullRequestDetail", () => {
       }),
     );
   });
+
+  it("paginates GetDifferences when NextToken is returned", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "big PR",
+        pullRequestTargets: [
+          {
+            sourceCommit: "abc123",
+            destinationCommit: "def456",
+          },
+        ],
+      },
+    });
+    // Promise.all runs getAllDifferences and getComments concurrently.
+    // Mock order matches actual call order:
+    // 1. GetDifferencesCommand (page 1) - from getAllDifferences
+    // 2. GetCommentsForPullRequestCommand - from getComments (concurrent)
+    // 3. GetDifferencesCommand (page 2) - from getAllDifferences loop
+    mockSend.mockResolvedValueOnce({
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "file1.ts" },
+          afterBlob: { blobId: "b2", path: "file1.ts" },
+        },
+      ],
+      NextToken: "page2-token",
+    });
+    mockSend.mockResolvedValueOnce({ commentsForPullRequestData: [] });
+    mockSend.mockResolvedValueOnce({
+      differences: [
+        {
+          beforeBlob: { blobId: "b3", path: "file2.ts" },
+          afterBlob: { blobId: "b4", path: "file2.ts" },
+        },
+      ],
+      NextToken: undefined,
+    });
+
+    const detail = await getPullRequestDetail(mockClient, "42", "my-service");
+    expect(detail.differences).toHaveLength(2);
+    expect(detail.differences[0].beforeBlob?.path).toBe("file1.ts");
+    expect(detail.differences[1].beforeBlob?.path).toBe("file2.ts");
+  });
 });
 
 describe("listPullRequests edge cases", () => {
@@ -801,6 +845,33 @@ describe("getComments", () => {
     expect(threads[0].comments[1].commentId).toBe("reply-1");
     expect(threads[0].comments[2].commentId).toBe("reply-3");
     expect(threads[0].comments[3].commentId).toBe("reply-2");
+  });
+
+  it("paginates when nextToken is returned", async () => {
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [{ commentId: "c1", content: "Page 1 comment" }],
+        },
+      ],
+      nextToken: "page2-token",
+    });
+    mockSend.mockResolvedValueOnce({
+      commentsForPullRequestData: [
+        {
+          comments: [{ commentId: "c2", content: "Page 2 comment" }],
+        },
+      ],
+      nextToken: undefined,
+    });
+
+    const threads = await getComments(mockClient, "42");
+    expect(threads).toHaveLength(2);
+    expect(threads[0].comments[0].commentId).toBe("c1");
+    expect(threads[1].comments[0].commentId).toBe("c2");
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    // Second call should include nextToken
+    expect(mockSend.mock.calls[1][0].input.nextToken).toBe("page2-token");
   });
 });
 
@@ -1491,6 +1562,27 @@ describe("getCommitDifferences", () => {
       beforeCommitSpecifier: "parentABC",
       afterCommitSpecifier: "commitDEF",
     });
+  });
+
+  it("paginates when NextToken is returned", async () => {
+    mockSend.mockResolvedValueOnce({
+      differences: [
+        { beforeBlob: { blobId: "b1", path: "a.ts" }, afterBlob: { blobId: "b2", path: "a.ts" } },
+      ],
+      NextToken: "token-2",
+    });
+    mockSend.mockResolvedValueOnce({
+      differences: [
+        { beforeBlob: { blobId: "b3", path: "b.ts" }, afterBlob: { blobId: "b4", path: "b.ts" } },
+      ],
+      NextToken: undefined,
+    });
+
+    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    expect(result).toHaveLength(2);
+    expect(result[0].beforeBlob?.path).toBe("a.ts");
+    expect(result[1].beforeBlob?.path).toBe("b.ts");
+    expect(mockSend).toHaveBeenCalledTimes(2);
   });
 });
 
