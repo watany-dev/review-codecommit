@@ -40,6 +40,7 @@ import {
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
+import { mapWithLimit } from "./utils/mapWithLimit.js";
 
 type Screen = "repos" | "prs" | "detail";
 
@@ -253,15 +254,6 @@ export function App({ client, initialRepo }: AppProps) {
 
       // Background: reactions
       void reloadReactions(detail.commentThreads);
-
-      // Background: commits
-      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
-      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
-      if (sourceCommit && mergeBase) {
-        void getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase).then((commitList) => {
-          setCommits(commitList);
-        });
-      }
     });
   }
 
@@ -283,7 +275,7 @@ export function App({ client, initialRepo }: AppProps) {
       const afterBlobId = diff.afterBlob?.blobId;
       const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
 
-      /* v8 ignore next 14 -- no-blob path rarely occurs; stale-load guard hard to test deterministically */
+      /* v8 ignore next 15 -- no-blob path rarely occurs; stale-load guard hard to test deterministically */
       if (!beforeBlobId && !afterBlobId) {
         if (diffLoadRef.current === loadId) {
           setDiffTexts((prev) => {
@@ -306,6 +298,7 @@ export function App({ client, initialRepo }: AppProps) {
           afterBlobId ? getBlobContent(client, repoName, afterBlobId) : Promise.resolve(""),
         ]);
 
+        /* v8 ignore next 8 -- stale-load guard hard to test deterministically */
         if (diffLoadRef.current === loadId) {
           setDiffTexts((prev) => {
             const next = new Map(prev);
@@ -319,6 +312,7 @@ export function App({ client, initialRepo }: AppProps) {
           });
         }
       } catch {
+        /* v8 ignore next 6 -- stale-load guard + error path hard to test deterministically */
         if (diffLoadRef.current === loadId) {
           setDiffTextStatus((prev) => {
             const next = new Map(prev);
@@ -561,24 +555,25 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function handleLoadCommitDiff(commitIndex: number) {
-    const commit = commits[commitIndex];
-    if (!commit || commit.parentIds.length === 0) return;
-
     setIsLoadingCommitDiff(true);
     try {
+      let currentCommits = commits;
+      if (currentCommits.length === 0) {
+        const sourceCommit = prDetail?.pullRequestTargets?.[0]?.sourceCommit;
+        const mergeBase = prDetail?.pullRequestTargets?.[0]?.mergeBase;
+        if (!sourceCommit || !mergeBase) return;
+        currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        setCommits(currentCommits);
+      }
+
+      const commit = currentCommits[commitIndex];
+      if (!commit || commit.parentIds.length === 0) return;
+
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
 
-      const texts = new Map<string, { before: string; after: string }>();
-      const concurrency = 6;
-      let index = 0;
-
-      async function processNext(): Promise<void> {
-        const currentIndex = index++;
-        if (currentIndex >= diffs.length) return;
-
-        const diff = diffs[currentIndex]!;
+      const blobResults = await mapWithLimit(diffs, 5, async (diff) => {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
@@ -588,12 +583,12 @@ export function App({ client, initialRepo }: AppProps) {
           afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
         ]);
 
-        texts.set(key, { before, after });
-        return processNext();
+        return { key, before, after };
+      });
+      const texts = new Map<string, { before: string; after: string }>();
+      for (const result of blobResults) {
+        texts.set(result.key, { before: result.before, after: result.after });
       }
-
-      const workerCount = Math.min(concurrency, diffs.length);
-      await Promise.all(Array.from({ length: workerCount }, () => processNext()));
       setCommitDiffTexts(texts);
     } finally {
       setIsLoadingCommitDiff(false);
@@ -773,6 +768,10 @@ export function App({ client, initialRepo }: AppProps) {
             diffTexts: commitDiffTexts,
             isLoading: isLoadingCommitDiff,
             onLoad: handleLoadCommitDiff,
+            commitsAvailable: !!(
+              prDetail?.pullRequestTargets?.[0]?.sourceCommit &&
+              prDetail?.pullRequestTargets?.[0]?.mergeBase
+            ),
           }}
           editComment={{
             onUpdate: handleUpdateComment,

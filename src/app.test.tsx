@@ -3228,7 +3228,7 @@ describe("App", () => {
     });
   });
 
-  it("fetches commits when loading PR detail with mergeBase", async () => {
+  it("lazy loads commits on Tab press when mergeBase exists", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
         {
@@ -3265,6 +3265,7 @@ describe("App", () => {
         parentIds: ["base789"],
       },
     ]);
+    vi.mocked(getCommitDifferences).mockResolvedValue([]);
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
@@ -3274,9 +3275,19 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
-    expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    // Commits not loaded yet during initial detail load
+    expect(getCommitsForPR).not.toHaveBeenCalled();
+    // Tab header should show [All changes] because commitsAvailable is true
     expect(lastFrame()).toContain("[All changes]");
-    expect(lastFrame()).toContain("Commits (1)");
+
+    // Tab triggers lazy load
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/1]");
+    });
   });
 
   it("does not show commits when mergeBase is missing", async () => {
@@ -3318,7 +3329,7 @@ describe("App", () => {
     expect(lastFrame()).not.toContain("[All changes]");
   });
 
-  it("loads commit diff when switching to commit view", async () => {
+  it("loads commits and commit diff when switching to commit view via Tab", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
         {
@@ -3372,7 +3383,10 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
 
-    stdin.write("\t"); // switch to commit view
+    stdin.write("\t"); // switch to commit view (triggers lazy load)
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    });
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });

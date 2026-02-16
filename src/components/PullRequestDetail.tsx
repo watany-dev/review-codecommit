@@ -76,6 +76,7 @@ interface CommitViewProps {
   diffTexts: Map<string, { before: string; after: string }>;
   isLoading: boolean;
   onLoad: (commitIndex: number) => void;
+  commitsAvailable: boolean;
 }
 
 interface EditCommentAction {
@@ -174,6 +175,7 @@ export function PullRequestDetail({
     diffTexts: commitDiffTexts,
     isLoading: isLoadingCommitDiff,
     onLoad: onLoadCommitDiff,
+    commitsAvailable,
   },
   editComment: {
     onUpdate: onUpdateComment,
@@ -498,7 +500,15 @@ export function PullRequestDetail({
     )
       return;
 
-    if (key.tab && commits.length > 0) {
+    if (key.tab && (commits.length > 0 || commitsAvailable)) {
+      if (commits.length === 0) {
+        // Lazy load: trigger first commit load
+        setViewIndex(0);
+        setCursorIndex(0);
+        onLoadCommitDiff(0);
+        return;
+      }
+
       const newIndex = key.shift
         ? viewIndex - 1 < -1
           ? commits.length - 1
@@ -731,7 +741,7 @@ export function PullRequestDetail({
             </Text>
           </Box>
         )}
-      {commits.length > 0 && (
+      {(commits.length > 0 || commitsAvailable) && (
         <Box flexDirection="column" marginBottom={0}>
           <Box>
             {viewIndex === -1 ? (
@@ -739,9 +749,9 @@ export function PullRequestDetail({
                 <Text bold color="cyan">
                   [All changes]
                 </Text>
-                <Text> Commits ({commits.length})</Text>
+                {commits.length > 0 && <Text> Commits ({commits.length})</Text>}
               </>
-            ) : (
+            ) : commits[viewIndex] ? (
               <>
                 <Text>All changes </Text>
                 <Text bold color="cyan">
@@ -749,9 +759,14 @@ export function PullRequestDetail({
                 </Text>
                 <Text> {commits[viewIndex]!.shortId}</Text>
               </>
+            ) : (
+              <>
+                <Text>All changes </Text>
+                <Text color="cyan">Loading commits...</Text>
+              </>
             )}
           </Box>
-          {viewIndex >= 0 && (
+          {viewIndex >= 0 && commits[viewIndex] && (
             <Text dimColor>
               {commits[viewIndex]!.message} {commits[viewIndex]!.authorName}{" "}
               {formatRelativeDate(commits[viewIndex]!.authorDate)}
@@ -981,7 +996,7 @@ export function PullRequestDetail({
           showReactionPicker ||
           showFileList
             ? ""
-            : viewIndex === -1 && commits.length > 0
+            : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
               ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
@@ -1023,6 +1038,7 @@ function getCommentIdFromLine(line: DisplayLine): { commentId: string } | null {
   return { commentId: line.commentId };
 }
 
+/* v8 ignore start -- commentId always matches a thread entry; loop-exit branch unreachable */
 function findCommentContent(commentThreads: CommentThread[], commentId: string): string {
   for (const thread of commentThreads) {
     for (const comment of thread.comments) {
@@ -1031,7 +1047,6 @@ function findCommentContent(commentThreads: CommentThread[], commentId: string):
       }
     }
   }
-  /* v8 ignore start -- commentId always matches a thread entry */
   return "";
 }
 /* v8 ignore stop */

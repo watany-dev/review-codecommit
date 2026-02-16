@@ -94,6 +94,7 @@ describe("PullRequestDetail", () => {
     diffTexts: new Map<string, { before: string; after: string }>(),
     isLoading: false,
     onLoad: vi.fn(),
+    commitsAvailable: false,
   };
 
   const defaultEditCommentProps = {
@@ -4550,7 +4551,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4578,7 +4579,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4609,7 +4615,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4651,7 +4662,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4681,7 +4697,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4731,6 +4752,34 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).not.toContain("[Commit");
       expect(onLoadCommitDiff).not.toHaveBeenCalled();
     });
+
+    it("Tab triggers lazy load when commitsAvailable but commits empty", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commitsAvailable: true, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(onLoadCommitDiff).toHaveBeenCalledWith(0);
+      });
+    });
   });
 
   describe("commit view - comment keys disabled", () => {
@@ -4749,7 +4798,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4778,7 +4827,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4809,7 +4858,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            isLoading: true,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4836,7 +4890,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            isLoading: true,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4862,7 +4921,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4886,7 +4945,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4966,6 +5025,7 @@ describe("PullRequestDetail", () => {
             diffTexts: commitDiffTexts,
             isLoading: false,
             onLoad: vi.fn(),
+            commitsAvailable: true,
           }}
         />,
       );
@@ -4992,7 +5052,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -5025,7 +5085,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
