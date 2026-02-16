@@ -28,6 +28,7 @@ import {
   UpdatePullRequestApprovalStateCommand,
   UpdatePullRequestStatusCommand,
 } from "@aws-sdk/client-codecommit";
+import { mapWithLimit } from "../utils/concurrency.js";
 
 export interface CodeCommitConfig {
   profile?: string;
@@ -91,27 +92,25 @@ export async function listPullRequests(
   const pullRequestIds = listResponse.pullRequestIds ?? [];
 
   const pullRequests: PullRequestSummary[] = (
-    await Promise.all(
-      pullRequestIds.map(async (id) => {
-        const getCommand = new GetPullRequestCommand({ pullRequestId: id });
-        const getResponse = await client.send(getCommand);
-        const pr = getResponse.pullRequest;
-        if (!pr) return null;
+    await mapWithLimit(pullRequestIds, 5, async (id) => {
+      const getCommand = new GetPullRequestCommand({ pullRequestId: id });
+      const getResponse = await client.send(getCommand);
+      const pr = getResponse.pullRequest;
+      if (!pr) return null;
 
-        const apiStatus = pr.pullRequestStatus ?? "OPEN";
-        const isMerged = pr.pullRequestTargets?.[0]?.mergeMetadata?.isMerged === true;
-        const displayStatus: PullRequestDisplayStatus =
-          apiStatus === "CLOSED" && isMerged ? "MERGED" : (apiStatus as PullRequestDisplayStatus);
+      const apiStatus = pr.pullRequestStatus ?? "OPEN";
+      const isMerged = pr.pullRequestTargets?.[0]?.mergeMetadata?.isMerged === true;
+      const displayStatus: PullRequestDisplayStatus =
+        apiStatus === "CLOSED" && isMerged ? "MERGED" : (apiStatus as PullRequestDisplayStatus);
 
-        return {
-          pullRequestId: pr.pullRequestId ?? id,
-          title: pr.title ?? "(no title)",
-          authorArn: pr.authorArn ?? "unknown",
-          creationDate: pr.creationDate ?? new Date(),
-          status: displayStatus,
-        };
-      }),
-    )
+      return {
+        pullRequestId: pr.pullRequestId ?? id,
+        title: pr.title ?? "(no title)",
+        authorArn: pr.authorArn ?? "unknown",
+        creationDate: pr.creationDate ?? new Date(),
+        status: displayStatus,
+      };
+    })
   ).filter((pr): pr is PullRequestSummary => pr !== null);
 
   const result: { pullRequests: PullRequestSummary[]; nextToken?: string } = { pullRequests };
@@ -559,16 +558,15 @@ export async function getReactionsForComments(
 ): Promise<ReactionsByComment> {
   const results: ReactionsByComment = new Map();
 
-  const fetches = commentIds.map(async (commentId) => {
+  const settled = await mapWithLimit(commentIds, 5, async (commentId) => {
     try {
       const reactions = await getReactionsForComment(client, commentId);
       return { commentId, reactions };
     } catch {
-      return { commentId, reactions: [] };
+      return { commentId, reactions: [] as ReactionSummary[] };
     }
   });
 
-  const settled = await Promise.all(fetches);
   for (const { commentId, reactions } of settled) {
     if (reactions.length > 0) {
       results.set(commentId, reactions);

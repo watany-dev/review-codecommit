@@ -40,6 +40,7 @@ import {
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
+import { mapWithLimit } from "./utils/concurrency.js";
 import { formatErrorMessage } from "./utils/formatError.js";
 
 type Screen = "repos" | "prs" | "detail";
@@ -233,7 +234,7 @@ export function App({ client, initialRepo }: AppProps) {
       const reactionsPromise = reloadReactions(detail.commentThreads);
 
       const blobPromise = (async () => {
-        const blobFetches = detail.differences.map(async (diff) => {
+        const blobResults = await mapWithLimit(detail.differences, 5, async (diff) => {
           const beforeBlobId = diff.beforeBlob?.blobId;
           const afterBlobId = diff.afterBlob?.blobId;
           const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
@@ -246,7 +247,6 @@ export function App({ client, initialRepo }: AppProps) {
           return { key, before, after };
         });
 
-        const blobResults = await Promise.all(blobFetches);
         const texts = new Map<string, { before: string; after: string }>();
         for (const result of blobResults) {
           texts.set(result.key, { before: result.before, after: result.after });
@@ -515,7 +515,7 @@ export function App({ client, initialRepo }: AppProps) {
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
 
-      const blobFetches = diffs.map(async (diff) => {
+      const blobResults = await mapWithLimit(diffs, 5, async (diff) => {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
@@ -527,8 +527,6 @@ export function App({ client, initialRepo }: AppProps) {
 
         return { key, before, after };
       });
-
-      const blobResults = await Promise.all(blobFetches);
       const texts = new Map<string, { before: string; after: string }>();
       for (const result of blobResults) {
         texts.set(result.key, { before: result.before, after: result.after });
