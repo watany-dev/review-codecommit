@@ -51,25 +51,7 @@ const mockClient = {} as any;
 
 describe("App", () => {
   beforeEach(() => {
-    vi.mocked(listRepositories).mockReset();
-    vi.mocked(listPullRequests).mockReset();
-    vi.mocked(getPullRequestDetail).mockReset();
-    vi.mocked(getBlobContent).mockReset();
-    vi.mocked(postComment).mockReset();
-    vi.mocked(postCommentReply).mockReset();
-    vi.mocked(getComments).mockReset();
-    vi.mocked(getApprovalStates).mockReset();
-    vi.mocked(evaluateApprovalRules).mockReset();
-    vi.mocked(updateApprovalState).mockReset();
-    vi.mocked(mergePullRequest).mockReset();
-    vi.mocked(getMergeConflicts).mockReset();
-    vi.mocked(closePullRequest).mockReset();
-    vi.mocked(getCommitsForPR).mockReset();
-    vi.mocked(getCommitDifferences).mockReset();
-    vi.mocked(updateComment).mockReset();
-    vi.mocked(deleteComment).mockReset();
-    vi.mocked(getReactionsForComments).mockReset();
-    vi.mocked(putReaction).mockReset();
+    vi.resetAllMocks();
     // Default: no reactions
     vi.mocked(getReactionsForComments).mockResolvedValue(new Map());
     vi.mocked(putReaction).mockResolvedValue(undefined);
@@ -1066,8 +1048,7 @@ describe("App", () => {
       stdin.write("\r");
     });
 
-    // Give time for any async operations
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 0));
     expect(postComment).not.toHaveBeenCalled();
   });
 
@@ -1306,7 +1287,7 @@ describe("App", () => {
     });
 
     stdin.write("y");
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 0));
     expect(updateApprovalState).not.toHaveBeenCalled();
   });
 
