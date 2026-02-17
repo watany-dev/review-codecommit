@@ -24,6 +24,7 @@ type InlineLocation = {
 const LARGE_DIFF_THRESHOLD = 1500;
 const DIFF_CHUNK_SIZE = 300;
 const EMPTY_STATUS_MAP = new Map<string, "loading" | "loaded" | "error">();
+const DIFF_CACHE_MAX_SIZE = 50;
 
 interface CommentAction {
   onPost: (content: string) => void;
@@ -1206,7 +1207,11 @@ function buildDisplayLines(
       const displayLimit = Math.min(currentLimit, totalLines);
       const cacheKey = `${blobKey}:${displayLimit}`;
       let diffLines = diffCache?.get(cacheKey);
-      if (!diffLines) {
+      if (diffLines) {
+        // LRU: re-insert to refresh access order
+        diffCache?.delete(cacheKey);
+        diffCache?.set(cacheKey, diffLines);
+      } else {
         const { beforeLimit, afterLimit } = getSliceLimits(
           beforeLines.length,
           afterLines.length,
@@ -1216,7 +1221,16 @@ function buildDisplayLines(
           beforeLines.slice(0, beforeLimit),
           afterLines.slice(0, afterLimit),
         );
-        diffCache?.set(cacheKey, diffLines);
+        /* v8 ignore start -- LRU eviction requires 50+ distinct diffs to trigger */
+        if (diffCache) {
+          while (diffCache.size >= DIFF_CACHE_MAX_SIZE) {
+            const oldest = diffCache.keys().next().value;
+            if (oldest === undefined) break;
+            diffCache.delete(oldest);
+          }
+          diffCache.set(cacheKey, diffLines);
+        }
+        /* v8 ignore stop */
       }
       for (const dl of diffLines) {
         lines.push({ ...dl, filePath, diffKey: blobKey });

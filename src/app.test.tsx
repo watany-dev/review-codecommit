@@ -1219,6 +1219,64 @@ describe("App", () => {
     });
   });
 
+  it("approves PR even when evaluateApprovalRules fails during reload", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        revisionId: "rev-1",
+        pullRequestTargets: [],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(updateApprovalState).mockResolvedValue(undefined);
+    vi.mocked(getApprovalStates).mockResolvedValue([
+      { userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" },
+    ]);
+    // evaluateApprovalRules fails during reloadApprovals -> .catch(() => null) handles it
+    vi.mocked(evaluateApprovalRules).mockRejectedValue(new Error("no rules"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("a");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Approve this pull request?");
+    });
+
+    stdin.write("y");
+    await vi.waitFor(() => {
+      expect(updateApprovalState).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ approvalState: "APPROVE" }),
+      );
+    });
+
+    // Approval should still work despite evaluateApprovalRules failure
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("watany");
+    });
+  });
+
   it("revokes approval successfully", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
