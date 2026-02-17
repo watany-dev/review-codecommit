@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { formatErrorMessage } from "./formatError.js";
 
@@ -384,5 +385,76 @@ describe("formatErrorMessage", () => {
         "Something went wrong",
       );
     });
+  });
+});
+
+// --- Property-Based Tests ---
+
+// Creates an Error that falls through to the default sanitization path.
+// Uses a name not matched by any known error handler, and a message
+// that avoids ECONNREFUSED/ETIMEDOUT to prevent network error branching.
+function unknownError(message: string): Error {
+  const err = new Error(message);
+  err.name = "SomeUnknownError";
+  return err;
+}
+
+// Safe character set: lowercase only, so ECONNREFUSED/ETIMEDOUT can't appear
+const safeChars = fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz ");
+const safeString = fc.stringOf(safeChars, { maxLength: 15 });
+
+describe("formatErrorMessage (property-based)", () => {
+  it("never throws on any non-Error input", () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.string(),
+          fc.integer(),
+          fc.boolean(),
+          fc.constant(null),
+          fc.constant(undefined),
+        ),
+        (value) => {
+          expect(() => formatErrorMessage(value)).not.toThrow();
+        },
+      ),
+    );
+  });
+
+  it("always replaces ARN patterns in fallback path", () => {
+    // ARN suffix: lowercase + digits + :/.-_ (no spaces/quotes so regex matches greedily)
+    const arnBody = fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz0123456789:/.-_"), {
+      minLength: 1,
+      maxLength: 30,
+    });
+    fc.assert(
+      fc.property(safeString, arnBody, safeString, (prefix, body, suffix) => {
+        const message = `${prefix} arn:${body} ${suffix}`;
+        const result = formatErrorMessage(unknownError(message));
+        expect(result).not.toMatch(/arn:/i);
+        expect(result).toContain("[ARN]");
+      }),
+    );
+  });
+
+  it("always replaces 12-digit account IDs in fallback path", () => {
+    fc.assert(
+      fc.property(safeString, safeString, (prefix, suffix) => {
+        // Space separators guarantee word boundaries around the 12-digit number
+        const message = `${prefix} 123456789012 ${suffix}`;
+        const result = formatErrorMessage(unknownError(message));
+        expect(result).not.toMatch(/\b\d{12}\b/);
+      }),
+    );
+  });
+
+  it("does not replace 11-digit or 13-digit numbers", () => {
+    fc.assert(
+      fc.property(fc.constantFrom("12345678901", "1234567890123"), (num) => {
+        const message = `error ${num} occurred`;
+        const result = formatErrorMessage(unknownError(message));
+        expect(result).toContain(num);
+      }),
+    );
   });
 });
