@@ -1,6 +1,6 @@
 {
   "name": "review-codecommit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A TUI tool for reviewing AWS CodeCommit pull requests in the terminal",
   "type": "module",
   "bin": {
