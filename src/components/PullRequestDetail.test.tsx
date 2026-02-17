@@ -1551,15 +1551,20 @@ describe("PullRequestDetail", () => {
     });
   });
 
-  it("shows truncation notice for large diffs and expands on t", async () => {
-    const beforeLines = Array.from({ length: 1200 }, (_, i) => `before ${i + 1}`).join("\n");
-    const afterLines = Array.from({ length: 1200 }, (_, i) => `after ${i + 1}`).join("\n");
+  it("folds unchanged context in large diffs and shows changes immediately", async () => {
+    // Create a large file where changes are in the middle (around line 600)
+    const commonPrefix = Array.from({ length: 600 }, (_, i) => `common ${i + 1}`);
+    const commonSuffix = Array.from({ length: 600 }, (_, i) => `common ${i + 601}`);
+    const beforeMiddle = ["old line A", "old line B"];
+    const afterMiddle = ["new line A", "new line B"];
+    const beforeContent = [...commonPrefix, ...beforeMiddle, ...commonSuffix].join("\n");
+    const afterContent = [...commonPrefix, ...afterMiddle, ...commonSuffix].join("\n");
     const largeDiffTexts = new Map([
       [
         "b1:b2",
         {
-          before: beforeLines,
-          after: afterLines,
+          before: beforeContent,
+          after: afterContent,
         },
       ],
     ]);
@@ -1584,34 +1589,49 @@ describe("PullRequestDetail", () => {
       />,
     );
 
-    stdin.write("G");
-    stdin.write("k");
-    stdin.write("k");
-    stdin.write("k");
+    // The diff should fold context and show actual changes immediately
+    // With folding, the view is compact enough that changes are visible near the top
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("... truncated 300/2400 lines");
-      expect(lastFrame()).toContain("[t] show next 300 lines");
+      const frame = lastFrame();
+      // Context folding indicator should be present
+      expect(frame).toContain("unchanged lines");
+      // Actual changes should be visible (not buried under 600 lines of context)
+      expect(frame).toContain("-old line A");
+      expect(frame).toContain("+new line A");
     });
 
-    stdin.write("G");
-    for (let i = 0; i < 6; i++) stdin.write("k");
-    stdin.write("t");
-    // Wait for re-render after expansion (before 300 only visible after expansion)
+    // Move cursor to a diff line (flush state before pressing t)
+    stdin.write("j"); // move to separator
+    stdin.write("j"); // move to first context line (has diffKey)
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("-before 300");
+      // Verify cursor moved to a context line
+      expect(lastFrame()).toContain(">  common 1");
     });
-    stdin.write("G");
-    stdin.write("k");
-    stdin.write("k");
+
+    // Press t to expand all folds for this file
+    stdin.write("t");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("... truncated 600/2400 lines");
+      // After expansion, fold markers disappear and previously folded lines appear
+      const frame = lastFrame();
+      expect(frame).not.toContain("unchanged lines");
+      expect(frame).toContain("common 10");
+    });
+
+    // Press t again to re-fold
+    stdin.write("t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("unchanged lines");
     });
   });
 
   it("handles asymmetric large diff (many before, few after lines)", async () => {
-    const beforeLines = Array.from({ length: 1500 }, (_, i) => `old ${i + 1}`).join("\n");
-    const afterLines = "new line 1\nnew line 2";
-    const asymmetricDiffTexts = new Map([["b1:b2", { before: beforeLines, after: afterLines }]]);
+    // 800 shared lines + different lines to exceed threshold
+    const sharedLines = Array.from({ length: 800 }, (_, i) => `shared ${i + 1}`);
+    const beforeContent = [...sharedLines, "old unique 1", "old unique 2"].join("\n");
+    const afterContent = [...sharedLines, "new unique 1"].join("\n");
+    const asymmetricDiffTexts = new Map([
+      ["b1:b2", { before: beforeContent, after: afterContent }],
+    ]);
     const { stdin, lastFrame } = render(
       <PullRequestDetail
         pullRequest={pullRequest as any}
@@ -1632,12 +1652,65 @@ describe("PullRequestDetail", () => {
         reaction={defaultReactionProps}
       />,
     );
-    // Navigate to the truncation area at the bottom
-    stdin.write("G");
-    stdin.write("k");
-    stdin.write("k");
+    // Asymmetric large diff should fold shared context and show the actual changes
+    stdin.write("j");
+    stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
-      expect(lastFrame()).toContain("truncated");
+      const frame = lastFrame();
+      expect(frame).toContain("unchanged lines");
+      expect(frame).toContain("-old unique");
+    });
+  });
+
+  it("does not fold context when inline comments exist in fold region", async () => {
+    // Create large diff with shared context that has an inline comment
+    const sharedLines = Array.from({ length: 800 }, (_, i) => `shared ${i + 1}`);
+    const beforeContent = [...sharedLines, "old"].join("\n");
+    const afterContent = [...sharedLines, "new"].join("\n");
+    const largeDiffTexts = new Map([["b1:b2", { before: beforeContent, after: afterContent }]]);
+    // Comment on line 400 (AFTER version) — in the middle of the shared context
+    const threads = [
+      {
+        location: {
+          filePath: "src/auth.ts",
+          filePosition: 400,
+          relativeFileVersion: "AFTER" as const,
+        },
+        comments: [
+          {
+            authorArn: "arn:aws:iam::123456789012:user/reviewer",
+            content: "Check this line",
+          },
+        ],
+      },
+    ];
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={threads as any}
+        diffTexts={largeDiffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    // The context run containing the comment should NOT be folded
+    // (all context lines are shown so the comment remains accessible)
+    await vi.waitFor(() => {
+      const frame = lastFrame();
+      expect(frame).not.toContain("unchanged lines");
     });
   });
 

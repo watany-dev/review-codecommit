@@ -22,7 +22,7 @@ type InlineLocation = {
 };
 
 const LARGE_DIFF_THRESHOLD = 1500;
-const DIFF_CHUNK_SIZE = 300;
+const FOLD_CONTEXT_LINES = 3;
 
 interface CommentAction {
   onPost: (content: string) => void;
@@ -412,7 +412,7 @@ export function PullRequestDetail({
     commitDiffTexts,
   ]);
 
-  const hasTruncation = useMemo(() => lines.some((line) => line.type === "truncation"), [lines]);
+  const hasContextFold = useMemo(() => lines.some((line) => line.type === "context-fold"), [lines]);
 
   const headerIndices = useMemo(
     () =>
@@ -551,13 +551,14 @@ export function PullRequestDetail({
       if (!texts) return;
       const totalLines = texts.before.split("\n").length + texts.after.split("\n").length;
       if (totalLines <= LARGE_DIFF_THRESHOLD) return;
-      const currentLimit = diffLineLimits.get(diffKey) ?? DIFF_CHUNK_SIZE;
-      /* v8 ignore next -- requires many t-presses to reach full expansion */
-      if (currentLimit >= totalLines) return;
-      const nextLimit = Math.min(currentLimit + DIFF_CHUNK_SIZE, totalLines);
+      // Toggle between folded and expanded view
       setDiffLineLimits((prev) => {
         const next = new Map(prev);
-        next.set(diffKey, nextLimit);
+        if (next.has(diffKey)) {
+          next.delete(diffKey);
+        } else {
+          next.set(diffKey, totalLines);
+        }
         return next;
       });
       return;
@@ -997,10 +998,10 @@ export function PullRequestDetail({
           showFileList
             ? ""
             : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
-              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
+              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasContextFold ? " t expand" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
+                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasContextFold ? " t expand" : ""}`}
         </Text>
       </Box>
     </Box>
@@ -1014,14 +1015,13 @@ interface DisplayLine {
     | "add"
     | "delete"
     | "context"
-    | "truncation"
-    | "truncate-context"
     | "comment-header"
     | "comment"
     | "inline-comment"
     | "inline-reply"
     | "comment-reply"
-    | "fold-indicator";
+    | "fold-indicator"
+    | "context-fold";
   text: string;
   filePath?: string;
   diffKey?: string;
@@ -1030,6 +1030,7 @@ interface DisplayLine {
   threadIndex?: number | undefined;
   commentId?: string | undefined;
   reactionText?: string;
+  foldedCount?: number;
 }
 
 function getCommentIdFromLine(line: DisplayLine): { commentId: string } | null {
@@ -1200,21 +1201,29 @@ function buildDisplayLines(
       const beforeLines = texts.before.split("\n");
       const afterLines = texts.after.split("\n");
       const totalLines = beforeLines.length + afterLines.length;
-      const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
-      const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
-      const displayLimit = Math.min(currentLimit, totalLines);
-      const cacheKey = `${blobKey}:${displayLimit}`;
+      const isLarge = totalLines > LARGE_DIFF_THRESHOLD;
+      const isExpanded = diffLineLimits.has(blobKey);
+      const shouldFold = isLarge && !isExpanded;
+      const cacheKey = `${blobKey}:${shouldFold ? "folded" : "expanded"}`;
       let diffLines = diffCache?.get(cacheKey);
       if (!diffLines) {
-        const { beforeLimit, afterLimit } = getSliceLimits(
-          beforeLines.length,
-          afterLines.length,
-          displayLimit,
-        );
-        diffLines = computeSimpleDiff(
-          beforeLines.slice(0, beforeLimit),
-          afterLines.slice(0, afterLimit),
-        );
+        diffLines = computeSimpleDiff(beforeLines, afterLines);
+        if (shouldFold) {
+          // Collect comment positions for this file so we never fold commented lines
+          const commentedPositions = new Set<string>();
+          for (const key of inlineThreadsByKey.keys()) {
+            if (key.startsWith(`${filePath}:`)) {
+              commentedPositions.add(key);
+            }
+          }
+          diffLines = foldContextLines(
+            diffLines,
+            FOLD_CONTEXT_LINES,
+            commentedPositions,
+            filePath,
+            blobKey,
+          );
+        }
         diffCache?.set(cacheKey, diffLines);
       }
       for (const dl of diffLines) {
@@ -1222,32 +1231,19 @@ function buildDisplayLines(
         dl.diffKey = blobKey;
         lines.push(dl);
 
-        const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
-        for (const { thread, index: threadIdx } of matchingEntries) {
-          appendThreadLines(
-            lines,
-            thread,
-            threadIdx,
-            collapsedThreads,
-            "inline",
-            reactionsByComment,
-          );
+        if (dl.type !== "context-fold") {
+          const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
+          for (const { thread, index: threadIdx } of matchingEntries) {
+            appendThreadLines(
+              lines,
+              thread,
+              threadIdx,
+              collapsedThreads,
+              "inline",
+              reactionsByComment,
+            );
+          }
         }
-      }
-      if (totalLines > displayLimit) {
-        const moreCount = Math.min(DIFF_CHUNK_SIZE, totalLines - displayLimit);
-        lines.push({
-          type: "truncate-context",
-          text: `... truncated ${displayLimit}/${totalLines} lines`,
-          filePath,
-          diffKey: blobKey,
-        });
-        lines.push({
-          type: "truncation",
-          text: `[t] show next ${moreCount} lines`,
-          filePath,
-          diffKey: blobKey,
-        });
       }
     } else if (status === "error") {
       lines.push({
@@ -1287,24 +1283,95 @@ function buildDisplayLines(
   return lines;
 }
 
-function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
-  if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
-  const total = beforeCount + afterCount;
-  if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
+/**
+ * Folds long runs of consecutive context (unchanged) lines, keeping only
+ * a few lines of context around each change hunk — similar to `git diff`.
+ *
+ * Lines that have inline comments are never folded so that comments
+ * remain visible.
+ */
+function foldContextLines(
+  diffLines: DisplayLine[],
+  contextLines: number,
+  commentedPositions: Set<string>,
+  filePath: string,
+  diffKey: string,
+): DisplayLine[] {
+  const result: DisplayLine[] = [];
+  let i = 0;
 
-  const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
-  let beforeLimit = Math.round(totalLimit * beforeRatio);
-  beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
-  let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
+  while (i < diffLines.length) {
+    if (diffLines[i]!.type !== "context") {
+      result.push(diffLines[i]!);
+      i++;
+      continue;
+    }
 
-  /* v8 ignore start -- defensive: proportional split makes this unreachable when total > totalLimit */
-  if (afterLimit < totalLimit - beforeLimit) {
-    const remaining = totalLimit - (beforeLimit + afterLimit);
-    beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
+    // Collect the entire run of consecutive context lines
+    const runStart = i;
+    while (i < diffLines.length && diffLines[i]!.type === "context") {
+      i++;
+    }
+    const runEnd = i;
+    const runLength = runEnd - runStart;
+
+    // Short run — keep all lines
+    if (runLength <= 2 * contextLines + 1) {
+      for (let j = runStart; j < runEnd; j++) {
+        result.push(diffLines[j]!);
+      }
+      continue;
+    }
+
+    // Check whether any line in the would-be fold region has a comment
+    const foldStart = runStart + contextLines;
+    const foldEnd = runEnd - contextLines;
+    let hasFoldedComments = false;
+    for (let j = foldStart; j < foldEnd; j++) {
+      const dl = diffLines[j]!;
+      if (
+        dl.beforeLineNumber &&
+        commentedPositions.has(`${filePath}:${dl.beforeLineNumber}:BEFORE`)
+      ) {
+        hasFoldedComments = true;
+        break;
+      }
+      if (dl.afterLineNumber && commentedPositions.has(`${filePath}:${dl.afterLineNumber}:AFTER`)) {
+        hasFoldedComments = true;
+        break;
+      }
+    }
+
+    if (hasFoldedComments) {
+      // Don't fold — show all lines so comments stay visible
+      for (let j = runStart; j < runEnd; j++) {
+        result.push(diffLines[j]!);
+      }
+      continue;
+    }
+
+    // Keep first contextLines
+    for (let j = runStart; j < foldStart; j++) {
+      result.push(diffLines[j]!);
+    }
+
+    // Fold marker
+    const foldedCount = foldEnd - foldStart;
+    result.push({
+      type: "context-fold",
+      text: `... ${foldedCount} unchanged lines ...`,
+      filePath,
+      diffKey,
+      foldedCount,
+    });
+
+    // Keep last contextLines
+    for (let j = foldEnd; j < runEnd; j++) {
+      result.push(diffLines[j]!);
+    }
   }
-  /* v8 ignore stop */
 
-  return { beforeLimit, afterLimit };
+  return result;
 }
 
 function findMatchingThreadEntries(
@@ -1488,10 +1555,6 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
       );
     case "context":
       return <Text bold={bold}>{line.text}</Text>;
-    case "truncate-context":
-      return <Text dimColor>{line.text}</Text>;
-    case "truncation":
-      return <Text dimColor>{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
@@ -1530,6 +1593,12 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
       return (
         <Text dimColor>
           {"   "}
+          {line.text}
+        </Text>
+      );
+    case "context-fold":
+      return (
+        <Text dimColor bold={bold}>
           {line.text}
         </Text>
       );
