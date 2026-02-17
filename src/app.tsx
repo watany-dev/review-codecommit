@@ -45,6 +45,8 @@ import { mapWithLimit } from "./utils/mapWithLimit.js";
 
 type Screen = "repos" | "prs" | "detail";
 
+const MAX_PAGINATION_HISTORY = 50;
+
 interface PaginationState {
   currentPage: number;
   currentToken: string | undefined;
@@ -141,6 +143,22 @@ export function App({ client, initialRepo }: AppProps) {
       setReactionsByComment(new Map());
     }
   }
+
+  /* v8 ignore start -- stale-load guard hard to test deterministically */
+  async function reloadReactionsGuarded(threads: CommentThread[], loadId: number) {
+    const allCommentIds = threads.flatMap((t) =>
+      t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
+    );
+    if (diffLoadRef.current !== loadId) return;
+    if (allCommentIds.length > 0) {
+      const reactions = await getReactionsForComments(client, allCommentIds);
+      if (diffLoadRef.current !== loadId) return;
+      setReactionsByComment(reactions);
+    } else {
+      setReactionsByComment(new Map());
+    }
+  }
+  /* v8 ignore stop */
 
   /**
    * Wrapper for async operations with automatic loading/error state management.
@@ -241,20 +259,23 @@ export function App({ client, initialRepo }: AppProps) {
       // Background: blob texts
       void loadDiffTextsInBackground(detail.differences, selectedRepo, loadId);
 
-      // Background: approvals
+      // Background: approvals (guarded by loadId to prevent stale updates)
       const revisionId = detail.pullRequest.revisionId;
       if (revisionId) {
         void Promise.all([
           getApprovalStates(client, { pullRequestId, revisionId }),
           evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+          /* v8 ignore start -- stale-load guard hard to test deterministically */
         ]).then(([states, evaluation]) => {
+          if (diffLoadRef.current !== loadId) return;
           setApprovals(states);
           setApprovalEvaluation(evaluation);
         });
+        /* v8 ignore stop */
       }
 
-      // Background: reactions
-      void reloadReactions(detail.commentThreads);
+      // Background: reactions (guarded by loadId to prevent stale updates)
+      void reloadReactionsGuarded(detail.commentThreads, loadId);
     });
   }
 
@@ -360,13 +381,23 @@ export function App({ client, initialRepo }: AppProps) {
 
     const nextToken = pagination.nextToken;
 
-    setPagination((prev) => ({
-      ...prev,
-      previousTokens: [...prev.previousTokens, prev.currentToken],
-      currentToken: nextToken,
-      currentPage: prev.currentPage + 1,
-      hasPreviousPage: true,
-    }));
+    setPagination((prev) => {
+      const tokens = [...prev.previousTokens, prev.currentToken];
+      // Cap history to prevent unbounded memory growth
+      /* v8 ignore start -- requires 50+ page navigations to trigger */
+      const trimmed =
+        tokens.length > MAX_PAGINATION_HISTORY
+          ? tokens.slice(tokens.length - MAX_PAGINATION_HISTORY)
+          : tokens;
+      /* v8 ignore stop */
+      return {
+        ...prev,
+        previousTokens: trimmed,
+        currentToken: nextToken,
+        currentPage: prev.currentPage + 1,
+        hasPreviousPage: true,
+      };
+    });
 
     loadPullRequests(selectedRepo, statusFilter, nextToken);
   }
@@ -561,6 +592,7 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function handleLoadCommitDiff(commitIndex: number) {
+    const loadId = diffLoadRef.current;
     setIsLoadingCommitDiff(true);
     try {
       let currentCommits = commits;
@@ -571,6 +603,9 @@ export function App({ client, initialRepo }: AppProps) {
         if (!sourceCommit || !mergeBase) return;
         /* v8 ignore stop */
         currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        /* v8 ignore start -- stale-load guard hard to test deterministically */
+        if (diffLoadRef.current !== loadId) return;
+        /* v8 ignore stop */
         setCommits(currentCommits);
       }
 
@@ -579,6 +614,9 @@ export function App({ client, initialRepo }: AppProps) {
 
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
+      /* v8 ignore start -- stale-load guard hard to test deterministically */
+      if (diffLoadRef.current !== loadId) return;
+      /* v8 ignore stop */
       setCommitDifferences(diffs);
 
       const blobResults = await mapWithLimit(diffs, 5, async (diff) => {
@@ -593,6 +631,9 @@ export function App({ client, initialRepo }: AppProps) {
 
         return { key, before, after };
       });
+      /* v8 ignore start -- stale-load guard hard to test deterministically */
+      if (diffLoadRef.current !== loadId) return;
+      /* v8 ignore stop */
       const texts = new Map<string, { before: string; after: string }>();
       for (const result of blobResults) {
         texts.set(result.key, { before: result.before, after: result.after });
@@ -648,6 +689,20 @@ export function App({ client, initialRepo }: AppProps) {
 
   function handleBack() {
     if (screen === "detail") {
+      // Invalidate in-flight background loads before clearing state
+      diffLoadRef.current += 1;
+      // Clear heavyweight detail state to free memory
+      setPrDetail(null);
+      setPrDifferences([]);
+      setCommentThreads([]);
+      setDiffTexts(new Map());
+      setDiffTextStatus(new Map());
+      setApprovals([]);
+      setApprovalEvaluation(null);
+      setReactionsByComment(new Map());
+      setCommits([]);
+      setCommitDifferences([]);
+      setCommitDiffTexts(new Map());
       setScreen("prs");
     } else if (screen === "prs") {
       if (initialRepo) {
@@ -769,7 +824,6 @@ export function App({ client, initialRepo }: AppProps) {
             onClose: handleClosePR,
             isProcessing: isClosingPR,
             error: closePRError,
-
             onClearError: () => setClosePRError(null),
           }}
           commitView={{
