@@ -32,22 +32,6 @@ export function isValidShellType(value: string): value is ShellType {
   return value === "bash" || value === "zsh" || value === "fish";
 }
 
-export function parseAwsProfiles(configContent: string): string[] {
-  const profiles: string[] = [];
-  for (const line of configContent.split("\n")) {
-    const trimmed = line.trim();
-    const profileMatch = trimmed.match(/^\[profile\s+(.+?)\]$/);
-    if (profileMatch?.[1]) {
-      profiles.push(profileMatch[1]);
-      continue;
-    }
-    if (trimmed === "[default]") {
-      profiles.push("default");
-    }
-  }
-  return profiles.sort();
-}
-
 export function generateBashCompletion(): string {
   return `# bash completion for review-codecommit
 _review_codecommit() {
