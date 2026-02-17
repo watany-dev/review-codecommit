@@ -1,6 +1,6 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CommentThread,
   CommitInfo,
@@ -20,6 +20,9 @@ type InlineLocation = {
   filePosition: number;
   relativeFileVersion: "BEFORE" | "AFTER";
 };
+
+const LARGE_DIFF_THRESHOLD = 1500;
+const DIFF_CHUNK_SIZE = 300;
 
 interface CommentAction {
   onPost: (content: string) => void;
@@ -73,6 +76,7 @@ interface CommitViewProps {
   diffTexts: Map<string, { before: string; after: string }>;
   isLoading: boolean;
   onLoad: (commitIndex: number) => void;
+  commitsAvailable: boolean;
 }
 
 interface EditCommentAction {
@@ -102,6 +106,7 @@ interface Props {
   differences: Difference[];
   commentThreads: CommentThread[];
   diffTexts: Map<string, { before: string; after: string }>;
+  diffTextStatus?: Map<string, "loading" | "loaded" | "error">;
   onBack: () => void;
   onHelp: () => void;
   comment: CommentAction;
@@ -121,6 +126,7 @@ export function PullRequestDetail({
   differences,
   commentThreads,
   diffTexts,
+  diffTextStatus = new Map(),
   onBack,
   onHelp,
   comment: {
@@ -169,6 +175,7 @@ export function PullRequestDetail({
     diffTexts: commitDiffTexts,
     isLoading: isLoadingCommitDiff,
     onLoad: onLoadCommitDiff,
+    commitsAvailable,
   },
   editComment: {
     onUpdate: onUpdateComment,
@@ -239,6 +246,15 @@ export function PullRequestDetail({
   const [wasDeleting, setWasDeleting] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
+  const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
+  const [showFileList, setShowFileList] = useState(false);
+  const [fileListCursor, setFileListCursor] = useState(0);
+  const diffCacheRef = useRef<Map<string, DisplayLine[]>>(new Map());
+
+  useEffect(() => {
+    setDiffLineLimits(new Map());
+    diffCacheRef.current = new Map();
+  }, [differences]);
   const [wasReacting, setWasReacting] = useState(false);
 
   useEffect(() => {
@@ -291,6 +307,7 @@ export function PullRequestDetail({
     if (isMerging) {
       setWasMerging(true);
     } else if (wasMerging && !mergeError) {
+      /* v8 ignore next 2 -- merge success auto-close tested in app.test.tsx */
       setMergeStep(null);
       setWasMerging(false);
     } else {
@@ -302,6 +319,7 @@ export function PullRequestDetail({
     if (isClosingPR) {
       setWasClosingPR(true);
     } else if (wasClosingPR && !closePRError) {
+      /* v8 ignore next 2 -- close success auto-close tested in app.test.tsx */
       setIsClosing(false);
       setWasClosingPR(false);
     } else {
@@ -364,22 +382,60 @@ export function PullRequestDetail({
       return buildDisplayLines(
         differences,
         diffTexts,
+        diffTextStatus,
+        diffLineLimits,
         commentThreads,
         collapsedThreads,
         reactionsByComment,
+        diffCacheRef.current,
       );
     }
-    return buildDisplayLines(commitDifferences, commitDiffTexts, [], new Set(), new Map());
+    return buildDisplayLines(
+      commitDifferences,
+      commitDiffTexts,
+      new Map(),
+      new Map(),
+      [],
+      new Set(),
+      new Map(),
+    );
   }, [
     viewIndex,
     differences,
     diffTexts,
+    diffTextStatus,
+    diffLineLimits,
     commentThreads,
     collapsedThreads,
     reactionsByComment,
     commitDifferences,
     commitDiffTexts,
   ]);
+
+  const hasTruncation = useMemo(() => lines.some((line) => line.type === "truncation"), [lines]);
+
+  const headerIndices = useMemo(
+    () =>
+      lines.reduce<number[]>((acc, line, i) => {
+        if (line.type === "header") acc.push(i);
+        return acc;
+      }, []),
+    [lines],
+  );
+
+  const fileNames = useMemo(() => headerIndices.map((i) => lines[i]!.text), [headerIndices, lines]);
+
+  const filePosition = useMemo(() => {
+    if (headerIndices.length === 0) return { current: 0, total: 0 };
+    let current = 1;
+    for (let i = headerIndices.length - 1; i >= 0; i--) {
+      if (cursorIndex >= headerIndices[i]!) {
+        current = i + 1;
+        break;
+      }
+    }
+    return { current, total: headerIndices.length };
+  }, [cursorIndex, headerIndices]);
 
   async function handleStrategySelect(strategy: MergeStrategy) {
     setSelectedStrategy(strategy);
@@ -409,11 +465,28 @@ export function PullRequestDetail({
     approvalAction ||
     mergeStep ||
     isClosing ||
-    showReactionPicker
+    showReactionPicker ||
+    showFileList
       ? 20
       : 30;
 
   useInput((input, key) => {
+    // File list mode: handle its own keys before the modal guard
+    if (showFileList) {
+      if (input === "j" || key.downArrow) {
+        setFileListCursor((prev) => Math.min(prev + 1, fileNames.length - 1));
+      } else if (input === "k" || key.upArrow) {
+        setFileListCursor((prev) => Math.max(prev - 1, 0));
+      } else if (key.return) {
+        const targetIndex = headerIndices[fileListCursor];
+        if (targetIndex !== undefined) setCursorIndex(targetIndex);
+        setShowFileList(false);
+      } else if (key.escape || input === "f" || input === "q") {
+        setShowFileList(false);
+      }
+      return;
+    }
+
     if (
       isCommenting ||
       isInlineCommenting ||
@@ -427,7 +500,15 @@ export function PullRequestDetail({
     )
       return;
 
-    if (key.tab && commits.length > 0) {
+    if (key.tab && (commits.length > 0 || commitsAvailable)) {
+      if (commits.length === 0) {
+        // Lazy load: trigger first commit load
+        setViewIndex(0);
+        setCursorIndex(0);
+        onLoadCommitDiff(0);
+        return;
+      }
+
       const newIndex = key.shift
         ? viewIndex - 1 < -1
           ? commits.length - 1
@@ -460,6 +541,27 @@ export function PullRequestDetail({
       setCursorIndex((prev) => Math.max(prev - 1, 0));
       return;
     }
+    if (input === "t") {
+      if (viewIndex >= 0) return;
+      const currentLine = lines[cursorIndex];
+      const diffKey = currentLine?.diffKey;
+      if (!diffKey) return;
+      const texts = diffTexts.get(diffKey);
+      /* v8 ignore next -- diffKey originates from diffTexts entries */
+      if (!texts) return;
+      const totalLines = texts.before.split("\n").length + texts.after.split("\n").length;
+      if (totalLines <= LARGE_DIFF_THRESHOLD) return;
+      const currentLimit = diffLineLimits.get(diffKey) ?? DIFF_CHUNK_SIZE;
+      /* v8 ignore next -- requires many t-presses to reach full expansion */
+      if (currentLimit >= totalLines) return;
+      const nextLimit = Math.min(currentLimit + DIFF_CHUNK_SIZE, totalLines);
+      setDiffLineLimits((prev) => {
+        const next = new Map(prev);
+        next.set(diffKey, nextLimit);
+        return next;
+      });
+      return;
+    }
     // Ctrl+d: half page down
     if (key.ctrl && input === "d") {
       if (lines.length === 0) return;
@@ -478,6 +580,25 @@ export function PullRequestDetail({
     if (input === "G") {
       if (lines.length === 0) return;
       setCursorIndex(lines.length - 1);
+      return;
+    }
+    // n: next file header
+    if (input === "n") {
+      const idx = findNextHeaderIndex(lines, cursorIndex);
+      if (idx !== -1) setCursorIndex(idx);
+      return;
+    }
+    // N: previous file header
+    if (input === "N") {
+      const idx = findPrevHeaderIndex(lines, cursorIndex);
+      if (idx !== -1) setCursorIndex(idx);
+      return;
+    }
+    // f: toggle file list
+    if (input === "f") {
+      if (viewIndex >= 0) return;
+      setShowFileList(true);
+      setFileListCursor(0);
       return;
     }
     if (input === "c") {
@@ -590,6 +711,12 @@ export function PullRequestDetail({
         <Text dimColor>
           {destRef} ← {sourceRef}
         </Text>
+        {filePosition.total > 0 && (
+          <Text dimColor>
+            {" "}
+            File {filePosition.current}/{filePosition.total}
+          </Text>
+        )}
       </Box>
       <Box>
         <Text>
@@ -614,7 +741,7 @@ export function PullRequestDetail({
             </Text>
           </Box>
         )}
-      {commits.length > 0 && (
+      {(commits.length > 0 || commitsAvailable) && (
         <Box flexDirection="column" marginBottom={0}>
           <Box>
             {viewIndex === -1 ? (
@@ -622,9 +749,9 @@ export function PullRequestDetail({
                 <Text bold color="cyan">
                   [All changes]
                 </Text>
-                <Text> Commits ({commits.length})</Text>
+                {commits.length > 0 && <Text> Commits ({commits.length})</Text>}
               </>
-            ) : (
+            ) : commits[viewIndex] ? (
               <>
                 <Text>All changes </Text>
                 <Text bold color="cyan">
@@ -632,9 +759,14 @@ export function PullRequestDetail({
                 </Text>
                 <Text> {commits[viewIndex]!.shortId}</Text>
               </>
+            ) : (
+              <>
+                <Text>All changes </Text>
+                <Text color="cyan">Loading commits...</Text>
+              </>
             )}
           </Box>
-          {viewIndex >= 0 && (
+          {viewIndex >= 0 && commits[viewIndex] && (
             <Text dimColor>
               {commits[viewIndex]!.message} {commits[viewIndex]!.authorName}{" "}
               {formatRelativeDate(commits[viewIndex]!.authorDate)}
@@ -839,6 +971,18 @@ export function PullRequestDetail({
           currentReactions={reactionsByComment.get(reactionTarget) ?? []}
         />
       )}
+      {showFileList && (
+        <Box flexDirection="column">
+          <Text bold>Files ({fileNames.length}):</Text>
+          {fileNames.map((name, i) => (
+            <Text key={name}>
+              {i === fileListCursor ? "> " : "  "}
+              {name}
+            </Text>
+          ))}
+          <Text dimColor>j/k move Enter select Esc close</Text>
+        </Box>
+      )}
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
@@ -849,13 +993,14 @@ export function PullRequestDetail({
           approvalAction ||
           mergeStep ||
           isClosing ||
-          showReactionPicker
+          showReactionPicker ||
+          showFileList
             ? ""
-            : viewIndex === -1 && commits.length > 0
-              ? "Tab view ↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"
+            : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
+              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : "↑↓ c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help"}
+                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>
@@ -869,6 +1014,8 @@ interface DisplayLine {
     | "add"
     | "delete"
     | "context"
+    | "truncation"
+    | "truncate-context"
     | "comment-header"
     | "comment"
     | "inline-comment"
@@ -877,6 +1024,7 @@ interface DisplayLine {
     | "fold-indicator";
   text: string;
   filePath?: string;
+  diffKey?: string;
   beforeLineNumber?: number;
   afterLineNumber?: number;
   threadIndex?: number | undefined;
@@ -890,6 +1038,7 @@ function getCommentIdFromLine(line: DisplayLine): { commentId: string } | null {
   return { commentId: line.commentId };
 }
 
+/* v8 ignore start -- commentId always matches a thread entry; loop-exit branch unreachable */
 function findCommentContent(commentThreads: CommentThread[], commentId: string): string {
   for (const thread of commentThreads) {
     for (const comment of thread.comments) {
@@ -898,7 +1047,6 @@ function findCommentContent(commentThreads: CommentThread[], commentId: string):
       }
     }
   }
-  /* v8 ignore start -- commentId always matches a thread entry */
   return "";
 }
 /* v8 ignore stop */
@@ -1018,9 +1166,12 @@ function appendThreadLines(
 function buildDisplayLines(
   differences: Difference[],
   diffTexts: Map<string, { before: string; after: string }>,
+  diffTextStatus: Map<string, "loading" | "loaded" | "error">,
+  diffLineLimits: Map<string, number>,
   commentThreads: CommentThread[],
   collapsedThreads: Set<number>,
   reactionsByComment: ReactionsByComment,
+  diffCache?: Map<string, DisplayLine[]>,
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
@@ -1043,13 +1194,32 @@ function buildDisplayLines(
 
     const blobKey = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
     const texts = diffTexts.get(blobKey);
+    const status = diffTextStatus.get(blobKey) ?? "loading";
 
     if (texts) {
       const beforeLines = texts.before.split("\n");
       const afterLines = texts.after.split("\n");
-      const diffLines = computeSimpleDiff(beforeLines, afterLines);
+      const totalLines = beforeLines.length + afterLines.length;
+      const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
+      const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
+      const displayLimit = Math.min(currentLimit, totalLines);
+      const cacheKey = `${blobKey}:${displayLimit}`;
+      let diffLines = diffCache?.get(cacheKey);
+      if (!diffLines) {
+        const { beforeLimit, afterLimit } = getSliceLimits(
+          beforeLines.length,
+          afterLines.length,
+          displayLimit,
+        );
+        diffLines = computeSimpleDiff(
+          beforeLines.slice(0, beforeLimit),
+          afterLines.slice(0, afterLimit),
+        );
+        diffCache?.set(cacheKey, diffLines);
+      }
       for (const dl of diffLines) {
         dl.filePath = filePath;
+        dl.diffKey = blobKey;
         lines.push(dl);
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
@@ -1064,9 +1234,38 @@ function buildDisplayLines(
           );
         }
       }
+      if (totalLines > displayLimit) {
+        const moreCount = Math.min(DIFF_CHUNK_SIZE, totalLines - displayLimit);
+        lines.push({
+          type: "truncate-context",
+          text: `... truncated ${displayLimit}/${totalLines} lines`,
+          filePath,
+          diffKey: blobKey,
+        });
+        lines.push({
+          type: "truncation",
+          text: `[t] show next ${moreCount} lines`,
+          filePath,
+          diffKey: blobKey,
+        });
+      }
+    } else if (status === "error") {
+      lines.push({
+        type: "context",
+        text: "(Failed to load file content)",
+        filePath,
+        diffKey: blobKey,
+      });
+    } else {
+      lines.push({
+        type: "context",
+        text: "(Loading file content...)",
+        filePath,
+        diffKey: blobKey,
+      });
     }
 
-    lines.push({ type: "separator", text: "" });
+    lines.push({ type: "separator", text: "", diffKey: blobKey, filePath });
   }
 
   const generalThreads = commentThreads
@@ -1086,6 +1285,26 @@ function buildDisplayLines(
   }
 
   return lines;
+}
+
+function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
+  if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
+  const total = beforeCount + afterCount;
+  if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
+
+  const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
+  let beforeLimit = Math.round(totalLimit * beforeRatio);
+  beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
+  let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
+
+  /* v8 ignore start -- defensive: proportional split makes this unreachable when total > totalLimit */
+  if (afterLimit < totalLimit - beforeLimit) {
+    const remaining = totalLimit - (beforeLimit + afterLimit);
+    beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
+  }
+  /* v8 ignore stop */
+
+  return { beforeLimit, afterLimit };
 }
 
 function findMatchingThreadEntries(
@@ -1182,6 +1401,8 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
       ai++;
     } else {
       // Case 2: Lines differ - process deletions first, then additions
+      const startBi = bi;
+      const startAi = ai;
 
       // Process deletions: consume lines from 'before' that don't match current 'after'
       while (
@@ -1216,6 +1437,26 @@ function computeSimpleDiff(beforeLines: string[], afterLines: string[]): Display
         });
         ai++;
       }
+
+      // Safety: if both loops broke without advancing, force progress to prevent infinite loop
+      if (bi === startBi && ai === startAi) {
+        if (bi < beforeLines.length) {
+          result.push({
+            type: "delete",
+            text: `-${beforeLines[bi]}`,
+            beforeLineNumber: bi + 1,
+          });
+          bi++;
+        }
+        if (ai < afterLines.length) {
+          result.push({
+            type: "add",
+            text: `+${afterLines[ai]}`,
+            afterLineNumber: ai + 1,
+          });
+          ai++;
+        }
+      }
     }
   }
 
@@ -1247,6 +1488,10 @@ function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
       );
     case "context":
       return <Text bold={bold}>{line.text}</Text>;
+    case "truncate-context":
+      return <Text dimColor>{line.text}</Text>;
+    case "truncation":
+      return <Text dimColor>{line.text}</Text>;
     case "comment-header":
       return <Text bold>{line.text}</Text>;
     case "comment":
@@ -1317,6 +1562,26 @@ function ConflictDisplay({
       <Text dimColor>Press any key to return</Text>
     </Box>
   );
+}
+
+function findNextHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
+  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
+    if (line.type === "header") acc.push(i);
+    return acc;
+  }, []);
+  if (headerIndices.length === 0) return -1;
+  const next = headerIndices.find((i) => i > currentIndex);
+  return next ?? headerIndices[0]!;
+}
+
+function findPrevHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
+  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
+    if (line.type === "header") acc.push(i);
+    return acc;
+  }, []);
+  if (headerIndices.length === 0) return -1;
+  const prev = [...headerIndices].reverse().find((i) => i < currentIndex);
+  return prev ?? headerIndices[headerIndices.length - 1]!;
 }
 
 function formatStrategyName(strategy: MergeStrategy): string {

@@ -28,6 +28,8 @@ import {
   UpdatePullRequestApprovalStateCommand,
   UpdatePullRequestStatusCommand,
 } from "@aws-sdk/client-codecommit";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
+import { mapWithLimit } from "../utils/mapWithLimit.js";
 
 export interface CodeCommitConfig {
   profile?: string;
@@ -63,6 +65,10 @@ export function createClient(config: CodeCommitConfig): CodeCommitClient {
   return new CodeCommitClient({
     ...(config.region && { region: config.region }),
     ...(config.profile && { profile: config.profile }),
+    requestHandler: new NodeHttpHandler({
+      requestTimeout: 10_000,
+      connectionTimeout: 5_000,
+    }),
   });
 }
 
@@ -91,32 +97,53 @@ export async function listPullRequests(
   const pullRequestIds = listResponse.pullRequestIds ?? [];
 
   const pullRequests: PullRequestSummary[] = (
-    await Promise.all(
-      pullRequestIds.map(async (id) => {
-        const getCommand = new GetPullRequestCommand({ pullRequestId: id });
-        const getResponse = await client.send(getCommand);
-        const pr = getResponse.pullRequest;
-        if (!pr) return null;
+    await mapWithLimit(pullRequestIds, 5, async (id) => {
+      const getCommand = new GetPullRequestCommand({ pullRequestId: id });
+      const getResponse = await client.send(getCommand);
+      const pr = getResponse.pullRequest;
+      if (!pr) return null;
 
-        const apiStatus = pr.pullRequestStatus ?? "OPEN";
-        const isMerged = pr.pullRequestTargets?.[0]?.mergeMetadata?.isMerged === true;
-        const displayStatus: PullRequestDisplayStatus =
-          apiStatus === "CLOSED" && isMerged ? "MERGED" : (apiStatus as PullRequestDisplayStatus);
+      const apiStatus = pr.pullRequestStatus ?? "OPEN";
+      const isMerged = pr.pullRequestTargets?.[0]?.mergeMetadata?.isMerged === true;
+      const displayStatus: PullRequestDisplayStatus =
+        apiStatus === "CLOSED" && isMerged ? "MERGED" : (apiStatus as PullRequestDisplayStatus);
 
-        return {
-          pullRequestId: pr.pullRequestId ?? id,
-          title: pr.title ?? "(no title)",
-          authorArn: pr.authorArn ?? "unknown",
-          creationDate: pr.creationDate ?? new Date(),
-          status: displayStatus,
-        };
-      }),
-    )
+      return {
+        pullRequestId: pr.pullRequestId ?? id,
+        title: pr.title ?? "(no title)",
+        authorArn: pr.authorArn ?? "unknown",
+        creationDate: pr.creationDate ?? new Date(),
+        status: displayStatus,
+      };
+    })
   ).filter((pr): pr is PullRequestSummary => pr !== null);
 
   const result: { pullRequests: PullRequestSummary[]; nextToken?: string } = { pullRequests };
   if (listResponse.nextToken != null) result.nextToken = listResponse.nextToken;
   return result;
+}
+
+async function getAllDifferences(
+  client: CodeCommitClient,
+  repositoryName: string,
+  beforeCommitSpecifier: string,
+  afterCommitSpecifier: string,
+): Promise<Difference[]> {
+  const allDifferences: Difference[] = [];
+  let nextToken: string | undefined;
+  do {
+    const response = await client.send(
+      new GetDifferencesCommand({
+        repositoryName,
+        beforeCommitSpecifier,
+        afterCommitSpecifier,
+        NextToken: nextToken,
+      }),
+    );
+    allDifferences.push(...(response.differences ?? []));
+    nextToken = response.NextToken;
+  } while (nextToken);
+  return allDifferences;
 }
 
 export async function getPullRequestDetail(
@@ -134,17 +161,9 @@ export async function getPullRequestDetail(
   const target = pullRequest.pullRequestTargets?.[0];
   const hasCommits = !!(target?.sourceCommit && target?.destinationCommit);
 
-  const [diffResult, commentThreads] = await Promise.all([
+  const [differences, commentThreads] = await Promise.all([
     hasCommits
-      ? client
-          .send(
-            new GetDifferencesCommand({
-              repositoryName,
-              beforeCommitSpecifier: target!.destinationCommit!,
-              afterCommitSpecifier: target!.sourceCommit!,
-            }),
-          )
-          .then((r) => r.differences ?? [])
+      ? getAllDifferences(client, repositoryName, target!.destinationCommit!, target!.sourceCommit!)
       : Promise.resolve([]),
     getComments(client, pullRequestId, {
       repositoryName,
@@ -157,7 +176,7 @@ export async function getPullRequestDetail(
     }),
   ]);
 
-  return { pullRequest, differences: diffResult as Difference[], commentThreads };
+  return { pullRequest, differences, commentThreads };
 }
 
 function sortCommentsRootFirst(comments: Comment[]): Comment[] {
@@ -184,7 +203,7 @@ export async function getComments(
   },
 ): Promise<CommentThread[]> {
   const commentThreads: CommentThread[] = [];
-  const commentsCommand = new GetCommentsForPullRequestCommand({
+  const baseInput = {
     pullRequestId,
     ...(params?.repositoryName ? { repositoryName: params.repositoryName } : {}),
     ...(params?.afterCommitId && params?.beforeCommitId
@@ -193,22 +212,28 @@ export async function getComments(
           beforeCommitId: params.beforeCommitId,
         }
       : {}),
-  });
-  const commentsResponse = await client.send(commentsCommand);
-  for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
-    const location = thread.location?.filePath
-      ? {
-          filePath: thread.location.filePath,
-          filePosition: thread.location.filePosition ?? 0,
-          relativeFileVersion:
-            (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
-        }
-      : null;
-    commentThreads.push({
-      location,
-      comments: sortCommentsRootFirst(thread.comments ?? []),
-    });
-  }
+  };
+  let nextToken: string | undefined;
+  do {
+    const commentsResponse = await client.send(
+      new GetCommentsForPullRequestCommand({ ...baseInput, nextToken }),
+    );
+    for (const thread of commentsResponse.commentsForPullRequestData ?? []) {
+      const location = thread.location?.filePath
+        ? {
+            filePath: thread.location.filePath,
+            filePosition: thread.location.filePosition ?? 0,
+            relativeFileVersion:
+              (thread.location.relativeFileVersion as "BEFORE" | "AFTER") ?? "AFTER",
+          }
+        : null;
+      commentThreads.push({
+        location,
+        comments: sortCommentsRootFirst(thread.comments ?? []),
+      });
+    }
+    nextToken = commentsResponse.nextToken;
+  } while (nextToken);
   return commentThreads;
 }
 
@@ -440,6 +465,7 @@ export async function getCommit(
   return {
     commitId: commit.commitId ?? commitId,
     shortId: (commit.commitId ?? commitId).slice(0, 7),
+    /* v8 ignore next -- split always returns at least one element */
     message: (commit.message ?? "").split("\n")[0] ?? "",
     authorName: commit.author?.name ?? "unknown",
     authorDate: commit.author?.date ? new Date(commit.author.date) : new Date(),
@@ -474,13 +500,7 @@ export async function getCommitDifferences(
   beforeCommitId: string,
   afterCommitId: string,
 ): Promise<Difference[]> {
-  const command = new GetDifferencesCommand({
-    repositoryName,
-    beforeCommitSpecifier: beforeCommitId,
-    afterCommitSpecifier: afterCommitId,
-  });
-  const response = await client.send(command);
-  return response.differences ?? [];
+  return getAllDifferences(client, repositoryName, beforeCommitId, afterCommitId);
 }
 
 export async function updateComment(
@@ -558,22 +578,18 @@ export async function getReactionsForComments(
   commentIds: string[],
 ): Promise<ReactionsByComment> {
   const results: ReactionsByComment = new Map();
-
-  const fetches = commentIds.map(async (commentId) => {
+  const settled = await mapWithLimit(commentIds, 5, async (commentId) => {
     try {
       const reactions = await getReactionsForComment(client, commentId);
       return { commentId, reactions };
     } catch {
-      return { commentId, reactions: [] };
+      return { commentId, reactions: [] as ReactionSummary[] };
     }
   });
-
-  const settled = await Promise.all(fetches);
   for (const { commentId, reactions } of settled) {
     if (reactions.length > 0) {
       results.set(commentId, reactions);
     }
   }
-
   return results;
 }

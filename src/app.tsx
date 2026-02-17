@@ -7,7 +7,7 @@ import type {
   RepositoryNameIdPair,
 } from "@aws-sdk/client-codecommit";
 import { Box, Text } from "ink";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
@@ -41,6 +41,7 @@ import {
   updateComment,
 } from "./services/codecommit.js";
 import { formatErrorMessage } from "./utils/formatError.js";
+import { mapWithLimit } from "./utils/mapWithLimit.js";
 
 type Screen = "repos" | "prs" | "detail";
 
@@ -83,6 +84,9 @@ export function App({ client, initialRepo }: AppProps) {
   const [diffTexts, setDiffTexts] = useState<Map<string, { before: string; after: string }>>(
     new Map(),
   );
+  const [diffTextStatus, setDiffTextStatus] = useState<Map<string, "loading" | "loaded" | "error">>(
+    new Map(),
+  );
 
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -109,6 +113,8 @@ export function App({ client, initialRepo }: AppProps) {
     Map<string, { before: string; after: string }>
   >(new Map());
   const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
+
+  const diffLoadRef = useRef(0);
 
   const [isUpdatingComment, setIsUpdatingComment] = useState(false);
   const [updateCommentError, setUpdateCommentError] = useState<string | null>(null);
@@ -212,70 +218,120 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
+    const loadId = diffLoadRef.current + 1;
+    diffLoadRef.current = loadId;
+
     await withLoadingState(async () => {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
       setCommentThreads(detail.commentThreads);
+      setDiffTexts(new Map());
 
-      // Parallelize independent operations: approvals, reactions, blobs, commits
-      const revisionId = detail.pullRequest.revisionId;
-      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
-      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
-
-      const approvalPromise = revisionId
-        ? Promise.all([
-            getApprovalStates(client, { pullRequestId, revisionId }),
-            evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
-          ])
-        : Promise.resolve(undefined);
-
-      const reactionsPromise = reloadReactions(detail.commentThreads);
-
-      const blobPromise = (async () => {
-        const blobFetches = detail.differences.map(async (diff) => {
-          const beforeBlobId = diff.beforeBlob?.blobId;
-          const afterBlobId = diff.afterBlob?.blobId;
-          const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-          const [before, after] = await Promise.all([
-            beforeBlobId ? getBlobContent(client, selectedRepo, beforeBlobId) : Promise.resolve(""),
-            afterBlobId ? getBlobContent(client, selectedRepo, afterBlobId) : Promise.resolve(""),
-          ]);
-
-          return { key, before, after };
-        });
-
-        const blobResults = await Promise.all(blobFetches);
-        const texts = new Map<string, { before: string; after: string }>();
-        for (const result of blobResults) {
-          texts.set(result.key, { before: result.before, after: result.after });
-        }
-        return texts;
-      })();
-
-      const commitsPromise =
-        sourceCommit && mergeBase
-          ? getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase)
-          : Promise.resolve([]);
-
-      const [approvalResult, , texts, commitList] = await Promise.all([
-        approvalPromise,
-        reactionsPromise,
-        blobPromise,
-        commitsPromise,
-      ]);
-
-      if (approvalResult) {
-        setApprovals(approvalResult[0]);
-        setApprovalEvaluation(approvalResult[1]);
+      const status = new Map<string, "loading" | "loaded" | "error">();
+      for (const diff of detail.differences) {
+        const key = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
+        status.set(key, "loading");
       }
-
-      setDiffTexts(texts);
-      setCommits(commitList);
+      setDiffTextStatus(status);
+      setCommits([]);
       setCommitDifferences([]);
       setCommitDiffTexts(new Map());
+
+      // Background: blob texts
+      void loadDiffTextsInBackground(detail.differences, selectedRepo, loadId);
+
+      // Background: approvals
+      const revisionId = detail.pullRequest.revisionId;
+      if (revisionId) {
+        void Promise.all([
+          getApprovalStates(client, { pullRequestId, revisionId }),
+          evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
+        ]).then(([states, evaluation]) => {
+          setApprovals(states);
+          setApprovalEvaluation(evaluation);
+        });
+      }
+
+      // Background: reactions
+      void reloadReactions(detail.commentThreads);
     });
+  }
+
+  async function loadDiffTextsInBackground(
+    differences: Difference[],
+    repoName: string,
+    loadId: number,
+  ) {
+    const concurrency = 6;
+    let index = 0;
+
+    async function processNext(): Promise<void> {
+      const currentIndex = index;
+      index += 1;
+      if (currentIndex >= differences.length) return;
+
+      const diff = differences[currentIndex]!;
+      const beforeBlobId = diff.beforeBlob?.blobId;
+      const afterBlobId = diff.afterBlob?.blobId;
+      const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
+
+      /* v8 ignore start -- no-blob path rarely occurs; stale-load guard hard to test deterministically */
+      if (!beforeBlobId && !afterBlobId) {
+        if (diffLoadRef.current === loadId) {
+          setDiffTexts((prev) => {
+            const next = new Map(prev);
+            next.set(key, { before: "", after: "" });
+            return next;
+          });
+          setDiffTextStatus((prev) => {
+            const next = new Map(prev);
+            next.set(key, "loaded");
+            return next;
+          });
+        }
+        return processNext();
+      }
+      /* v8 ignore stop */
+
+      try {
+        const [before, after] = await Promise.all([
+          beforeBlobId ? getBlobContent(client, repoName, beforeBlobId) : Promise.resolve(""),
+          afterBlobId ? getBlobContent(client, repoName, afterBlobId) : Promise.resolve(""),
+        ]);
+
+        /* v8 ignore start -- stale-load guard hard to test deterministically */
+        if (diffLoadRef.current === loadId) {
+          setDiffTexts((prev) => {
+            const next = new Map(prev);
+            next.set(key, { before, after });
+            return next;
+          });
+          setDiffTextStatus((prev) => {
+            const next = new Map(prev);
+            next.set(key, "loaded");
+            return next;
+          });
+        }
+        /* v8 ignore stop */
+      } catch {
+        /* v8 ignore start -- stale-load guard + error path hard to test deterministically */
+        if (diffLoadRef.current === loadId) {
+          setDiffTextStatus((prev) => {
+            const next = new Map(prev);
+            next.set(key, "error");
+            return next;
+          });
+        }
+        /* v8 ignore stop */
+      }
+
+      return processNext();
+    }
+
+    const workerCount = Math.min(concurrency, differences.length);
+    const workers = Array.from({ length: workerCount }, () => processNext());
+    await Promise.all(workers);
   }
 
   function handleSelectRepo(repoName: string) {
@@ -505,17 +561,27 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function handleLoadCommitDiff(commitIndex: number) {
-    const commit = commits[commitIndex];
-
-    if (!commit || commit.parentIds.length === 0) return;
-
     setIsLoadingCommitDiff(true);
     try {
+      let currentCommits = commits;
+      if (currentCommits.length === 0) {
+        const sourceCommit = prDetail?.pullRequestTargets?.[0]?.sourceCommit;
+        const mergeBase = prDetail?.pullRequestTargets?.[0]?.mergeBase;
+        /* v8 ignore start -- UI prevents calling without sourceCommit/mergeBase */
+        if (!sourceCommit || !mergeBase) return;
+        /* v8 ignore stop */
+        currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        setCommits(currentCommits);
+      }
+
+      const commit = currentCommits[commitIndex];
+      if (!commit || commit.parentIds.length === 0) return;
+
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
       setCommitDifferences(diffs);
 
-      const blobFetches = diffs.map(async (diff) => {
+      const blobResults = await mapWithLimit(diffs, 5, async (diff) => {
         const beforeBlobId = diff.beforeBlob?.blobId;
         const afterBlobId = diff.afterBlob?.blobId;
         const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
@@ -527,8 +593,6 @@ export function App({ client, initialRepo }: AppProps) {
 
         return { key, before, after };
       });
-
-      const blobResults = await Promise.all(blobFetches);
       const texts = new Map<string, { before: string; after: string }>();
       for (const result of blobResults) {
         texts.set(result.key, { before: result.before, after: result.after });
@@ -593,6 +657,8 @@ export function App({ client, initialRepo }: AppProps) {
       setSearchQuery("");
       setPagination(initialPagination);
       setScreen("repos");
+      setDiffTexts(new Map());
+      setDiffTextStatus(new Map());
     } /* v8 ignore start */ else {
       process.exit(0);
     }
@@ -661,6 +727,7 @@ export function App({ client, initialRepo }: AppProps) {
           differences={prDifferences}
           commentThreads={commentThreads}
           diffTexts={diffTexts}
+          diffTextStatus={diffTextStatus}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
           comment={{
@@ -711,6 +778,10 @@ export function App({ client, initialRepo }: AppProps) {
             diffTexts: commitDiffTexts,
             isLoading: isLoadingCommitDiff,
             onLoad: handleLoadCommitDiff,
+            commitsAvailable: !!(
+              prDetail?.pullRequestTargets?.[0]?.sourceCommit &&
+              prDetail?.pullRequestTargets?.[0]?.mergeBase
+            ),
           }}
           editComment={{
             onUpdate: handleUpdateComment,

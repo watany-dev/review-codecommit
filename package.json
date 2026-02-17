@@ -1,6 +1,6 @@
 {
   "name": "review-codecommit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A TUI tool for reviewing AWS CodeCommit pull requests in the terminal",
   "type": "module",
   "bin": {
@@ -70,6 +70,7 @@
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-codecommit": "^3.989.0",
+    "@smithy/node-http-handler": "^4.4.10",
     "ink": "^6.7.0",
     "ink-text-input": "^6.0.0",
     "react": "^19.2.4"

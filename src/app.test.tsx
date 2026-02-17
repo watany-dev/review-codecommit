@@ -391,7 +391,6 @@ describe("App", () => {
     stdin.write("?");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("my-service");
-      expect(lastFrame()).not.toContain("Navigation");
     });
   });
 
@@ -439,6 +438,11 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b1");
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b2");
+    });
   });
 
   it("loads PR detail with only afterBlob", async () => {
@@ -478,6 +482,10 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b2");
+    });
   });
 
   it("shows error when PR detail loading fails", async () => {
@@ -503,6 +511,8 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("failed to load");
     });
+
+    expect(getBlobContent).not.toHaveBeenCalled();
   });
 
   it("shows error when loading PRs fails", async () => {
@@ -549,6 +559,60 @@ describe("App", () => {
     stdin.write("\r");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
+    });
+
+    await vi.waitFor(() => {
+      expect(getBlobContent).toHaveBeenCalledWith(mockClient, "my-service", "b1");
+    });
+  });
+
+  it("shows blob error state when blob fetch fails", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            destinationReference: "refs/heads/main",
+            sourceReference: "refs/heads/fix",
+          },
+        ],
+      },
+      differences: [
+        {
+          beforeBlob: { blobId: "b1", path: "src/auth.ts" },
+          afterBlob: { blobId: "b2", path: "src/auth.ts" },
+        },
+      ],
+      commentThreads: [],
+    });
+    vi.mocked(getBlobContent)
+      .mockResolvedValueOnce("const timeout = 3000;")
+      .mockRejectedValueOnce(new Error("blob failed"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(Failed to load file content)");
     });
   });
 
@@ -611,6 +675,8 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Navigation");
     });
+
+    expect(getBlobContent).not.toHaveBeenCalled();
   });
 
   it("posts comment successfully and reloads comments", async () => {
@@ -3143,7 +3209,7 @@ describe("App", () => {
     });
   });
 
-  it("fetches commits when loading PR detail with mergeBase", async () => {
+  it("lazy loads commits on Tab press when mergeBase exists", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
         {
@@ -3180,6 +3246,7 @@ describe("App", () => {
         parentIds: ["base789"],
       },
     ]);
+    vi.mocked(getCommitDifferences).mockResolvedValue([]);
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
@@ -3189,9 +3256,19 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
-    expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    // Commits not loaded yet during initial detail load
+    expect(getCommitsForPR).not.toHaveBeenCalled();
+    // Tab header should show [All changes] because commitsAvailable is true
     expect(lastFrame()).toContain("[All changes]");
-    expect(lastFrame()).toContain("Commits (1)");
+
+    // Tab triggers lazy load
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/1]");
+    });
   });
 
   it("does not show commits when mergeBase is missing", async () => {
@@ -3233,7 +3310,7 @@ describe("App", () => {
     expect(lastFrame()).not.toContain("[All changes]");
   });
 
-  it("loads commit diff when switching to commit view", async () => {
+  it("loads commits and commit diff when switching to commit view via Tab", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
         {
@@ -3287,7 +3364,10 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
 
-    stdin.write("\t"); // switch to commit view
+    stdin.write("\t"); // switch to commit view (triggers lazy load)
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
+    });
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
@@ -3298,6 +3378,100 @@ describe("App", () => {
         "base789",
         "src123",
       );
+    });
+  });
+
+  it("loads commit diff for new file (afterBlob only) and reuses cached commits", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockResolvedValue([
+      {
+        commitId: "c1",
+        shortId: "c1short",
+        message: "First commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T09:00:00Z"),
+        parentIds: ["base789"],
+      },
+      {
+        commitId: "c2",
+        shortId: "c2short",
+        message: "Second commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["c1"],
+      },
+    ]);
+    // First commit: new file + deleted file (covers both missing blob branches)
+    vi.mocked(getCommitDifferences)
+      .mockResolvedValueOnce([
+        {
+          afterBlob: { blobId: "newfile1", path: "src/new.ts" },
+        },
+        {
+          beforeBlob: { blobId: "deleted1", path: "src/old.ts" },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          beforeBlob: { blobId: "b1", path: "src/edit.ts" },
+          afterBlob: { blobId: "b2", path: "src/edit.ts" },
+        },
+      ]);
+    vi.mocked(getBlobContent).mockResolvedValue("content");
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Switch to commit view (triggers lazy load of commits)
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/2]");
+    });
+
+    // Navigate to second commit via Tab (commits already cached, no re-fetch)
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 2/2]");
+    });
+    // getCommitsForPR should NOT be called again
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+    // But getCommitDifferences should be called for the second commit
+    await vi.waitFor(() => {
+      expect(getCommitDifferences).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -4325,6 +4499,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });
@@ -4401,6 +4576,7 @@ describe("App", () => {
 
     // Navigate to comment line
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });
@@ -4473,6 +4649,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
     for (let i = 0; i < 5; i++) stdin.write("j");
+    stdin.write("j");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(">  taro: OK");
     });

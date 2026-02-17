@@ -94,6 +94,7 @@ describe("PullRequestDetail", () => {
     diffTexts: new Map<string, { before: string; after: string }>(),
     isLoading: false,
     onLoad: vi.fn(),
+    commitsAvailable: false,
   };
 
   const defaultEditCommentProps = {
@@ -1474,6 +1475,7 @@ describe("PullRequestDetail", () => {
     );
     stdin.write("j");
     stdin.write("j");
+    stdin.write("j");
     // Verify no crash, cursor still within bounds
     expect(lastFrame()).toContain("> ");
   });
@@ -1529,6 +1531,10 @@ describe("PullRequestDetail", () => {
     );
     // Move cursor to a diff line (skip header and separator), wait for render
     stdin.write("j");
+    await vi.waitFor(() => {
+      const frame = lastFrame() ?? "";
+      expect(frame).toMatch(/> .*─/);
+    });
     stdin.write("j");
     await vi.waitFor(() => {
       // Cursor should be on context line " line1"
@@ -1539,6 +1545,196 @@ describe("PullRequestDetail", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Inline comment on");
     });
+    stdin.write("\u001B");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toContain("Inline comment on");
+    });
+  });
+
+  it("shows truncation notice for large diffs and expands on t", async () => {
+    const beforeLines = Array.from({ length: 1200 }, (_, i) => `before ${i + 1}`).join("\n");
+    const afterLines = Array.from({ length: 1200 }, (_, i) => `after ${i + 1}`).join("\n");
+    const largeDiffTexts = new Map([
+      [
+        "b1:b2",
+        {
+          before: beforeLines,
+          after: afterLines,
+        },
+      ],
+    ]);
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={largeDiffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    stdin.write("G");
+    stdin.write("k");
+    stdin.write("k");
+    stdin.write("k");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("... truncated 300/2400 lines");
+      expect(lastFrame()).toContain("[t] show next 300 lines");
+    });
+
+    stdin.write("G");
+    for (let i = 0; i < 6; i++) stdin.write("k");
+    stdin.write("t");
+    // Wait for re-render after expansion (before 300 only visible after expansion)
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("-before 300");
+    });
+    stdin.write("G");
+    stdin.write("k");
+    stdin.write("k");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("... truncated 600/2400 lines");
+    });
+  });
+
+  it("handles asymmetric large diff (many before, few after lines)", async () => {
+    const beforeLines = Array.from({ length: 1500 }, (_, i) => `old ${i + 1}`).join("\n");
+    const afterLines = "new line 1\nnew line 2";
+    const asymmetricDiffTexts = new Map([["b1:b2", { before: beforeLines, after: afterLines }]]);
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={asymmetricDiffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    // Navigate to the truncation area at the bottom
+    stdin.write("G");
+    stdin.write("k");
+    stdin.write("k");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("truncated");
+    });
+  });
+
+  it("t key does nothing on small diff", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    // Move to a diff line
+    stdin.write("j");
+    stdin.write("j");
+    const before = lastFrame();
+    stdin.write("t");
+    expect(lastFrame()).toBe(before);
+  });
+
+  it("t key does nothing on non-diff line", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    // Stay on header line (no diffKey)
+    const before = lastFrame();
+    stdin.write("t");
+    expect(lastFrame()).toBe(before);
+  });
+
+  it("t key does nothing in commit view", async () => {
+    const sampleCommits = [
+      {
+        commitId: "abc1234567",
+        shortId: "abc1234",
+        message: "feat: add login",
+        authorName: "alice",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["base123"],
+      },
+    ] as any;
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/1]");
+    });
+    const before = lastFrame();
+    stdin.write("t");
+    expect(lastFrame()).toBe(before);
   });
 
   it("does not open inline comment input on non-diff line", () => {
@@ -1914,11 +2110,15 @@ describe("PullRequestDetail", () => {
         reaction={defaultReactionProps}
       />,
     );
-    // Navigate past all diff lines to comment section
-    // header=0, sep=1, ctx=2, del=3, add=4, ctx=5, add=6, sep(empty)=7, sep(line)=8, comment-header=9
-    for (let i = 0; i < 9; i++) {
-      stdin.write("j");
-    }
+    // Jump to bottom where comment header is rendered
+    stdin.write("G");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Comments (1):");
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("bob: general");
+    });
+    stdin.write("k");
     await vi.waitFor(() => {
       expect(lastFrame()).toMatch(/> .*Comments/);
     });
@@ -2625,8 +2825,11 @@ describe("PullRequestDetail", () => {
     expect(lastFrame()).toContain("[+3 replies]");
 
     // Navigate to the comment line (sep=0, comment-header=1, comment=2)
-    stdin.write("j");
-    stdin.write("j");
+    stdin.write("G");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("a: root");
+    });
+    stdin.write("k");
     await vi.waitFor(() => {
       expect(lastFrame()).toMatch(/> .*a: root/);
     });
@@ -4263,7 +4466,7 @@ describe("PullRequestDetail", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Cannot approve own PR");
     });
-    stdin.write("\r"); // dismiss error
+    stdin.write("x"); // dismiss error
     await vi.waitFor(() => {
       expect(onClearApprovalError).toHaveBeenCalled();
     });
@@ -4361,7 +4564,40 @@ describe("PullRequestDetail", () => {
       conflictCount: 0,
       conflictFiles: [],
     });
-    const { lastFrame, stdin } = render(
+    const { lastFrame, stdin, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={{
+          ...defaultMergeProps,
+          error: null,
+          onClearError: onClearMergeError,
+          onCheckConflicts: onCheckConflicts,
+        }}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    stdin.write("m");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Select merge strategy:");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("(y/n)");
+    });
+    rerender(
       <PullRequestDetail
         pullRequest={pullRequest as any}
         differences={differences as any}
@@ -4386,15 +4622,10 @@ describe("PullRequestDetail", () => {
         reaction={defaultReactionProps}
       />,
     );
-    stdin.write("m");
-    await vi.waitFor(() => {
-      expect(lastFrame()).toContain("Select merge strategy:");
-    });
-    stdin.write("\r");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("Merge failed");
     });
-    stdin.write("\r"); // dismiss error
+    stdin.write("x"); // dismiss error
     await vi.waitFor(() => {
       expect(onClearMergeError).toHaveBeenCalled();
     });
@@ -4468,7 +4699,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4496,7 +4727,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4527,7 +4763,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4569,7 +4810,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4599,7 +4845,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, onLoad: onLoadCommitDiff }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            onLoad: onLoadCommitDiff,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4649,6 +4900,34 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).not.toContain("[Commit");
       expect(onLoadCommitDiff).not.toHaveBeenCalled();
     });
+
+    it("Tab triggers lazy load when commitsAvailable but commits empty", async () => {
+      const onLoadCommitDiff = vi.fn();
+      const { stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commitsAvailable: true, onLoad: onLoadCommitDiff }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      stdin.write("\t");
+      await vi.waitFor(() => {
+        expect(onLoadCommitDiff).toHaveBeenCalledWith(0);
+      });
+    });
   });
 
   describe("commit view - comment keys disabled", () => {
@@ -4667,7 +4946,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4696,7 +4975,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4727,7 +5006,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            isLoading: true,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4754,7 +5038,12 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits, isLoading: true }}
+          commitView={{
+            ...defaultCommitProps,
+            commits: sampleCommits,
+            commitsAvailable: true,
+            isLoading: true,
+          }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4780,7 +5069,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4804,7 +5093,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4884,6 +5173,7 @@ describe("PullRequestDetail", () => {
             diffTexts: commitDiffTexts,
             isLoading: false,
             onLoad: vi.fn(),
+            commitsAvailable: true,
           }}
         />,
       );
@@ -4910,7 +5200,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4943,7 +5233,7 @@ describe("PullRequestDetail", () => {
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
-          commitView={{ ...defaultCommitProps, commits: sampleCommits }}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
@@ -4998,8 +5288,8 @@ describe("PullRequestDetail", () => {
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("taro");
       });
-      // Navigate to the comment line
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      // Jump to the comment section and select the comment line
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5056,7 +5346,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5065,7 +5355,9 @@ describe("PullRequestDetail", () => {
         expect(lastFrame()).toContain("Edit Comment:");
       });
       stdin.write("\r");
-      expect(onUpdateComment).toHaveBeenCalledWith("c-1", "LGTM");
+      await vi.waitFor(() => {
+        expect(onUpdateComment).toHaveBeenCalledWith("c-1", "LGTM");
+      });
     });
 
     it("cancels edit with Esc", async () => {
@@ -5089,7 +5381,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5124,9 +5416,11 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
@@ -5181,7 +5475,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5238,7 +5532,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5271,7 +5565,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5306,9 +5600,11 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
@@ -5364,7 +5660,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5397,7 +5693,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5434,27 +5730,23 @@ describe("PullRequestDetail", () => {
       expect(lastFrame()).toContain("d del");
     });
 
-    it("edits comment with missing commentId in threads (uses empty content)", async () => {
-      // Test where commentId is in display but not in commentThreads data
-      // This exercises findCommentContent returning ""
-      const threadsWithMismatch = [
+    it("does not open edit when commentId is missing", async () => {
+      const threadsWithoutId = [
         {
           location: null,
           comments: [
             {
-              commentId: "comment-99",
               authorArn: "arn:aws:iam::123456789012:user/taro",
               content: "Mismatch",
             },
           ],
         },
       ];
-      const onUpdateComment = vi.fn();
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
           differences={differences as any}
-          commentThreads={threadsWithMismatch as any}
+          commentThreads={threadsWithoutId as any}
           diffTexts={diffTexts}
           onBack={vi.fn()}
           onHelp={vi.fn()}
@@ -5465,20 +5757,22 @@ describe("PullRequestDetail", () => {
           merge={defaultMergeProps}
           close={defaultCloseProps}
           commitView={defaultCommitProps}
-          editComment={{ ...defaultEditCommentProps, onUpdate: onUpdateComment }}
+          editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
       stdin.write("e");
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain("Edit Comment:");
+        expect(lastFrame()).not.toContain("Edit Comment:");
       });
     });
 
@@ -5504,9 +5798,11 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
@@ -5542,9 +5838,11 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
@@ -5580,9 +5878,11 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) {
-        stdin.write("j");
-      }
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (1):");
+      });
+      stdin.write("j");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro");
       });
@@ -5644,7 +5944,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5718,7 +6018,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5903,8 +6203,16 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      // Navigate to the comment line (scroll down to find it)
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      // Jump to the comment section and select the comment line
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (2):");
+      });
+      // G lands on hanako (last line), confirm cursor is there
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain(">    └ hanako: Agreed");
+      });
+      stdin.write("k");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5963,7 +6271,14 @@ describe("PullRequestDetail", () => {
           reaction={{ ...defaultReactionProps, onReact: onReact }}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (2):");
+      });
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("taro: LGTM");
+      });
+      stdin.write("k");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -5996,7 +6311,14 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (2):");
+      });
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("taro: LGTM");
+      });
+      stdin.write("k");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -6031,7 +6353,14 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (2):");
+      });
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("taro: LGTM");
+      });
+      stdin.write("k");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -6112,7 +6441,14 @@ describe("PullRequestDetail", () => {
           }}
         />,
       );
-      for (let i = 0; i < 10; i++) stdin.write("j");
+      stdin.write("G");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comments (2):");
+      });
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("taro: LGTM");
+      });
+      stdin.write("k");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain(">  taro: LGTM");
       });
@@ -6366,6 +6702,598 @@ describe("PullRequestDetail", () => {
       stdin.write("G");
       // Modal should still be open
       expect(lastFrame()).toContain("Comment:");
+    });
+  });
+
+  describe("per-file diff cache", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/file1.ts" },
+        afterBlob: { blobId: "a2", path: "src/file1.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/file2.ts" },
+        afterBlob: { blobId: "b2", path: "src/file2.ts" },
+      },
+    ];
+
+    it("renders correctly when diffTexts load incrementally", () => {
+      // Start with only file1 loaded
+      const diffTexts1 = new Map([["a1:a2", { before: "old1", after: "new1" }]]);
+
+      const { lastFrame, rerender } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts1}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      expect(lastFrame()).toContain("src/file1.ts");
+      expect(lastFrame()).toContain("new1");
+      expect(lastFrame()).toContain("Loading file content...");
+
+      // Now file2 also loads
+      const diffTexts2 = new Map([
+        ["a1:a2", { before: "old1", after: "new1" }],
+        ["b1:b2", { before: "old2", after: "new2" }],
+      ]);
+
+      rerender(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts2}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Both files should now be rendered
+      expect(lastFrame()).toContain("new1");
+      expect(lastFrame()).toContain("new2");
+      expect(lastFrame()).not.toContain("Loading file content...");
+    });
+  });
+
+  describe("file navigation (n/N keys)", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("n moves cursor to next file header", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Cursor starts at first line (src/alpha.ts header)
+      expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+
+      // Press n to jump to next file header
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+
+    it("n wraps from last file to first file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Jump to second file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // Jump again should wrap to first file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+      });
+    });
+
+    it("N moves cursor to previous file header", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Move to second file first
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // N goes back to first file
+      stdin.write("N");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+      });
+    });
+
+    it("N wraps from first file to last file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Cursor starts at first header, N should wrap to last file
+      stdin.write("N");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+  });
+
+  describe("file position indicator", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("shows File 1/2 when cursor is on first file", () => {
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      expect(lastFrame()).toContain("File 1/2");
+    });
+
+    it("shows File 2/2 when cursor moves to second file", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Jump to second file
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("File 2/2");
+      });
+    });
+  });
+
+  describe("file list mode (f key)", () => {
+    const twoFileDifferences = [
+      {
+        beforeBlob: { blobId: "a1", path: "src/alpha.ts" },
+        afterBlob: { blobId: "a2", path: "src/alpha.ts" },
+      },
+      {
+        beforeBlob: { blobId: "b1", path: "src/beta.ts" },
+        afterBlob: { blobId: "b2", path: "src/beta.ts" },
+      },
+    ];
+
+    const twoFileDiffTexts = new Map([
+      ["a1:a2", { before: "line1", after: "line1\nnewline" }],
+      ["b1:b2", { before: "hello", after: "hello\nworld" }],
+    ]);
+
+    it("shows file list overlay when f is pressed", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        const output = lastFrame()!;
+        expect(output).toContain("Files");
+        expect(output).toContain("src/alpha.ts");
+        expect(output).toContain("src/beta.ts");
+      });
+    });
+
+    it("navigates file list with j/k and jumps with Enter", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      // Open file list
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      // Move cursor down to second file
+      stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      // Select with Enter - should jump to that file and close the list
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("j/k move");
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+    });
+
+    it("closes file list with Esc", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      stdin.write("\u001B"); // Esc
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("Files (2)");
+      });
+    });
+
+    it("closes file list with f key", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("Files (2)");
+      });
+    });
+
+    it("does not process other keys while file list is open", async () => {
+      const onBack = vi.fn();
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={onBack}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      // q should close file list, not trigger onBack
+      stdin.write("q");
+      await vi.waitFor(() => {
+        expect(onBack).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("diff with swapped lines (no infinite loop)", () => {
+    it("renders diff when lines are swapped (A,B -> B,A)", () => {
+      const swapDiffTexts = new Map([["b1:b2", { before: "A\nB", after: "B\nA" }]]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={swapDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("A");
+      expect(output).toContain("B");
+    });
+
+    it("renders diff with nearby duplicate lines within 5-line window", () => {
+      const nearbyDupDiffTexts = new Map([
+        [
+          "b1:b2",
+          {
+            before: "X\nY\nZ\nX\nW",
+            after: "Y\nX\nW\nZ\nX",
+          },
+        ],
+      ]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={nearbyDupDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("src/auth.ts");
+    });
+
+    it("renders diff with import-like line reordering", () => {
+      const importSwapDiffTexts = new Map([
+        [
+          "b1:b2",
+          {
+            before:
+              'import { foo } from "foo";\nimport { bar } from "bar";\nimport { baz } from "baz";',
+            after:
+              'import { bar } from "bar";\nimport { baz } from "baz";\nimport { foo } from "foo";',
+          },
+        ],
+      ]);
+      const { lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={importSwapDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      const output = lastFrame();
+      expect(output).toBeDefined();
+      expect(output).toContain("foo");
+      expect(output).toContain("bar");
+      expect(output).toContain("baz");
     });
   });
 });
