@@ -7,8 +7,9 @@
 > **設計レビュー待ち**
 >
 > review-codecommit のレビュー結果を AI に読ませるための構造化出力機能。
-> `--pr <id>` と `--output json|markdown` オプションで TUI を起動せず、
-> PR のメタデータ・diff・コメントを標準出力に出力する。パイプ連携により
+> `--pr [id]` と `--output json|markdown` オプションで TUI を起動せず、
+> PR のメタデータ・diff・コメントを標準出力に出力する。`--pr` に ID を指定すれば
+> PR 詳細を、ID を省略すれば PR 一覧を出力する。パイプ連携により
 > `review-codecommit my-repo --pr 123 | claude "レビューして"` のようなワークフローを実現する。
 
 ## 概要
@@ -19,11 +20,11 @@ review-codecommit は TUI ツールとして PR レビュー機能を提供し�
 
 ### 今回やること
 
-- `--pr <id>` オプションで対象 PR を指定する
+- `--pr [id]` オプションで対象 PR を指定する（ID 省略時は PR 一覧を出力）
 - `--output json` で PR 詳細（メタデータ・diff・コメント・承認状態）を JSON 出力する
 - `--output markdown` で同じ情報を Markdown 形式で出力する
 - stdout が非 TTY の場合（パイプ接続時）、`--output` 省略時に JSON をデフォルト出力する
-- `--pr` なしで `--output` を指定した場合は PR 一覧を出力する
+- `--pr` の ID 省略時、または `--pr` なしで `--output` を指定した場合は PR 一覧を出力する
 - 進捗・エラーは stderr に出力し、stdout はデータのみとする
 - 既存の TUI 動作に影響を与えない
 
@@ -40,7 +41,7 @@ review-codecommit は TUI ツールとして PR レビュー機能を提供し�
 ### 新規オプション
 
 ```
---pr <id>              Specify pull request ID
+--pr [id]              Specify pull request ID (omit id for PR list)
 --output <format>      Output format: json, markdown (short: -o)
 ```
 
@@ -58,8 +59,14 @@ review-codecommit my-repo --pr 123 -o markdown
 review-codecommit my-repo --pr 123 | claude "このPRをレビューして"
 review-codecommit my-repo --pr 123 | jq '.comments'
 
-# PR 一覧を JSON で取得
+# PR 一覧を JSON で取得（--pr の ID 省略）
+review-codecommit my-repo --pr --output json
+
+# PR 一覧を JSON で取得（--output のみ）
 review-codecommit my-repo --output json
+
+# PR 一覧をパイプで取得（--pr のみ、ID 省略）
+review-codecommit my-repo --pr | jq '.pullRequests[].title'
 
 # プロファイル・リージョン指定との併用
 review-codecommit my-repo --pr 123 --output json --profile dev --region ap-northeast-1
@@ -73,10 +80,13 @@ review-codecommit my-repo --pr 123 --output json --profile dev --region ap-north
 | `--pr <id> --output markdown` | PR 詳細を Markdown で stdout に出力して exit(0) |
 | `--pr <id>`（stdout が非 TTY） | `--output json` と同等（自動検出） |
 | `--pr <id>`（stdout が TTY、`--output` なし） | エラー: `--output` の指定が必要な旨を stderr に出力して exit(1) |
+| `--pr`（ID 省略）`--output json` | PR 一覧を JSON で stdout に出力して exit(0) |
+| `--pr`（ID 省略）`--output markdown` | PR 一覧を Markdown で stdout に出力して exit(0) |
+| `--pr`（ID 省略、stdout が非 TTY） | PR 一覧を JSON で stdout に出力して exit(0)（自動検出） |
+| `--pr`（ID 省略、stdout が TTY、`--output` なし） | エラー: `--output` の指定が必要な旨を stderr に出力して exit(1) |
 | `--output json`（`--pr` なし） | PR 一覧を JSON で stdout に出力して exit(0) |
 | `--output markdown`（`--pr` なし） | PR 一覧を Markdown で stdout に出力して exit(0) |
 | `--output invalid` | エラー: stderr にエラーメッセージを出力して exit(1) |
-| `--pr`（値なし） | エラー: stderr にエラーメッセージを出力して exit(1) |
 | `--output`（値なし） | エラー: stderr にエラーメッセージを出力して exit(1) |
 | `--help` と `--output` が同時指定 | `--help` が優先（既存動作維持） |
 | TUI モード（`--output` なし、`--pr` なし、stdout が TTY） | 従来どおり TUI を起動（変更なし） |
@@ -842,13 +852,11 @@ if (isOutputMode) {
   });
 
   try {
-    if (parsed.pr !== undefined) {
-      if (!parsed.pr) {
-        console.error("Pull request ID is required. Usage: --pr <id>");
-        process.exit(1);
-      }
+    if (parsed.pr !== undefined && parsed.pr !== "") {
+      // --pr <id> → PR 詳細出力
       await outputPRDetail(client, parsed.repoName, parsed.pr, format);
     } else {
+      // --pr（ID 省略）または --output のみ → PR 一覧出力
       await outputPRList(client, parsed.repoName, format);
     }
     process.exit(0);
@@ -871,7 +879,7 @@ Usage: review-codecommit [options] [repository]
 Options:
   --profile <name>       AWS profile to use
   --region <region>       AWS region to use
-  --pr <id>              Specify pull request ID (non-interactive output)
+  --pr [id]              Specify pull request ID (omit id for PR list)
   --output, -o <format>   Output format: json, markdown
   --completions <shell>   Generate completion script (bash, zsh, fish)
   --help, -h              Show this help message
@@ -887,7 +895,9 @@ Output mode:
   review-codecommit <repo> --pr <id> --output json      PR detail as JSON
   review-codecommit <repo> --pr <id> --output markdown   PR detail as Markdown
   review-codecommit <repo> --pr <id> | <command>        Auto JSON via pipe
-  review-codecommit <repo> --output json                 PR list as JSON`;
+  review-codecommit <repo> --pr --output json              PR list as JSON
+  review-codecommit <repo> --pr | <command>               PR list as JSON via pipe
+  review-codecommit <repo> --output json                   PR list as JSON`;
 ```
 
 ## エッジケースと対処方針
@@ -902,7 +912,9 @@ Output mode:
 | `--pr 123`（パイプ接続） | 正常: 自動的に JSON 出力 |
 | `--pr 123`（TTY、`--output` なし） | エラー: フォーマット指定を促すメッセージ |
 | `--output json`（`--pr` なし） | 正常: PR 一覧を JSON 出力 |
-| `--pr`（値なし） | エラー: PR ID が必要な旨のメッセージ |
+| `--pr`（ID 省略）+ `--output json` | 正常: PR 一覧を JSON 出力 |
+| `--pr`（ID 省略）+ パイプ接続 | 正常: PR 一覧を JSON 出力（自動検出） |
+| `--pr`（ID 省略）+ TTY + `--output` なし | エラー: フォーマット指定を促すメッセージ |
 | `--output`（値なし） | エラー: フォーマット指定が必要な旨のメッセージ |
 | `--output yaml` | エラー: 不正なフォーマットのメッセージ |
 | `--pr 123 --output json --help` | `--help` が優先 |
@@ -1102,8 +1114,8 @@ process.on("EPIPE", () => {
 | # | テストケース | 期待結果 |
 |---|-------------|---------|
 | 1 | `--pr 123` | `{ pr: "123" }` |
-| 2 | `--pr`（値なし、末尾） | `{ pr: "" }` |
-| 3 | `--pr --output json` | `{ pr: "", output: "json" }` |
+| 2 | `--pr`（ID 省略、末尾） | `{ pr: "" }`（一覧モードとして扱う） |
+| 3 | `--pr --output json` | `{ pr: "", output: "json" }`（一覧モードとして扱う） |
 | 4 | `--output json` | `{ output: "json" }` |
 | 5 | `--output markdown` | `{ output: "markdown" }` |
 | 6 | `-o json` | `{ output: "json" }` |
@@ -1118,10 +1130,13 @@ process.on("EPIPE", () => {
 |---|-------------|---------|
 | 1 | `--pr 123 --output json` | `outputPRDetail` が呼ばれ exit(0) |
 | 2 | `--output json`（`--pr` なし） | `outputPRList` が呼ばれ exit(0) |
-| 3 | `--pr 123`（非 TTY） | JSON で出力 |
-| 4 | `--pr 123`（TTY、`--output` なし） | エラーメッセージ、exit(1) |
-| 5 | `--output invalid` | エラーメッセージ、exit(1) |
-| 6 | リポジトリ名なし `--output json` | エラーメッセージ、exit(1) |
+| 3 | `--pr`（ID 省略）`--output json` | `outputPRList` が呼ばれ exit(0) |
+| 4 | `--pr`（ID 省略、非 TTY） | `outputPRList` が JSON で呼ばれ exit(0) |
+| 5 | `--pr 123`（非 TTY） | JSON で出力 |
+| 6 | `--pr 123`（TTY、`--output` なし） | エラーメッセージ、exit(1) |
+| 7 | `--pr`（ID 省略、TTY、`--output` なし） | エラーメッセージ、exit(1) |
+| 8 | `--output invalid` | エラーメッセージ、exit(1) |
+| 9 | リポジトリ名なし `--output json` | エラーメッセージ、exit(1) |
 
 #### Property-Based Tests（fast-check）
 
