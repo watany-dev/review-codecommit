@@ -31,6 +31,8 @@ import {
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { mapWithLimit } from "../utils/mapWithLimit.js";
 
+const textDecoder = new TextDecoder();
+
 export interface CodeCommitConfig {
   profile?: string;
   region?: string;
@@ -344,7 +346,7 @@ export async function getBlobContent(
     if (response.content.byteLength > MAX_BLOB_SIZE) {
       return "[File too large to display]";
     }
-    return new TextDecoder().decode(response.content);
+    return textDecoder.decode(response.content);
   }
   return "";
 }
