@@ -31,8 +31,7 @@ describe("Help", () => {
     expect(output).toContain("Revoke approval");
     expect(output).toContain("Merge PR");
     expect(output).toContain("Close PR without merge");
-    expect(output).toContain("Shift+Tab");
-    expect(output).toContain("Previous commit");
+    expect(output).toContain("Previous commit view");
   });
 
   it("renders category headers in correct order", () => {
@@ -143,12 +142,12 @@ describe("Help", () => {
     expect(output).toContain("Jump to end");
   });
 
-  it("shows n Next file keybinding", () => {
+  it("shows Tab Next file keybinding", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("Next file");
   });
 
-  it("shows N Previous file keybinding", () => {
+  it("shows Shift+Tab Previous file keybinding", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("Previous file");
   });

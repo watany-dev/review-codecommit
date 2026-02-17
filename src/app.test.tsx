@@ -3261,8 +3261,8 @@ describe("App", () => {
     // Tab header should show [All changes] because commitsAvailable is true
     expect(lastFrame()).toContain("[All changes]");
 
-    // Tab triggers lazy load
-    stdin.write("\t");
+    // n triggers lazy load
+    stdin.write("n");
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
     });
@@ -3364,7 +3364,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
 
-    stdin.write("\t"); // switch to commit view (triggers lazy load)
+    stdin.write("n"); // switch to commit view (triggers lazy load)
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
     });
@@ -3454,7 +3454,7 @@ describe("App", () => {
     });
 
     // Switch to commit view (triggers lazy load of commits)
-    stdin.write("\t");
+    stdin.write("n");
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledTimes(1);
     });
@@ -3462,8 +3462,8 @@ describe("App", () => {
       expect(lastFrame()).toContain("[Commit 1/2]");
     });
 
-    // Navigate to second commit via Tab (commits already cached, no re-fetch)
-    stdin.write("\t");
+    // Navigate to second commit via n (commits already cached, no re-fetch)
+    stdin.write("n");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 2/2]");
     });

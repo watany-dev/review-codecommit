@@ -501,7 +501,7 @@ export function PullRequestDetail({
     )
       return;
 
-    if (key.tab && (commits.length > 0 || commitsAvailable)) {
+    if ((input === "n" || input === "N") && (commits.length > 0 || commitsAvailable)) {
       if (commits.length === 0) {
         // Lazy load: trigger first commit load
         setViewIndex(0);
@@ -510,13 +510,14 @@ export function PullRequestDetail({
         return;
       }
 
-      const newIndex = key.shift
-        ? viewIndex - 1 < -1
-          ? commits.length - 1
-          : viewIndex - 1
-        : viewIndex + 1 > commits.length - 1
-          ? -1
-          : viewIndex + 1;
+      const newIndex =
+        input === "N"
+          ? viewIndex - 1 < -1
+            ? commits.length - 1
+            : viewIndex - 1
+          : viewIndex + 1 > commits.length - 1
+            ? -1
+            : viewIndex + 1;
 
       setViewIndex(newIndex);
       setCursorIndex(0);
@@ -583,14 +584,14 @@ export function PullRequestDetail({
       setCursorIndex(lines.length - 1);
       return;
     }
-    // n: next file header
-    if (input === "n") {
+    // tab: next file header
+    if (key.tab && !key.shift) {
       const idx = findNextHeaderIndex(headerIndices, cursorIndex);
       if (idx !== -1) setCursorIndex(idx);
       return;
     }
-    // N: previous file header
-    if (input === "N") {
+    // shift+tab: previous file header
+    if (key.tab && key.shift) {
       const idx = findPrevHeaderIndex(headerIndices, cursorIndex);
       if (idx !== -1) setCursorIndex(idx);
       return;
@@ -998,10 +999,10 @@ export function PullRequestDetail({
           showFileList
             ? ""
             : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
-              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
+              ? `n/N view ↑↓ Tab file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
-                ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
+                ? "n next N prev ↑↓ e edit d del a/r approve m merge x close q ? help"
+                : `↑↓ Tab file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>

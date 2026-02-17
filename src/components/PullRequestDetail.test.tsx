@@ -1728,7 +1728,7 @@ describe("PullRequestDetail", () => {
         reaction={defaultReactionProps}
       />,
     );
-    stdin.write("\t");
+    stdin.write("n");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
@@ -4710,8 +4710,8 @@ describe("PullRequestDetail", () => {
     });
   });
 
-  describe("commit view - Tab/Shift+Tab navigation", () => {
-    it("Tab switches to first commit view", async () => {
+  describe("commit view - n/N navigation", () => {
+    it("n switches to first commit view", async () => {
       const onLoadCommitDiff = vi.fn();
       const { lastFrame, stdin } = render(
         <PullRequestDetail
@@ -4738,7 +4738,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
@@ -4747,7 +4747,7 @@ describe("PullRequestDetail", () => {
       expect(onLoadCommitDiff).toHaveBeenCalledWith(0);
     });
 
-    it("Tab wraps from last commit to All changes", async () => {
+    it("n wraps from last commit to All changes", async () => {
       const onLoadCommitDiff = vi.fn();
       const { lastFrame, stdin } = render(
         <PullRequestDetail
@@ -4774,27 +4774,27 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      // Tab 4 times: All changes -> Commit 1 -> Commit 2 -> Commit 3 -> All changes
-      stdin.write("\t");
+      // n 4 times: All changes -> Commit 1 -> Commit 2 -> Commit 3 -> All changes
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 2/3]");
       });
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 3/3]");
       });
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[All changes]");
       });
       expect(onLoadCommitDiff).toHaveBeenCalledTimes(3);
     });
 
-    it("Shift+Tab wraps from All changes to last commit", async () => {
+    it("N wraps from All changes to last commit", async () => {
       const onLoadCommitDiff = vi.fn();
       const { lastFrame, stdin } = render(
         <PullRequestDetail
@@ -4821,7 +4821,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\u001b[Z"); // Shift+Tab
+      stdin.write("N");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 3/3]");
       });
@@ -4829,7 +4829,7 @@ describe("PullRequestDetail", () => {
       expect(onLoadCommitDiff).toHaveBeenCalledWith(2);
     });
 
-    it("Shift+Tab goes from commit 2 to commit 1 (non-wrapping)", async () => {
+    it("N goes from commit 2 to commit 1 (non-wrapping)", async () => {
       const onLoadCommitDiff = vi.fn();
       const { lastFrame, stdin } = render(
         <PullRequestDetail
@@ -4857,22 +4857,22 @@ describe("PullRequestDetail", () => {
         />,
       );
       // Go to commit 2
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 2/3]");
       });
-      // Shift+Tab back to commit 1
-      stdin.write("\u001b[Z");
+      // N back to commit 1
+      stdin.write("N");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
     });
 
-    it("Tab does nothing when commits are empty", async () => {
+    it("n does nothing when commits are empty", async () => {
       const onLoadCommitDiff = vi.fn();
       const { lastFrame, stdin } = render(
         <PullRequestDetail
@@ -4894,14 +4894,14 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t");
+      stdin.write("n");
       // Wait a tick for async processing
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(lastFrame()).not.toContain("[Commit");
       expect(onLoadCommitDiff).not.toHaveBeenCalled();
     });
 
-    it("Tab triggers lazy load when commitsAvailable but commits empty", async () => {
+    it("n triggers lazy load when commitsAvailable but commits empty", async () => {
       const onLoadCommitDiff = vi.fn();
       const { stdin } = render(
         <PullRequestDetail
@@ -4923,7 +4923,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(onLoadCommitDiff).toHaveBeenCalledWith(0);
       });
@@ -4952,7 +4952,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
@@ -4981,7 +4981,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
@@ -5017,7 +5017,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("Loading commit diff...");
       });
@@ -5054,7 +5054,7 @@ describe("PullRequestDetail", () => {
   });
 
   describe("commit view - footer", () => {
-    it("shows Tab switch view in All changes when commits exist", () => {
+    it("shows n/N view in All changes when commits exist", () => {
       const { lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -5075,10 +5075,10 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      expect(lastFrame()).toContain("Tab view");
+      expect(lastFrame()).toContain("n/N view");
     });
 
-    it("shows Tab next Shift+Tab prev in commit view", async () => {
+    it("shows n next N prev in commit view", async () => {
       const { lastFrame, stdin } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -5099,14 +5099,14 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
-        expect(lastFrame()).toContain("Tab next");
+        expect(lastFrame()).toContain("n next");
       });
-      expect(lastFrame()).toContain("Shift+Tab prev");
+      expect(lastFrame()).toContain("N prev");
     });
 
-    it("does not show Tab in footer when no commits", () => {
+    it("does not show n/N in footer when no commits", () => {
       const { lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -5127,8 +5127,8 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      expect(lastFrame()).not.toContain("Tab switch");
-      expect(lastFrame()).not.toContain("Tab next");
+      expect(lastFrame()).not.toContain("n/N view");
+      expect(lastFrame()).not.toContain("n next");
     });
   });
 
@@ -5177,7 +5177,7 @@ describe("PullRequestDetail", () => {
           }}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("src/validators.ts");
       });
@@ -5210,7 +5210,7 @@ describe("PullRequestDetail", () => {
       stdin.write("j");
       stdin.write("j");
       // Switch to commit view - cursor should reset
-      stdin.write("\t");
+      stdin.write("n");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
@@ -5239,7 +5239,7 @@ describe("PullRequestDetail", () => {
           reaction={defaultReactionProps}
         />,
       );
-      stdin.write("\t"); // switch to commit view
+      stdin.write("n"); // switch to commit view
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("[Commit 1/3]");
       });
@@ -6797,7 +6797,7 @@ describe("PullRequestDetail", () => {
       ["b1:b2", { before: "hello", after: "hello\nworld" }],
     ]);
 
-    it("n moves cursor to next file header", async () => {
+    it("tab moves cursor to next file header", async () => {
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -6822,14 +6822,14 @@ describe("PullRequestDetail", () => {
       // Cursor starts at first line (src/alpha.ts header)
       expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
 
-      // Press n to jump to next file header
-      stdin.write("n");
+      // Press tab to jump to next file header
+      stdin.write("\t");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
       });
     });
 
-    it("n wraps from last file to first file", async () => {
+    it("tab wraps from last file to first file", async () => {
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -6852,19 +6852,19 @@ describe("PullRequestDetail", () => {
       );
 
       // Jump to second file
-      stdin.write("n");
+      stdin.write("\t");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
       });
 
       // Jump again should wrap to first file
-      stdin.write("n");
+      stdin.write("\t");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
       });
     });
 
-    it("N moves cursor to previous file header", async () => {
+    it("shift+tab moves cursor to previous file header", async () => {
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -6887,19 +6887,19 @@ describe("PullRequestDetail", () => {
       );
 
       // Move to second file first
-      stdin.write("n");
+      stdin.write("\t");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
       });
 
-      // N goes back to first file
-      stdin.write("N");
+      // shift+tab goes back to first file
+      stdin.write("\u001b[Z");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
       });
     });
 
-    it("N wraps from first file to last file", async () => {
+    it("shift+tab wraps from first file to last file", async () => {
       const { stdin, lastFrame } = render(
         <PullRequestDetail
           pullRequest={pullRequest as any}
@@ -6921,8 +6921,8 @@ describe("PullRequestDetail", () => {
         />,
       );
 
-      // Cursor starts at first header, N should wrap to last file
-      stdin.write("N");
+      // Cursor starts at first header, shift+tab should wrap to last file
+      stdin.write("\u001b[Z");
       await vi.waitFor(() => {
         expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
       });
@@ -6994,7 +6994,7 @@ describe("PullRequestDetail", () => {
       );
 
       // Jump to second file
-      stdin.write("n");
+      stdin.write("\t");
       await vi.waitFor(() => {
         expect(lastFrame()).toContain("File 2/2");
       });

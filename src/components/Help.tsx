@@ -47,8 +47,8 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="Ctrl+d" description="Half page down" />
         <KeyRow keyName="Ctrl+u" description="Half page up" />
         <KeyRow keyName="G" description="Jump to end" />
-        <KeyRow keyName="n" description="Next file" />
-        <KeyRow keyName="N" description="Previous file" />
+        <KeyRow keyName="Tab" description="Next file" />
+        <KeyRow keyName="Shift+Tab" description="Previous file" />
         <KeyRow keyName="f" description="File list" />
         <KeyRow keyName="Enter" description="Select / confirm" />
         <KeyRow keyName="q / Esc" description="Back / quit" />
@@ -73,8 +73,8 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="r" description="Revoke approval" />
         <KeyRow keyName="m" description="Merge PR" />
         <KeyRow keyName="x" description="Close PR without merge" />
-        <KeyRow keyName="Tab" description="Switch to commit view" />
-        <KeyRow keyName="Shift+Tab" description="Previous commit" />
+        <KeyRow keyName="n" description="Next commit view" />
+        <KeyRow keyName="N" description="Previous commit view" />
       </Box>
       <Box flexDirection="column" marginTop={1}>
         <SectionHeader title="PR List" />
