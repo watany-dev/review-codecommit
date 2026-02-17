@@ -4,7 +4,7 @@
   "description": "A TUI tool for reviewing AWS CodeCommit pull requests in the terminal",
   "type": "module",
   "bin": {
-    "review-codecommit": "dist/cli.js"
+    "review-codecommit": "dist/cli.mjs"
   },
   "exports": {
     ".": {
@@ -18,7 +18,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/cli.tsx --outdir ./dist --target node --packages external && bun build ./src/index.ts --outdir ./dist --target node --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.js",
+    "build": "bun build ./src/cli.tsx --outfile ./dist/cli.mjs --format esm --target node --packages external && bun build ./src/index.ts --outdir ./dist --format esm --target node --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
