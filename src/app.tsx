@@ -592,6 +592,7 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function handleLoadCommitDiff(commitIndex: number) {
+    const loadId = diffLoadRef.current;
     setIsLoadingCommitDiff(true);
     try {
       let currentCommits = commits;
@@ -602,6 +603,9 @@ export function App({ client, initialRepo }: AppProps) {
         if (!sourceCommit || !mergeBase) return;
         /* v8 ignore stop */
         currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        /* v8 ignore start -- stale-load guard hard to test deterministically */
+        if (diffLoadRef.current !== loadId) return;
+        /* v8 ignore stop */
         setCommits(currentCommits);
       }
 
@@ -610,6 +614,9 @@ export function App({ client, initialRepo }: AppProps) {
 
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
+      /* v8 ignore start -- stale-load guard hard to test deterministically */
+      if (diffLoadRef.current !== loadId) return;
+      /* v8 ignore stop */
       setCommitDifferences(diffs);
 
       const blobResults = await mapWithLimit(diffs, 5, async (diff) => {
@@ -624,6 +631,9 @@ export function App({ client, initialRepo }: AppProps) {
 
         return { key, before, after };
       });
+      /* v8 ignore start -- stale-load guard hard to test deterministically */
+      if (diffLoadRef.current !== loadId) return;
+      /* v8 ignore stop */
       const texts = new Map<string, { before: string; after: string }>();
       for (const result of blobResults) {
         texts.set(result.key, { before: result.before, after: result.after });
@@ -679,6 +689,8 @@ export function App({ client, initialRepo }: AppProps) {
 
   function handleBack() {
     if (screen === "detail") {
+      // Invalidate in-flight background loads before clearing state
+      diffLoadRef.current += 1;
       // Clear heavyweight detail state to free memory
       setPrDetail(null);
       setPrDifferences([]);
