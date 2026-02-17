@@ -1219,9 +1219,7 @@ function buildDisplayLines(
         diffCache?.set(cacheKey, diffLines);
       }
       for (const dl of diffLines) {
-        dl.filePath = filePath;
-        dl.diffKey = blobKey;
-        lines.push(dl);
+        lines.push({ ...dl, filePath, diffKey: blobKey });
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
