@@ -51,25 +51,7 @@ const mockClient = {} as any;
 
 describe("App", () => {
   beforeEach(() => {
-    vi.mocked(listRepositories).mockReset();
-    vi.mocked(listPullRequests).mockReset();
-    vi.mocked(getPullRequestDetail).mockReset();
-    vi.mocked(getBlobContent).mockReset();
-    vi.mocked(postComment).mockReset();
-    vi.mocked(postCommentReply).mockReset();
-    vi.mocked(getComments).mockReset();
-    vi.mocked(getApprovalStates).mockReset();
-    vi.mocked(evaluateApprovalRules).mockReset();
-    vi.mocked(updateApprovalState).mockReset();
-    vi.mocked(mergePullRequest).mockReset();
-    vi.mocked(getMergeConflicts).mockReset();
-    vi.mocked(closePullRequest).mockReset();
-    vi.mocked(getCommitsForPR).mockReset();
-    vi.mocked(getCommitDifferences).mockReset();
-    vi.mocked(updateComment).mockReset();
-    vi.mocked(deleteComment).mockReset();
-    vi.mocked(getReactionsForComments).mockReset();
-    vi.mocked(putReaction).mockReset();
+    vi.resetAllMocks();
     // Default: no reactions
     vi.mocked(getReactionsForComments).mockResolvedValue(new Map());
     vi.mocked(putReaction).mockResolvedValue(undefined);
@@ -1132,8 +1114,7 @@ describe("App", () => {
       stdin.write("\r");
     });
 
-    // Give time for any async operations
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 0));
     expect(postComment).not.toHaveBeenCalled();
   });
 
@@ -1372,7 +1353,7 @@ describe("App", () => {
     });
 
     stdin.write("y");
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 0));
     expect(updateApprovalState).not.toHaveBeenCalled();
   });
 
@@ -3397,6 +3378,100 @@ describe("App", () => {
         "base789",
         "src123",
       );
+    });
+  });
+
+  it("loads commit diff for new file (afterBlob only) and reuses cached commits", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockResolvedValue([
+      {
+        commitId: "c1",
+        shortId: "c1short",
+        message: "First commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T09:00:00Z"),
+        parentIds: ["base789"],
+      },
+      {
+        commitId: "c2",
+        shortId: "c2short",
+        message: "Second commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["c1"],
+      },
+    ]);
+    // First commit: new file + deleted file (covers both missing blob branches)
+    vi.mocked(getCommitDifferences)
+      .mockResolvedValueOnce([
+        {
+          afterBlob: { blobId: "newfile1", path: "src/new.ts" },
+        },
+        {
+          beforeBlob: { blobId: "deleted1", path: "src/old.ts" },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          beforeBlob: { blobId: "b1", path: "src/edit.ts" },
+          afterBlob: { blobId: "b2", path: "src/edit.ts" },
+        },
+      ]);
+    vi.mocked(getBlobContent).mockResolvedValue("content");
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    // Switch to commit view (triggers lazy load of commits)
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/2]");
+    });
+
+    // Navigate to second commit via Tab (commits already cached, no re-fetch)
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 2/2]");
+    });
+    // getCommitsForPR should NOT be called again
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+    // But getCommitDifferences should be called for the second commit
+    await vi.waitFor(() => {
+      expect(getCommitDifferences).toHaveBeenCalledTimes(2);
     });
   });
 

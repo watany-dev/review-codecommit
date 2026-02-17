@@ -74,6 +74,20 @@ describe("Help", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("calls onClose on escape key", () => {
+    const onClose = vi.fn();
+    const { stdin } = render(<Help onClose={onClose} />);
+    stdin.write("\u001B");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not call onClose on unrelated key", () => {
+    const onClose = vi.fn();
+    const { stdin } = render(<Help onClose={onClose} />);
+    stdin.write("x");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   // v0.7: Comment edit/delete keybindings
   it("shows e Edit comment keybinding", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);

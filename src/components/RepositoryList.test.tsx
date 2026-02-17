@@ -106,4 +106,19 @@ describe("RepositoryList", () => {
     expect(lastFrame()).toContain("no-id-repo");
     expect(lastFrame()).toContain("another-repo");
   });
+
+  it("does not call onSelect when repositoryName is missing", () => {
+    const onSelect = vi.fn();
+    const reposNoName = [{ repositoryId: "1" } as any];
+    const { stdin } = render(
+      <RepositoryList
+        repositories={reposNoName}
+        onSelect={onSelect}
+        onQuit={vi.fn()}
+        onHelp={vi.fn()}
+      />,
+    );
+    stdin.write("\r");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });

@@ -427,4 +427,13 @@ describe("PullRequestList", () => {
       expect(lastFrame()).toContain("Page 2");
     });
   });
+
+  it("does not call onSelect when pressing enter on empty list", () => {
+    const onSelect = vi.fn();
+    const { stdin } = render(
+      <PullRequestList {...defaultProps} pullRequests={[]} onSelect={onSelect} />,
+    );
+    stdin.write("\r");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });
