@@ -23,6 +23,7 @@ type InlineLocation = {
 
 const LARGE_DIFF_THRESHOLD = 1500;
 const DIFF_CHUNK_SIZE = 300;
+const EMPTY_STATUS_MAP = new Map<string, "loading" | "loaded" | "error">();
 
 interface CommentAction {
   onPost: (content: string) => void;
@@ -126,7 +127,7 @@ export function PullRequestDetail({
   differences,
   commentThreads,
   diffTexts,
-  diffTextStatus = new Map(),
+  diffTextStatus = EMPTY_STATUS_MAP,
   onBack,
   onHelp,
   comment: {
