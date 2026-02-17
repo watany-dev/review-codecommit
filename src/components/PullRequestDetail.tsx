@@ -23,6 +23,7 @@ type InlineLocation = {
 
 const LARGE_DIFF_THRESHOLD = 1500;
 const DIFF_CHUNK_SIZE = 300;
+const EMPTY_STATUS_MAP = new Map<string, "loading" | "loaded" | "error">();
 
 interface CommentAction {
   onPost: (content: string) => void;
@@ -126,7 +127,7 @@ export function PullRequestDetail({
   differences,
   commentThreads,
   diffTexts,
-  diffTextStatus = new Map(),
+  diffTextStatus = EMPTY_STATUS_MAP,
   onBack,
   onHelp,
   comment: {
@@ -584,13 +585,13 @@ export function PullRequestDetail({
     }
     // n: next file header
     if (input === "n") {
-      const idx = findNextHeaderIndex(lines, cursorIndex);
+      const idx = findNextHeaderIndex(headerIndices, cursorIndex);
       if (idx !== -1) setCursorIndex(idx);
       return;
     }
     // N: previous file header
     if (input === "N") {
-      const idx = findPrevHeaderIndex(lines, cursorIndex);
+      const idx = findPrevHeaderIndex(headerIndices, cursorIndex);
       if (idx !== -1) setCursorIndex(idx);
       return;
     }
@@ -1218,9 +1219,7 @@ function buildDisplayLines(
         diffCache?.set(cacheKey, diffLines);
       }
       for (const dl of diffLines) {
-        dl.filePath = filePath;
-        dl.diffKey = blobKey;
-        lines.push(dl);
+        lines.push({ ...dl, filePath, diffKey: blobKey });
 
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
@@ -1564,21 +1563,13 @@ function ConflictDisplay({
   );
 }
 
-function findNextHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
-  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
-    if (line.type === "header") acc.push(i);
-    return acc;
-  }, []);
+function findNextHeaderIndex(headerIndices: number[], currentIndex: number): number {
   if (headerIndices.length === 0) return -1;
   const next = headerIndices.find((i) => i > currentIndex);
   return next ?? headerIndices[0]!;
 }
 
-function findPrevHeaderIndex(lines: DisplayLine[], currentIndex: number): number {
-  const headerIndices = lines.reduce<number[]>((acc, line, i) => {
-    if (line.type === "header") acc.push(i);
-    return acc;
-  }, []);
+function findPrevHeaderIndex(headerIndices: number[], currentIndex: number): number {
   if (headerIndices.length === 0) return -1;
   const prev = [...headerIndices].reverse().find((i) => i < currentIndex);
   return prev ?? headerIndices[headerIndices.length - 1]!;
