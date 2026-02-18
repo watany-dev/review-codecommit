@@ -269,7 +269,8 @@ export async function postComment(
       : undefined,
   });
   const response = await client.send(command);
-  return response.comment!;
+  if (!response.comment) throw new Error("Empty comment response from CodeCommit API.");
+  return response.comment;
 }
 
 export async function postCommentReply(
@@ -284,7 +285,8 @@ export async function postCommentReply(
     content: params.content,
   });
   const response = await client.send(command);
-  return response.comment!;
+  if (!response.comment) throw new Error("Empty reply response from CodeCommit API.");
+  return response.comment;
 }
 
 export async function updateApprovalState(
@@ -393,7 +395,8 @@ export async function mergePullRequest(
       break;
   }
   const response = await client.send(command);
-  return response.pullRequest!;
+  if (!response.pullRequest) throw new Error("Empty merge response from CodeCommit API.");
+  return response.pullRequest;
 }
 
 export async function getMergeConflicts(
@@ -442,7 +445,8 @@ export async function closePullRequest(
     pullRequestStatus: "CLOSED",
   });
   const response = await client.send(command);
-  return response.pullRequest!;
+  if (!response.pullRequest) throw new Error("Empty close response from CodeCommit API.");
+  return response.pullRequest;
 }
 
 export interface CommitInfo {
@@ -517,7 +521,8 @@ export async function updateComment(
     content: params.content,
   });
   const response = await client.send(command);
-  return response.comment!;
+  if (!response.comment) throw new Error("Empty update response from CodeCommit API.");
+  return response.comment;
 }
 
 export async function deleteComment(
@@ -530,7 +535,8 @@ export async function deleteComment(
     commentId: params.commentId,
   });
   const response = await client.send(command);
-  return response.comment!;
+  if (!response.comment) throw new Error("Empty delete response from CodeCommit API.");
+  return response.comment;
 }
 
 /** Aggregated reaction information for a single comment */

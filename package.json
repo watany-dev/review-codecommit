@@ -68,11 +68,14 @@
     "node": ">=20.0.0"
   },
   "license": "MIT",
+  "overrides": {
+    "fast-xml-parser": ">=5.3.6"
+  },
   "dependencies": {
-    "@aws-sdk/client-codecommit": "^3.989.0",
-    "@smithy/node-http-handler": "^4.4.10",
-    "ink": "^6.7.0",
-    "ink-text-input": "^6.0.0",
-    "react": "^19.2.4"
+    "@aws-sdk/client-codecommit": "3.990.0",
+    "@smithy/node-http-handler": "4.4.10",
+    "ink": "6.7.0",
+    "ink-text-input": "6.0.0",
+    "react": "19.2.4"
   }
 }
