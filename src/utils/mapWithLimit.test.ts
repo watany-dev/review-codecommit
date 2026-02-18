@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { mapWithLimit } from "./mapWithLimit.js";
 
@@ -40,5 +41,52 @@ describe("mapWithLimit", () => {
         return x;
       }),
     ).rejects.toThrow("fail");
+  });
+});
+
+// --- Property-Based Tests ---
+
+describe("mapWithLimit (property-based)", () => {
+  it("always returns array of same length as input", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.integer(), { maxLength: 20 }),
+        fc.integer({ min: 1, max: 10 }),
+        async (items, limit) => {
+          const result = await mapWithLimit(items, limit, async (x) => x);
+          expect(result).toHaveLength(items.length);
+        },
+      ),
+    );
+  });
+
+  it("preserves input order regardless of concurrency limit", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.integer(), { minLength: 1, maxLength: 20 }),
+        fc.integer({ min: 1, max: 10 }),
+        async (items, limit) => {
+          const result = await mapWithLimit(items, limit, async (x) => x);
+          expect(result).toEqual(items);
+        },
+      ),
+    );
+  });
+
+  it("with limit=1, processes at most 1 item concurrently", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(fc.integer(), { minLength: 1, maxLength: 10 }), async (items) => {
+        let running = 0;
+        let maxRunning = 0;
+        await mapWithLimit(items, 1, async (x) => {
+          running++;
+          maxRunning = Math.max(maxRunning, running);
+          await Promise.resolve();
+          running--;
+          return x;
+        });
+        expect(maxRunning).toBeLessThanOrEqual(1);
+      }),
+    );
   });
 });
