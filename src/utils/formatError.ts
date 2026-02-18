@@ -176,6 +176,9 @@ export function formatErrorMessage(
     .replace(/arn:[^\s"')]+/gi, "[ARN]")
     .replace(/\b\d{12}\b/g, "[ACCOUNT_ID]")
     .replace(/AKIA[0-9A-Z]{16}/g, "[ACCESS_KEY]")
-    .replace(/(?:us|eu|ap|sa|ca|me|af)-[a-z]+-\d+/g, "[REGION]");
+    .replace(/(?:us|eu|ap|sa|ca|me|af)-[a-z]+-\d+/g, "[REGION]")
+    .replace(/(?<=[^A-Za-z0-9/+=]|^)[A-Za-z0-9/+=]{40}(?=[^A-Za-z0-9/+=]|$)/g, "[SECRET_KEY]")
+    .replace(/IQoJb2lnaW5[A-Za-z0-9/+=]+/g, "[SESSION_TOKEN]")
+    .replace(/vpce-[a-z0-9]+/gi, "[VPC_ENDPOINT]");
   return sanitized;
 }

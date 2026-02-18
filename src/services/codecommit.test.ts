@@ -579,6 +579,20 @@ describe("postComment", () => {
       }),
     ).rejects.toThrow("Access denied");
   });
+
+  it("throws when API returns empty comment", async () => {
+    mockSend.mockResolvedValueOnce({ comment: undefined });
+
+    await expect(
+      postComment(mockClient, {
+        pullRequestId: "42",
+        repositoryName: "my-service",
+        beforeCommitId: "def456",
+        afterCommitId: "abc123",
+        content: "test",
+      }),
+    ).rejects.toThrow("Empty comment response from CodeCommit API.");
+  });
 });
 
 describe("getComments", () => {
@@ -888,6 +902,17 @@ describe("postCommentReply", () => {
       }),
     ).rejects.toThrow("comment not found");
   });
+
+  it("throws when API returns empty comment", async () => {
+    mockSend.mockResolvedValueOnce({ comment: undefined });
+
+    await expect(
+      postCommentReply(mockClient, {
+        inReplyTo: "comment-1",
+        content: "reply",
+      }),
+    ).rejects.toThrow("Empty reply response from CodeCommit API.");
+  });
 });
 
 describe("updateApprovalState", () => {
@@ -1135,6 +1160,18 @@ describe("mergePullRequest", () => {
       }),
     ).rejects.toThrow("merge failed");
   });
+
+  it("throws when API returns empty pullRequest", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequest: undefined });
+
+    await expect(
+      mergePullRequest(mockClient, {
+        pullRequestId: "42",
+        repositoryName: "my-service",
+        strategy: "fast-forward",
+      }),
+    ).rejects.toThrow("Empty merge response from CodeCommit API.");
+  });
 });
 
 describe("getMergeConflicts", () => {
@@ -1292,6 +1329,16 @@ describe("closePullRequest", () => {
         pullRequestId: "42",
       }),
     ).rejects.toThrow("already closed");
+  });
+
+  it("throws when API returns empty pullRequest", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequest: undefined });
+
+    await expect(
+      closePullRequest(mockClient, {
+        pullRequestId: "42",
+      }),
+    ).rejects.toThrow("Empty close response from CodeCommit API.");
   });
 });
 
@@ -1594,6 +1641,17 @@ describe("updateComment", () => {
       }),
     ).rejects.toThrow("not your comment");
   });
+
+  it("throws when API returns empty comment", async () => {
+    mockSend.mockResolvedValueOnce({ comment: undefined });
+
+    await expect(
+      updateComment(mockClient, {
+        commentId: "comment-1",
+        content: "Updated",
+      }),
+    ).rejects.toThrow("Empty update response from CodeCommit API.");
+  });
 });
 
 describe("deleteComment", () => {
@@ -1631,6 +1689,16 @@ describe("deleteComment", () => {
         commentId: "comment-1",
       }),
     ).rejects.toThrow("already deleted");
+  });
+
+  it("throws when API returns empty comment", async () => {
+    mockSend.mockResolvedValueOnce({ comment: undefined });
+
+    await expect(
+      deleteComment(mockClient, {
+        commentId: "comment-1",
+      }),
+    ).rejects.toThrow("Empty delete response from CodeCommit API.");
   });
 });
 

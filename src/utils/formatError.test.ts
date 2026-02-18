@@ -384,5 +384,27 @@ describe("formatErrorMessage", () => {
         "Something went wrong",
       );
     });
+
+    it("sanitizes AWS secret access keys (40-char base64)", () => {
+      expect(
+        formatErrorMessage(
+          makeError("Error", "Secret wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY leaked"),
+        ),
+      ).toBe("Secret [SECRET_KEY] leaked");
+    });
+
+    it("sanitizes AWS session tokens", () => {
+      expect(
+        formatErrorMessage(
+          makeError("Error", "Token IQoJb2lnaW5YWxsbGFzIjoiY29kZS1pbnRlcnByZXRlci error"),
+        ),
+      ).toBe("Token [SESSION_TOKEN] error");
+    });
+
+    it("sanitizes VPC endpoint IDs", () => {
+      expect(
+        formatErrorMessage(makeError("Error", "Endpoint vpce-0123456789abcdef0 unreachable")),
+      ).toBe("Endpoint [VPC_ENDPOINT] unreachable");
+    });
   });
 });

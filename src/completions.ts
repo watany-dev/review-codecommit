@@ -62,7 +62,10 @@ _review_codecommit() {
         --profile)
             local profiles=""
             if [ -f "\${HOME}/.aws/config" ]; then
-                profiles=$(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')
+                while IFS= read -r _profile; do
+                    _profile="\${_profile//[^a-zA-Z0-9_.@-]/}"
+                    [ -n "$_profile" ] && profiles="$profiles $_profile"
+                done < <(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')
             fi
             COMPREPLY=( $(compgen -W "\${profiles}" -- "\${cur}") )
             return 0
@@ -110,7 +113,10 @@ _review_codecommit() {
         profile)
             profiles=()
             if [[ -f "\${HOME}/.aws/config" ]]; then
-                profiles=(\${(f)"$(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')"})
+                while IFS= read -r _profile; do
+                    _profile="\${_profile//[^a-zA-Z0-9_.@-]/}"
+                    [[ -n "$_profile" ]] && profiles+=("$_profile")
+                done < <(grep -E '^\\[profile |^\\[default\\]' "\${HOME}/.aws/config" | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')
             fi
             _describe 'AWS profile' profiles
             ;;
@@ -136,7 +142,7 @@ export function generateFishCompletion(): string {
 complete -c review-codecommit -f
 
 # Options
-complete -c review-codecommit -l profile -x -d "AWS profile to use" -a "(test -f ~/.aws/config; and grep -E '^\\[profile |^\\[default\\]' ~/.aws/config | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/')"
+complete -c review-codecommit -l profile -x -d "AWS profile to use" -a "(test -f ~/.aws/config; and grep -E '^\\[profile |^\\[default\\]' ~/.aws/config | sed -E 's/^\\[profile (.+)\\]/\\1/; s/^\\[default\\]/default/' | string replace -ra '[^a-zA-Z0-9_.@-]' '')"
 complete -c review-codecommit -l help -d "Show help message"
 complete -c review-codecommit -s h -d "Show help message"
 complete -c review-codecommit -l version -d "Show version number"
