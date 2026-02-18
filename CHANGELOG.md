@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-18
+
+### Added
+
+#### Activity Timeline
+- View PR event history as a timeline from the PR detail screen (`A` key)
+- Displays icon, actor name (truncated to 12 chars), event description, and relative time for each event
+- Supports 10 event types: PR created, status changed (open/close), source branch updated, merge state changed, approval rule created/deleted/updated/overridden, approvals reset, and approval state changed (approve/revoke)
+- j/k navigation and arrow key support within the timeline
+- Pagination with `n` key (next token-based append mode — loaded events are kept while new ones are appended)
+- Loading state for initial fetch and subsequent page loads
+- Error state with `q` to go back
+- Empty state message when no events are found
+- `q`/`Esc` returns to PR detail screen
+
+#### Service Layer
+- `getPullRequestActivity` function added to `src/services/codecommit.ts` using `DescribePullRequestEventsCommand`
+- `PrActivityEvent` and `PullRequestActivityResult` types exported from the service layer
+
+#### IAM
+- New IAM permission required: `codecommit:DescribePullRequestEvents`
+
+### Changed
+- `PullRequestDetail` footer now shows `A activity` hint
+- Help screen updated with `A - Activity timeline` keybinding entry
+- `formatErrorMessage` extended with `"activity"` context for activity-specific error messages
+
+### Tests
+- 20 new `ActivityTimeline` component tests (snapshots, navigation, pagination, error/empty states)
+- 15+ new `getPullRequestActivity` service tests covering all event types
+- 6 new `App` integration tests for activity screen transitions and data loading
+- CI coverage maintained at 95.12%
+
+---
+
 ## [0.1.1] - 2026-02-18
 
 ### Fixed
