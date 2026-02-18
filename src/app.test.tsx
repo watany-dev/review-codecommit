@@ -22,6 +22,7 @@ vi.mock("./services/codecommit.js", () => ({
   deleteComment: vi.fn(),
   getReactionsForComments: vi.fn(),
   putReaction: vi.fn(),
+  getPullRequestActivity: vi.fn(),
 }));
 
 import { App } from "./app.js";
@@ -35,6 +36,7 @@ import {
   getCommitDifferences,
   getCommitsForPR,
   getMergeConflicts,
+  getPullRequestActivity,
   getPullRequestDetail,
   getReactionsForComments,
   listPullRequests,
@@ -55,6 +57,8 @@ describe("App", () => {
     // Default: no reactions
     vi.mocked(getReactionsForComments).mockResolvedValue(new Map());
     vi.mocked(putReaction).mockResolvedValue(undefined);
+    // Default: empty activity
+    vi.mocked(getPullRequestActivity).mockResolvedValue({ events: [], nextToken: undefined });
     // Default: no commits
     vi.mocked(getCommitsForPR).mockResolvedValue([]);
     vi.mocked(getCommitDifferences).mockResolvedValue([]);
@@ -4664,6 +4668,210 @@ describe("App", () => {
     stdin.write("\r");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain(expected);
+    });
+  });
+
+  // Activity timeline tests
+  describe("Activity timeline", () => {
+    function setupPRListAndDetail() {
+      vi.mocked(listPullRequests).mockResolvedValue({
+        pullRequests: [
+          {
+            pullRequestId: "42",
+            title: "fix: login timeout",
+            authorArn: "arn:aws:iam::123456789012:user/watany",
+            creationDate: new Date("2026-02-13T10:00:00Z"),
+            status: "OPEN" as const,
+          },
+        ],
+      });
+      vi.mocked(getPullRequestDetail).mockResolvedValue({
+        pullRequest: {
+          pullRequestId: "42",
+          title: "fix: login timeout",
+          pullRequestTargets: [],
+        },
+        differences: [],
+        commentThreads: [],
+      });
+    }
+
+    it("pressing A shows activity screen with events", async () => {
+      setupPRListAndDetail();
+      vi.mocked(getPullRequestActivity).mockResolvedValue({
+        events: [
+          {
+            eventDate: new Date("2026-02-13T10:00:00Z"),
+            eventType: "PULL_REQUEST_CREATED",
+            actorArn: "arn:aws:iam::123456789012:user/watany",
+            description: "created this PR",
+          },
+        ],
+        nextToken: undefined,
+      });
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Activity:");
+        expect(lastFrame()).toContain("created this PR");
+      });
+    });
+
+    it("pressing A calls getPullRequestActivity with PR id", async () => {
+      setupPRListAndDetail();
+      vi.mocked(getPullRequestActivity).mockResolvedValue({ events: [], nextToken: undefined });
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(getPullRequestActivity).toHaveBeenCalledWith(
+          mockClient,
+          expect.objectContaining({ pullRequestId: "42" }),
+        );
+      });
+    });
+
+    it("shows error message when getPullRequestActivity fails", async () => {
+      setupPRListAndDetail();
+      const err = new Error("denied");
+      err.name = "AccessDeniedException";
+      vi.mocked(getPullRequestActivity).mockRejectedValue(err);
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Failed to load activity:");
+      });
+    });
+
+    it("pressing q on activity screen returns to detail", async () => {
+      setupPRListAndDetail();
+      vi.mocked(getPullRequestActivity).mockResolvedValue({ events: [], nextToken: undefined });
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Activity:");
+      });
+
+      stdin.write("q");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+    });
+
+    it("pressing n loads next page of activity", async () => {
+      setupPRListAndDetail();
+      vi.mocked(getPullRequestActivity)
+        .mockResolvedValueOnce({
+          events: [
+            {
+              eventDate: new Date("2026-02-13T10:00:00Z"),
+              eventType: "PULL_REQUEST_CREATED",
+              actorArn: "arn:aws:iam::123456789012:user/watany",
+              description: "created this PR",
+            },
+          ],
+          nextToken: "token123",
+        })
+        .mockResolvedValueOnce({
+          events: [
+            {
+              eventDate: new Date("2026-02-14T10:00:00Z"),
+              eventType: "PULL_REQUEST_APPROVAL_STATE_CHANGED",
+              actorArn: "arn:aws:iam::123456789012:user/taro",
+              description: "approved this PR",
+            },
+          ],
+          nextToken: undefined,
+        });
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("created this PR");
+        expect(lastFrame()).toContain("n next page");
+      });
+
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("approved this PR");
+      });
+
+      expect(getPullRequestActivity).toHaveBeenCalledTimes(2);
+      expect(getPullRequestActivity).toHaveBeenNthCalledWith(
+        2,
+        mockClient,
+        expect.objectContaining({ pullRequestId: "42", nextToken: "token123" }),
+      );
+    });
+
+    it("shows PR not found error for PullRequestDoesNotExistException", async () => {
+      setupPRListAndDetail();
+      const err = new Error("not found");
+      err.name = "PullRequestDoesNotExistException";
+      vi.mocked(getPullRequestActivity).mockRejectedValue(err);
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Pull request not found.");
+      });
     });
   });
 });

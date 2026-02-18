@@ -11,6 +11,7 @@ import {
   getCommitDifferences,
   getCommitsForPR,
   getMergeConflicts,
+  getPullRequestActivity,
   getPullRequestDetail,
   getReactionsForComment,
   getReactionsForComments,
@@ -1898,5 +1899,433 @@ describe("getReactionsForComments", () => {
     await getReactionsForComments(mockClient, ids);
     expect(maxConcurrent).toBeLessThanOrEqual(6);
     expect(mockSend).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe("getPullRequestActivity", () => {
+  it("returns events and nextToken from API response", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          pullRequestId: "42",
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_CREATED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+      nextToken: "token123",
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0].eventType).toBe("PULL_REQUEST_CREATED");
+    expect(result.events[0].description).toBe("created this PR");
+    expect(result.events[0].actorArn).toBe("arn:aws:iam::123456789012:user/watany");
+    expect(result.nextToken).toBe("token123");
+  });
+
+  it("returns empty events and undefined nextToken when no events", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [],
+      nextToken: undefined,
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events).toHaveLength(0);
+    expect(result.nextToken).toBeUndefined();
+  });
+
+  it("returns empty events when pullRequestEvents is undefined in response", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: undefined,
+      nextToken: undefined,
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events).toHaveLength(0);
+  });
+
+  it("uses UNKNOWN as eventType when pullRequestEventType is undefined", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: undefined,
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].eventType).toBe("UNKNOWN");
+  });
+
+  it("passes nextToken for pagination", async () => {
+    mockSend.mockResolvedValueOnce({ pullRequestEvents: [], nextToken: undefined });
+
+    await getPullRequestActivity(mockClient, { pullRequestId: "42", nextToken: "prevToken" });
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({ nextToken: "prevToken" }),
+      }),
+    );
+  });
+
+  it("propagates API errors", async () => {
+    mockSend.mockRejectedValueOnce(new Error("PullRequestDoesNotExistException"));
+    await expect(getPullRequestActivity(mockClient, { pullRequestId: "999" })).rejects.toThrow(
+      "PullRequestDoesNotExistException",
+    );
+  });
+
+  it("maps PULL_REQUEST_STATUS_CHANGED CLOSED to 'closed this PR'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_STATUS_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+          pullRequestStatusChangedEventMetadata: { pullRequestStatus: "CLOSED" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("closed this PR");
+  });
+
+  it("maps PULL_REQUEST_STATUS_CHANGED OPEN to 'reopened this PR'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_STATUS_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+          pullRequestStatusChangedEventMetadata: { pullRequestStatus: "OPEN" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("reopened this PR");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_STATE_CHANGED APPROVE to 'approved this PR'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_STATE_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalStateChangedEventMetadata: { approvalStatus: "APPROVE" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("approved this PR");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_STATE_CHANGED REVOKE to 'revoked approval'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_STATE_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalStateChangedEventMetadata: { approvalStatus: "REVOKE" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("revoked approval");
+  });
+
+  it("maps PULL_REQUEST_MERGE_STATE_CHANGED merged to 'merged this PR'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_MERGE_STATE_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+          pullRequestMergedStateChangedEventMetadata: {
+            mergeMetadata: { isMerged: true },
+          },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("merged this PR");
+  });
+
+  it("maps unknown event type to the event type string", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_UNKNOWN_FUTURE_TYPE",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("PULL_REQUEST_UNKNOWN_FUTURE_TYPE");
+  });
+
+  it("uses empty string for actorArn when missing", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_CREATED",
+          actorArn: undefined,
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].actorArn).toBe("");
+  });
+
+  it("maps PULL_REQUEST_SOURCE_REFERENCE_UPDATED to 'updated the source branch'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_SOURCE_REFERENCE_UPDATED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("updated the source branch");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_CREATED with rule name", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_CREATED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: { approvalRuleName: "2 approvers" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('created approval rule "2 approvers"');
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_DELETED with rule name", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_DELETED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: { approvalRuleName: "old-rule" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('deleted approval rule "old-rule"');
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_UPDATED with rule name", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_UPDATED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: { approvalRuleName: "my-rule" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('updated approval rule "my-rule"');
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN OVERRIDE to 'overrode approval rules'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleOverriddenEventMetadata: { overrideStatus: "OVERRIDE" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("overrode approval rules");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN REVOKE to 'revoked approval rule override'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleOverriddenEventMetadata: { overrideStatus: "REVOKE" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("revoked approval rule override");
+  });
+
+  it("maps PULL_REQUEST_APPROVALS_RESET to 'approvals reset (source branch updated)'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVALS_RESET",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("approvals reset (source branch updated)");
+  });
+
+  it("maps PULL_REQUEST_STATUS_CHANGED unknown status to 'changed PR status'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_STATUS_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+          pullRequestStatusChangedEventMetadata: { pullRequestStatus: "UNKNOWN_STATUS" },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("changed PR status");
+  });
+
+  it("maps PULL_REQUEST_MERGE_STATE_CHANGED not merged to 'merge state changed'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_MERGE_STATE_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+          pullRequestMergedStateChangedEventMetadata: {
+            mergeMetadata: { isMerged: false },
+          },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("merge state changed");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN unknown status to 'changed approval rule override'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleOverriddenEventMetadata: { overrideStatus: "UNKNOWN" as any },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("changed approval rule override");
+  });
+
+  it("maps PULL_REQUEST_APPROVAL_STATE_CHANGED unknown status to 'changed approval state'", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_STATE_CHANGED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalStateChangedEventMetadata: { approvalStatus: "UNKNOWN" as any },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe("changed approval state");
+  });
+
+  it("uses epoch Date when eventDate is missing", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: undefined,
+          pullRequestEventType: "PULL_REQUEST_CREATED",
+          actorArn: "arn:aws:iam::123456789012:user/watany",
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].eventDate).toEqual(new Date(0));
+  });
+
+  it("approval rule created with no rule name defaults to empty string", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_CREATED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: { approvalRuleName: undefined },
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('created approval rule ""');
+  });
+
+  it("approval rule deleted with no rule name defaults to empty string", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_DELETED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: undefined,
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('deleted approval rule ""');
+  });
+
+  it("approval rule updated with no rule name defaults to empty string", async () => {
+    mockSend.mockResolvedValueOnce({
+      pullRequestEvents: [
+        {
+          eventDate: new Date("2026-02-18T10:00:00Z"),
+          pullRequestEventType: "PULL_REQUEST_APPROVAL_RULE_UPDATED",
+          actorArn: "arn:aws:iam::123456789012:user/taro",
+          approvalRuleEventMetadata: undefined,
+        },
+      ],
+    });
+
+    const result = await getPullRequestActivity(mockClient, { pullRequestId: "42" });
+    expect(result.events[0].description).toBe('updated approval rule ""');
   });
 });

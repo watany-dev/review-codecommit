@@ -110,6 +110,7 @@ interface Props {
   diffTextStatus?: Map<string, "loading" | "loaded" | "error">;
   onBack: () => void;
   onHelp: () => void;
+  onShowActivity: () => void;
   comment: CommentAction;
   inlineComment: InlineCommentAction;
   reply: ReplyAction;
@@ -130,6 +131,7 @@ export function PullRequestDetail({
   diffTextStatus = EMPTY_STATUS_MAP,
   onBack,
   onHelp,
+  onShowActivity,
   comment: {
     onPost: onPostComment,
     isProcessing: isPostingComment,
@@ -657,6 +659,10 @@ export function PullRequestDetail({
       setIsClosing(true);
       return;
     }
+    if (input === "A") {
+      onShowActivity();
+      return;
+    }
     if (input === "e") {
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
@@ -998,10 +1004,10 @@ export function PullRequestDetail({
           showFileList
             ? ""
             : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
-              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`
+              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
                 ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close q ? help${hasTruncation ? " t more" : ""}`}
+                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>

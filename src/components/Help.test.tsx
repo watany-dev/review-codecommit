@@ -126,6 +126,11 @@ describe("Help", () => {
     expect(lastFrame()).toContain("React to comment");
   });
 
+  it("shows A Activity timeline keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    expect(lastFrame()).toContain("Activity timeline");
+  });
+
   it("shows h/l reaction navigation keybindings", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("Previous reaction");

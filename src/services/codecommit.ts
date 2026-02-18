@@ -3,6 +3,7 @@ import {
   CodeCommitClient,
   type Comment,
   DeleteCommentContentCommand,
+  DescribePullRequestEventsCommand,
   type Difference,
   EvaluatePullRequestApprovalRulesCommand,
   type Evaluation,
@@ -22,6 +23,7 @@ import {
   PostCommentForPullRequestCommand,
   PostCommentReplyCommand,
   type PullRequest,
+  type PullRequestEvent,
   PutCommentReactionCommand,
   type RepositoryNameIdPair,
   UpdateCommentCommand,
@@ -600,4 +602,110 @@ export async function getReactionsForComments(
     }
   }
   return results;
+}
+
+/** PR アクティビティイベントの表示用データ */
+export interface PrActivityEvent {
+  eventDate: Date;
+  eventType: string;
+  actorArn: string;
+  description: string;
+}
+
+interface PullRequestActivityResult {
+  events: PrActivityEvent[];
+  nextToken?: string;
+}
+
+export async function getPullRequestActivity(
+  client: CodeCommitClient,
+  params: {
+    pullRequestId: string;
+    nextToken?: string;
+    maxResults?: number;
+  },
+): Promise<PullRequestActivityResult> {
+  const command = new DescribePullRequestEventsCommand({
+    pullRequestId: params.pullRequestId,
+    ...(params.nextToken !== undefined ? { nextToken: params.nextToken } : {}),
+    maxResults: params.maxResults ?? 50,
+  });
+  const response = await client.send(command);
+
+  const events = (response.pullRequestEvents ?? []).map(mapPrEvent);
+
+  return {
+    events,
+    ...(response.nextToken !== undefined ? { nextToken: response.nextToken } : {}),
+  };
+}
+
+function mapPrEvent(event: PullRequestEvent): PrActivityEvent {
+  const actorArn = event.actorArn ?? "";
+  const eventDate = event.eventDate ?? new Date(0);
+  const eventType = event.pullRequestEventType ?? "UNKNOWN";
+  const description = buildEventDescription(event);
+
+  return { eventDate, eventType, actorArn, description };
+}
+
+function buildEventDescription(event: PullRequestEvent): string {
+  // Cast to string so the switch can handle future/undocumented event types safely
+  const type = (event.pullRequestEventType ?? "") as string;
+
+  switch (type) {
+    case "PULL_REQUEST_CREATED":
+      return "created this PR";
+
+    case "PULL_REQUEST_STATUS_CHANGED": {
+      const status = event.pullRequestStatusChangedEventMetadata?.pullRequestStatus;
+      if (status === "CLOSED") return "closed this PR";
+      if (status === "OPEN") return "reopened this PR";
+      return "changed PR status";
+    }
+
+    case "PULL_REQUEST_SOURCE_REFERENCE_UPDATED":
+      return "updated the source branch";
+
+    case "PULL_REQUEST_MERGE_STATE_CHANGED": {
+      const merged = event.pullRequestMergedStateChangedEventMetadata?.mergeMetadata?.isMerged;
+      if (merged) return "merged this PR";
+      return "merge state changed";
+    }
+
+    case "PULL_REQUEST_APPROVAL_RULE_CREATED": {
+      const name = event.approvalRuleEventMetadata?.approvalRuleName ?? "";
+      return `created approval rule "${name}"`;
+    }
+
+    case "PULL_REQUEST_APPROVAL_RULE_DELETED": {
+      const name = event.approvalRuleEventMetadata?.approvalRuleName ?? "";
+      return `deleted approval rule "${name}"`;
+    }
+
+    case "PULL_REQUEST_APPROVAL_RULE_UPDATED": {
+      const name = event.approvalRuleEventMetadata?.approvalRuleName ?? "";
+      return `updated approval rule "${name}"`;
+    }
+
+    case "PULL_REQUEST_APPROVAL_RULE_OVERRIDDEN": {
+      const overrideStatus = event.approvalRuleOverriddenEventMetadata?.overrideStatus;
+      if (overrideStatus === "OVERRIDE") return "overrode approval rules";
+      if (overrideStatus === "REVOKE") return "revoked approval rule override";
+      return "changed approval rule override";
+    }
+
+    case "PULL_REQUEST_APPROVALS_RESET":
+      return "approvals reset (source branch updated)";
+
+    case "PULL_REQUEST_APPROVAL_STATE_CHANGED": {
+      const approvalStatus = event.approvalStateChangedEventMetadata?.approvalStatus;
+      if (approvalStatus === "APPROVE") return "approved this PR";
+      if (approvalStatus === "REVOKE") return "revoked approval";
+      return "changed approval state";
+    }
+
+    default:
+      return type;
+  }
 }

@@ -7,7 +7,16 @@
  */
 export function formatErrorMessage(
   err: unknown,
-  context?: "comment" | "reply" | "approval" | "merge" | "close" | "edit" | "delete" | "reaction",
+  context?:
+    | "comment"
+    | "reply"
+    | "approval"
+    | "merge"
+    | "close"
+    | "edit"
+    | "delete"
+    | "reaction"
+    | "activity",
   approvalAction?: "approve" | "revoke",
 ): string {
   if (!(err instanceof Error)) {
@@ -141,6 +150,13 @@ export function formatErrorMessage(
     if (name === "PullRequestAlreadyClosedException") {
       return "Pull request is already closed.";
     }
+    if (name === "PullRequestDoesNotExistException") {
+      return "Pull request not found.";
+    }
+  }
+
+  // Activity-specific errors
+  if (context === "activity") {
     if (name === "PullRequestDoesNotExistException") {
       return "Pull request not found.";
     }

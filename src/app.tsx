@@ -8,6 +8,7 @@ import type {
 } from "@aws-sdk/client-codecommit";
 import { Box, Text } from "ink";
 import React, { useEffect, useRef, useState } from "react";
+import { ActivityTimeline } from "./components/ActivityTimeline.js";
 import { Help } from "./components/Help.js";
 import { PullRequestDetail } from "./components/PullRequestDetail.js";
 import { PullRequestList } from "./components/PullRequestList.js";
@@ -25,12 +26,14 @@ import {
   getCommitDifferences,
   getCommitsForPR,
   getMergeConflicts,
+  getPullRequestActivity,
   getPullRequestDetail,
   getReactionsForComments,
   listPullRequests,
   listRepositories,
   type MergeStrategy,
   mergePullRequest,
+  type PrActivityEvent,
   type PullRequestDisplayStatus,
   type PullRequestSummary,
   postComment,
@@ -43,7 +46,7 @@ import {
 import { formatErrorMessage } from "./utils/formatError.js";
 import { mapWithLimit } from "./utils/mapWithLimit.js";
 
-type Screen = "repos" | "prs" | "detail";
+type Screen = "repos" | "prs" | "detail" | "activity";
 
 interface PaginationState {
   currentPage: number;
@@ -124,6 +127,12 @@ export function App({ client, initialRepo }: AppProps) {
   const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
   const [isReacting, setIsReacting] = useState(false);
   const [reactionError, setReactionError] = useState<string | null>(null);
+
+  // v0.4: activity timeline
+  const [activityEvents, setActivityEvents] = useState<PrActivityEvent[]>([]);
+  const [activityNextToken, setActivityNextToken] = useState<string | undefined>(undefined);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
 
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<PullRequestDisplayStatus>("OPEN");
@@ -646,6 +655,48 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function loadActivity(pullRequestId: string, nextToken?: string) {
+    setIsLoadingActivity(true);
+    setActivityError(null);
+    try {
+      const result = await getPullRequestActivity(client, {
+        pullRequestId,
+        ...(nextToken !== undefined ? { nextToken } : {}),
+        maxResults: 50,
+      });
+      if (nextToken) {
+        setActivityEvents((prev) => [...prev, ...result.events]);
+      } else {
+        setActivityEvents(result.events);
+      }
+      setActivityNextToken(result.nextToken);
+    } catch (err) {
+      if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
+        setActivityEvents([]);
+        setActivityNextToken(undefined);
+        void loadActivity(pullRequestId);
+        return;
+      }
+      setActivityError(formatErrorMessage(err, "activity"));
+    } finally {
+      setIsLoadingActivity(false);
+    }
+  }
+
+  function handleShowActivity() {
+    if (!prDetail?.pullRequestId) return;
+    setScreen("activity");
+    setActivityEvents([]);
+    setActivityNextToken(undefined);
+    setActivityError(null);
+    void loadActivity(prDetail.pullRequestId);
+  }
+
+  function handleLoadNextActivityPage() {
+    if (!prDetail?.pullRequestId || !activityNextToken || isLoadingActivity) return;
+    void loadActivity(prDetail.pullRequestId, activityNextToken);
+  }
+
   function handleBack() {
     if (screen === "detail") {
       setScreen("prs");
@@ -730,6 +781,7 @@ export function App({ client, initialRepo }: AppProps) {
           diffTextStatus={diffTextStatus}
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
+          onShowActivity={handleShowActivity}
           comment={{
             onPost: handlePostComment,
             isProcessing: isPostingComment,
@@ -805,6 +857,18 @@ export function App({ client, initialRepo }: AppProps) {
 
             onClearError: () => setReactionError(null),
           }}
+        />
+      );
+    case "activity":
+      return (
+        <ActivityTimeline
+          pullRequestTitle={prDetail?.title ?? ""}
+          events={activityEvents}
+          isLoading={isLoadingActivity}
+          error={activityError}
+          hasNextPage={!!activityNextToken}
+          onLoadNextPage={handleLoadNextActivityPage}
+          onBack={() => setScreen("detail")}
         />
       );
   }
