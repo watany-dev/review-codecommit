@@ -1,17 +1,27 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useAsyncDismiss } from "../hooks/useAsyncDismiss.js";
 import type {
   CommentThread,
   CommitInfo,
   ConflictSummary,
   MergeStrategy,
-  ReactionSummary,
   ReactionsByComment,
 } from "../services/codecommit.js";
+import {
+  buildDisplayLines,
+  COMMENT_LINE_TYPES,
+  DIFF_CHUNK_SIZE,
+  type DisplayLine,
+  FOLD_THRESHOLD,
+  LARGE_DIFF_THRESHOLD,
+} from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
+import { ConflictDisplay } from "./ConflictDisplay.js";
+import { renderDiffLine } from "./DiffLine.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
 
@@ -21,8 +31,6 @@ type InlineLocation = {
   relativeFileVersion: "BEFORE" | "AFTER";
 };
 
-const LARGE_DIFF_THRESHOLD = 1500;
-const DIFF_CHUNK_SIZE = 300;
 const EMPTY_STATUS_MAP = new Map<string, "loading" | "loaded" | "error">();
 
 interface CommentAction {
@@ -202,31 +210,25 @@ export function PullRequestDetail({
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [wasPosting, setWasPosting] = useState(false);
   const [isInlineCommenting, setIsInlineCommenting] = useState(false);
   const [inlineCommentLocation, setInlineCommentLocation] = useState<{
     filePath: string;
     filePosition: number;
     relativeFileVersion: "BEFORE" | "AFTER";
   } | null>(null);
-  const [wasPostingInline, setWasPostingInline] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyTarget, setReplyTarget] = useState<{
     commentId: string;
     author: string;
     content: string;
   } | null>(null);
-  const [wasPostingReply, setWasPostingReply] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "revoke" | null>(null);
-  const [wasApproving, setWasApproving] = useState(false);
   const [mergeStep, setMergeStep] = useState<"strategy" | "confirm" | null>(null);
   const [selectedStrategy, setSelectedStrategy] = useState<MergeStrategy>("fast-forward");
   const [conflictSummary, setConflictSummary] = useState<ConflictSummary | null>(null);
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [viewIndex, setViewIndex] = useState(-1); // -1 = All changes
-  const [wasMerging, setWasMerging] = useState(false);
-  const [wasClosingPR, setWasClosingPR] = useState(false);
   const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
     const collapsed = new Set<number>();
     for (let i = 0; i < commentThreads.length; i++) {
@@ -241,12 +243,10 @@ export function PullRequestDetail({
     commentId: string;
     content: string;
   } | null>(null);
-  const [wasUpdating, setWasUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
     commentId: string;
   } | null>(null);
-  const [wasDeleting, setWasDeleting] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
@@ -258,113 +258,33 @@ export function PullRequestDetail({
     setDiffLineLimits(new Map());
     diffCacheRef.current = new Map();
   }, [differences]);
-  const [wasReacting, setWasReacting] = useState(false);
 
-  useEffect(() => {
-    if (isPostingComment) {
-      setWasPosting(true);
-    } else if (wasPosting && !commentError) {
-      setIsCommenting(false);
-      setWasPosting(false);
-    } else {
-      setWasPosting(false);
-    }
-  }, [isPostingComment, commentError]);
-
-  useEffect(() => {
-    if (isPostingInlineComment) {
-      setWasPostingInline(true);
-    } else if (wasPostingInline && !inlineCommentError) {
-      setIsInlineCommenting(false);
-      setInlineCommentLocation(null);
-      setWasPostingInline(false);
-    } else {
-      setWasPostingInline(false);
-    }
-  }, [isPostingInlineComment, inlineCommentError]);
-
-  useEffect(() => {
-    if (isPostingReply) {
-      setWasPostingReply(true);
-    } else if (wasPostingReply && !replyError) {
-      setIsReplying(false);
-      setReplyTarget(null);
-      setWasPostingReply(false);
-    } else {
-      setWasPostingReply(false);
-    }
-  }, [isPostingReply, replyError]);
-
-  useEffect(() => {
-    if (isApproving) {
-      setWasApproving(true);
-    } else if (wasApproving && !approvalError) {
-      setApprovalAction(null);
-      setWasApproving(false);
-    } else {
-      setWasApproving(false);
-    }
-  }, [isApproving, approvalError]);
-
-  useEffect(() => {
-    if (isMerging) {
-      setWasMerging(true);
-    } else if (wasMerging && !mergeError) {
-      /* v8 ignore next 2 -- merge success auto-close tested in app.test.tsx */
-      setMergeStep(null);
-      setWasMerging(false);
-    } else {
-      setWasMerging(false);
-    }
-  }, [isMerging, mergeError]);
-
-  useEffect(() => {
-    if (isClosingPR) {
-      setWasClosingPR(true);
-    } else if (wasClosingPR && !closePRError) {
-      /* v8 ignore next 2 -- close success auto-close tested in app.test.tsx */
-      setIsClosing(false);
-      setWasClosingPR(false);
-    } else {
-      setWasClosingPR(false);
-    }
-  }, [isClosingPR, closePRError]);
-
-  useEffect(() => {
-    if (isUpdatingComment) {
-      setWasUpdating(true);
-    } else if (wasUpdating && !updateCommentError) {
-      setIsEditing(false);
-      setEditTarget(null);
-      setWasUpdating(false);
-    } else {
-      setWasUpdating(false);
-    }
-  }, [isUpdatingComment, updateCommentError]);
-
-  useEffect(() => {
-    if (isDeletingComment) {
-      setWasDeleting(true);
-    } else if (wasDeleting && !deleteCommentError) {
-      setIsDeleting(false);
-      setDeleteTarget(null);
-      setWasDeleting(false);
-    } else {
-      setWasDeleting(false);
-    }
-  }, [isDeletingComment, deleteCommentError]);
-
-  useEffect(() => {
-    if (isReacting) {
-      setWasReacting(true);
-    } else if (wasReacting && !reactionError) {
-      setShowReactionPicker(false);
-      setReactionTarget(null);
-      setWasReacting(false);
-    } else {
-      setWasReacting(false);
-    }
-  }, [isReacting, reactionError]);
+  useAsyncDismiss(isPostingComment, commentError, () => setIsCommenting(false));
+  useAsyncDismiss(isPostingInlineComment, inlineCommentError, () => {
+    setIsInlineCommenting(false);
+    setInlineCommentLocation(null);
+  });
+  useAsyncDismiss(isPostingReply, replyError, () => {
+    setIsReplying(false);
+    setReplyTarget(null);
+  });
+  useAsyncDismiss(isApproving, approvalError, () => setApprovalAction(null));
+  /* v8 ignore next -- merge success auto-close tested in app.test.tsx */
+  useAsyncDismiss(isMerging, mergeError, () => setMergeStep(null));
+  /* v8 ignore next -- close success auto-close tested in app.test.tsx */
+  useAsyncDismiss(isClosingPR, closePRError, () => setIsClosing(false));
+  useAsyncDismiss(isUpdatingComment, updateCommentError, () => {
+    setIsEditing(false);
+    setEditTarget(null);
+  });
+  useAsyncDismiss(isDeletingComment, deleteCommentError, () => {
+    setIsDeleting(false);
+    setDeleteTarget(null);
+  });
+  useAsyncDismiss(isReacting, reactionError, () => {
+    setShowReactionPicker(false);
+    setReactionTarget(null);
+  });
 
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
@@ -1014,31 +934,6 @@ export function PullRequestDetail({
   );
 }
 
-interface DisplayLine {
-  type:
-    | "header"
-    | "separator"
-    | "add"
-    | "delete"
-    | "context"
-    | "truncation"
-    | "truncate-context"
-    | "comment-header"
-    | "comment"
-    | "inline-comment"
-    | "inline-reply"
-    | "comment-reply"
-    | "fold-indicator";
-  text: string;
-  filePath?: string;
-  diffKey?: string;
-  beforeLineNumber?: number;
-  afterLineNumber?: number;
-  threadIndex?: number | undefined;
-  commentId?: string | undefined;
-  reactionText?: string;
-}
-
 function getCommentIdFromLine(line: DisplayLine): { commentId: string } | null {
   if (!COMMENT_LINE_TYPES.has(line.type)) return null;
   if (!line.commentId) return null;
@@ -1081,268 +976,6 @@ function getReplyTargetFromLine(
   return { commentId: line.commentId, author, content };
 }
 
-const COMMENT_LINE_TYPES = new Set<DisplayLine["type"]>([
-  "inline-comment",
-  "comment",
-  "inline-reply",
-  "comment-reply",
-]);
-
-const FOLD_THRESHOLD = 4;
-
-function formatReactionBadge(reactions: ReactionSummary[] | undefined): string {
-  if (!reactions || reactions.length === 0) return "";
-  return reactions
-    .filter((r) => r.count > 0)
-    .map((r) => `${r.emoji}×${r.count}`)
-    .join(" ");
-}
-
-function appendThreadLines(
-  lines: DisplayLine[],
-  thread: CommentThread,
-  threadIndex: number,
-  collapsedThreads: Set<number>,
-  mode: "inline" | "general",
-  reactionsByComment: ReactionsByComment,
-): void {
-  const comments = thread.comments;
-  if (comments.length === 0) return;
-
-  const rootComment = comments.find((c) => !c.inReplyTo) ?? comments[0]!;
-  const replies = comments.filter((c) => c !== rootComment);
-  const isCollapsed = collapsedThreads.has(threadIndex);
-  const shouldFold = comments.length >= FOLD_THRESHOLD;
-
-  const rootAuthor = extractAuthorName(rootComment.authorArn ?? "unknown");
-  const rootContent = rootComment.content ?? "";
-  const rootReactionText = formatReactionBadge(reactionsByComment.get(rootComment.commentId ?? ""));
-
-  if (mode === "inline") {
-    lines.push({
-      type: "inline-comment",
-      text: `💬 ${rootAuthor}: ${rootContent}`,
-      threadIndex,
-      commentId: rootComment.commentId,
-      reactionText: rootReactionText,
-    });
-  } else {
-    lines.push({
-      type: "comment",
-      text: `${rootAuthor}: ${rootContent}`,
-      threadIndex,
-      commentId: rootComment.commentId,
-      reactionText: rootReactionText,
-    });
-  }
-
-  if (shouldFold && isCollapsed) {
-    lines.push({
-      type: "fold-indicator",
-      text: `[+${replies.length} replies]`,
-      threadIndex,
-    });
-    return;
-  }
-
-  for (const reply of replies) {
-    const author = extractAuthorName(reply.authorArn ?? "unknown");
-    const content = reply.content ?? "";
-    const replyReactionText = formatReactionBadge(reactionsByComment.get(reply.commentId ?? ""));
-
-    if (mode === "inline") {
-      lines.push({
-        type: "inline-reply",
-        text: `└ ${author}: ${content}`,
-        threadIndex,
-        commentId: reply.commentId,
-        reactionText: replyReactionText,
-      });
-    } else {
-      lines.push({
-        type: "comment-reply",
-        text: `└ ${author}: ${content}`,
-        threadIndex,
-        commentId: reply.commentId,
-        reactionText: replyReactionText,
-      });
-    }
-  }
-}
-
-function buildDisplayLines(
-  differences: Difference[],
-  diffTexts: Map<string, { before: string; after: string }>,
-  diffTextStatus: Map<string, "loading" | "loaded" | "error">,
-  diffLineLimits: Map<string, number>,
-  commentThreads: CommentThread[],
-  collapsedThreads: Set<number>,
-  reactionsByComment: ReactionsByComment,
-  diffCache?: Map<string, DisplayLine[]>,
-): DisplayLine[] {
-  const lines: DisplayLine[] = [];
-
-  // Index inline comments by file:position:version for efficient lookup
-  const inlineThreadsByKey = new Map<string, { thread: CommentThread; index: number }[]>();
-  for (let i = 0; i < commentThreads.length; i++) {
-    const thread = commentThreads[i]!;
-    if (thread.location) {
-      const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
-      const existing = inlineThreadsByKey.get(key) ?? [];
-      existing.push({ thread, index: i });
-      inlineThreadsByKey.set(key, existing);
-    }
-  }
-
-  for (const diff of differences) {
-    const filePath = diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
-    lines.push({ type: "header", text: filePath });
-    lines.push({ type: "separator", text: "─".repeat(50) });
-
-    const blobKey = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
-    const texts = diffTexts.get(blobKey);
-    const status = diffTextStatus.get(blobKey) ?? "loading";
-
-    if (texts) {
-      const beforeLines = texts.before.split("\n");
-      const afterLines = texts.after.split("\n");
-      const totalLines = beforeLines.length + afterLines.length;
-      const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
-      const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
-      const displayLimit = Math.min(currentLimit, totalLines);
-      const cacheKey = `${blobKey}:${displayLimit}`;
-      let diffLines = diffCache?.get(cacheKey);
-      if (!diffLines) {
-        const { beforeLimit, afterLimit } = getSliceLimits(
-          beforeLines.length,
-          afterLines.length,
-          displayLimit,
-        );
-        diffLines = computeSimpleDiff(
-          beforeLines.slice(0, beforeLimit),
-          afterLines.slice(0, afterLimit),
-        );
-        diffCache?.set(cacheKey, diffLines);
-      }
-      for (const dl of diffLines) {
-        lines.push({ ...dl, filePath, diffKey: blobKey });
-
-        const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
-        for (const { thread, index: threadIdx } of matchingEntries) {
-          appendThreadLines(
-            lines,
-            thread,
-            threadIdx,
-            collapsedThreads,
-            "inline",
-            reactionsByComment,
-          );
-        }
-      }
-      if (totalLines > displayLimit) {
-        const moreCount = Math.min(DIFF_CHUNK_SIZE, totalLines - displayLimit);
-        lines.push({
-          type: "truncate-context",
-          text: `... truncated ${displayLimit}/${totalLines} lines`,
-          filePath,
-          diffKey: blobKey,
-        });
-        lines.push({
-          type: "truncation",
-          text: `[t] show next ${moreCount} lines`,
-          filePath,
-          diffKey: blobKey,
-        });
-      }
-    } else if (status === "error") {
-      lines.push({
-        type: "context",
-        text: "(Failed to load file content)",
-        filePath,
-        diffKey: blobKey,
-      });
-    } else {
-      lines.push({
-        type: "context",
-        text: "(Loading file content...)",
-        filePath,
-        diffKey: blobKey,
-      });
-    }
-
-    lines.push({ type: "separator", text: "", diffKey: blobKey, filePath });
-  }
-
-  const generalThreads = commentThreads
-    .map((t, i) => ({ thread: t, index: i }))
-    .filter(({ thread }) => thread.location === null);
-
-  if (generalThreads.length > 0) {
-    const totalComments = generalThreads.reduce(
-      (sum, { thread }) => sum + thread.comments.length,
-      0,
-    );
-    lines.push({ type: "separator", text: "─".repeat(50) });
-    lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
-    for (const { thread, index: threadIdx } of generalThreads) {
-      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general", reactionsByComment);
-    }
-  }
-
-  return lines;
-}
-
-function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
-  if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
-  const total = beforeCount + afterCount;
-  if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
-
-  const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
-  let beforeLimit = Math.round(totalLimit * beforeRatio);
-  beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
-  let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
-
-  /* v8 ignore start -- defensive: proportional split makes this unreachable when total > totalLimit */
-  if (afterLimit < totalLimit - beforeLimit) {
-    const remaining = totalLimit - (beforeLimit + afterLimit);
-    beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
-  }
-  /* v8 ignore stop */
-
-  return { beforeLimit, afterLimit };
-}
-
-function findMatchingThreadEntries(
-  threadsByKey: Map<string, { thread: CommentThread; index: number }[]>,
-  filePath: string,
-  line: DisplayLine,
-): { thread: CommentThread; index: number }[] {
-  const results: { thread: CommentThread; index: number }[] = [];
-
-  if (line.type === "delete" && line.beforeLineNumber) {
-    const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
-    results.push(...(threadsByKey.get(key) ?? []));
-  }
-
-  if (line.type === "add" && line.afterLineNumber) {
-    const key = `${filePath}:${line.afterLineNumber}:AFTER`;
-    results.push(...(threadsByKey.get(key) ?? []));
-  }
-
-  if (line.type === "context") {
-    if (line.beforeLineNumber) {
-      const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
-      results.push(...(threadsByKey.get(key) ?? []));
-    }
-    if (line.afterLineNumber) {
-      const key = `${filePath}:${line.afterLineNumber}:AFTER`;
-      results.push(...(threadsByKey.get(key) ?? []));
-    }
-  }
-
-  return results;
-}
-
 function getLocationFromLine(line: DisplayLine): {
   filePath: string;
   filePosition: number;
@@ -1369,205 +1002,6 @@ function getLocationFromLine(line: DisplayLine): {
   return null;
 }
 /* v8 ignore stop */
-
-/**
- * Computes a simplified line-by-line diff between two sets of lines.
- *
- * Algorithm:
- * 1. When lines match at current positions: add as context and advance both indices
- * 2. When lines differ:
- *    a. Process deletions: consume lines from 'before' until we find a match
- *       - Stop early if a matching line is found within the next 5 lines (optimization)
- *    b. Process additions: consume lines from 'after' until we find a match
- *       - Stop early if a matching line is found within the next 5 lines (optimization)
- *
- * This is a greedy algorithm that prioritizes matching lines over minimal edit distance.
- * The 5-line lookahead prevents excessive deletions/additions when lines are just reordered.
- */
-function computeSimpleDiff(beforeLines: string[], afterLines: string[]): DisplayLine[] {
-  const result: DisplayLine[] = [];
-  let bi = 0; // Index for beforeLines
-  let ai = 0; // Index for afterLines
-
-  // Process both arrays until all lines are consumed
-  while (bi < beforeLines.length || ai < afterLines.length) {
-    const beforeLine = beforeLines[bi];
-    const afterLine = afterLines[ai];
-
-    // Case 1: Lines match at current position - add as context
-    if (bi < beforeLines.length && ai < afterLines.length && beforeLine === afterLine) {
-      result.push({
-        type: "context",
-        text: ` ${beforeLine}`,
-        beforeLineNumber: bi + 1,
-        afterLineNumber: ai + 1,
-      });
-      bi++;
-      ai++;
-    } else {
-      // Case 2: Lines differ - process deletions first, then additions
-      const startBi = bi;
-      const startAi = ai;
-
-      // Process deletions: consume lines from 'before' that don't match current 'after'
-      while (
-        bi < beforeLines.length &&
-        (ai >= afterLines.length || beforeLines[bi] !== afterLines[ai])
-      ) {
-        const bl = beforeLines[bi]!;
-        // Optimization: look ahead to see if this line appears soon in 'after'
-        const nextMatch = afterLines.indexOf(bl, ai);
-        if (nextMatch !== -1 && nextMatch - ai < 5) break; // Stop if match found within 5 lines
-        result.push({
-          type: "delete",
-          text: `-${bl}`,
-          beforeLineNumber: bi + 1,
-        });
-        bi++;
-      }
-
-      // Process additions: consume lines from 'after' that don't match current 'before'
-      while (
-        ai < afterLines.length &&
-        (bi >= beforeLines.length || afterLines[ai] !== beforeLines[bi])
-      ) {
-        const al = afterLines[ai]!;
-        // Optimization: look ahead to see if this line appears soon in 'before'
-        const nextMatch = beforeLines.indexOf(al, bi);
-        if (nextMatch !== -1 && nextMatch - bi < 5) break; // Stop if match found within 5 lines
-        result.push({
-          type: "add",
-          text: `+${al}`,
-          afterLineNumber: ai + 1,
-        });
-        ai++;
-      }
-
-      // Safety: if both loops broke without advancing, force progress to prevent infinite loop
-      if (bi === startBi && ai === startAi) {
-        if (bi < beforeLines.length) {
-          result.push({
-            type: "delete",
-            text: `-${beforeLines[bi]}`,
-            beforeLineNumber: bi + 1,
-          });
-          bi++;
-        }
-        if (ai < afterLines.length) {
-          result.push({
-            type: "add",
-            text: `+${afterLines[ai]}`,
-            afterLineNumber: ai + 1,
-          });
-          ai++;
-        }
-      }
-    }
-  }
-
-  return result;
-}
-
-function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
-  const bold = isCursor;
-  switch (line.type) {
-    case "header":
-      return (
-        <Text bold color="yellow">
-          {line.text}
-        </Text>
-      );
-    case "separator":
-      return <Text dimColor>{line.text}</Text>;
-    case "add":
-      return (
-        <Text color="green" bold={bold}>
-          {line.text}
-        </Text>
-      );
-    case "delete":
-      return (
-        <Text color="red" bold={bold}>
-          {line.text}
-        </Text>
-      );
-    case "context":
-      return <Text bold={bold}>{line.text}</Text>;
-    case "truncate-context":
-      return <Text dimColor>{line.text}</Text>;
-    case "truncation":
-      return <Text dimColor>{line.text}</Text>;
-    case "comment-header":
-      return <Text bold>{line.text}</Text>;
-    case "comment":
-      return (
-        <Text>
-          {" "}
-          {line.text}
-          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
-        </Text>
-      );
-    case "inline-comment":
-      return (
-        <Text color="magenta">
-          {" "}
-          {line.text}
-          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
-        </Text>
-      );
-    case "inline-reply":
-      return (
-        <Text color="magenta">
-          {"   "}
-          {line.text}
-          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
-        </Text>
-      );
-    case "comment-reply":
-      return (
-        <Text>
-          {"   "}
-          {line.text}
-          {line.reactionText ? <Text dimColor> {line.reactionText}</Text> : null}
-        </Text>
-      );
-    case "fold-indicator":
-      return (
-        <Text dimColor>
-          {"   "}
-          {line.text}
-        </Text>
-      );
-  }
-}
-
-function ConflictDisplay({
-  conflictSummary,
-  onDismiss,
-}: {
-  conflictSummary: ConflictSummary;
-  onDismiss: () => void;
-}) {
-  useInput(() => {
-    onDismiss();
-  });
-
-  return (
-    <Box flexDirection="column">
-      <Text color="red">
-        ✗ Cannot merge: {conflictSummary.conflictCount} conflicting file
-        {conflictSummary.conflictCount !== 1 ? "s" : ""}
-      </Text>
-      <Text> </Text>
-      {conflictSummary.conflictFiles.map((file) => (
-        <Text key={file}> {file}</Text>
-      ))}
-      <Text> </Text>
-      <Text>Resolve conflicts before merging.</Text>
-      <Text dimColor>Press any key to return</Text>
-    </Box>
-  );
-}
 
 function findNextHeaderIndex(headerIndices: number[], currentIndex: number): number {
   if (headerIndices.length === 0) return -1;
