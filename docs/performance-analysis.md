@@ -140,13 +140,15 @@ prop が渡されない場合、毎レンダーで新しい `Map` が生成さ�
 
 > **改修影響度: 🟡 中** — 依存配列を減らすには `diffTexts` を `useRef` にする等の構造変更が必要で、#9 と連動する。`useMemo` 内のロジック自体は `diffCacheRef` でキャッシュ済みの diff 行を再利用するため、再構築コストは主にループとpush操作。差分描画のファイル単位分割（各ファイルを独立コンポーネントにする）で根本解決できるが、`PullRequestDetail` の大規模リファクタリングになる。
 
-### 12. `visibleLines` の key に配列インデックス使用
+### 12. `visibleLines` の key に配列インデックス使用 ⚠️ 描画バグ確認済み
 
-**場所**: `src/components/PullRequestDetail.tsx:787`
+**場所**: `src/components/PullRequestDetail.tsx:714`（行番号は実装変更で移動している場合あり）
 
 スクロールにより `globalIndex` がずれると、React は全 `visibleLines` を再マウントする。行のコンテンツをベースにした安定 key を使えば再マウントを抑制できる。
 
-> **改修影響度: 🟡 中** — key を変えること自体は簡単だが、安定した一意 key の生成が難しい。同一テキストの行が複数存在しうる（空行、同じ内容の context 行）ため、`line.type + line.text` だけでは重複する。行番号を組み合わせる必要があるが、それは現在の `globalIndex` と実質同じ。**Ink のレンダリングは DOM ではなくターミナル出力**なので、ブラウザ React ほど key の影響が大きくない可能性がある。要プロファイリング。
+> **改修影響度: 🔴 高（描画バグ）** — 「要プロファイリング」から格上げ。`audit-complexity-rendering.md`（S-2）で確認：j/k を1回押すたびに表示中全30行の `Box` コンポーネントが破棄・再生成される。Ink はターミナルへの直接書き込みを行うため、DOM React より再マウントのコストが高く、フリッカー・描画乱れの直接原因になっている可能性が高い。
+>
+> **修正方針**: `line.type + (line.diffKey ?? "") + String(line.beforeLineNumber ?? line.afterLineNumber ?? "") + String(line.threadIndex ?? "") + String(index)` で安定 key を生成する。`index` は重複を防ぐ最終フォールバック。
 
 ---
 
@@ -193,6 +195,8 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 | ✅ 完了 | 16 | extractAuthorName 繰返し | 小 | 🟢 非常に低 | 対応済み（v0.1.1） |
 | ✅ 完了 | 7 | header index 再計算 | 小 | 🟢 低 | 対応済み（v0.1.1） |
 | ✅ 完了 | 8 | キャッシュ mutation | — | 🟢 低 | 対応済み（v0.1.1） |
+| ⛔ 即対応 | 12 | visibleLines key（**描画バグ確認**） | — | 🔴 高 | 安定 key 生成に変更。`audit-complexity-rendering.md` S-2 参照 |
+| ⛔ 即対応 | — | blob load 時カーソル飛び（**描画バグ確認**） | — | 🔴 高 | cursorIndex の補正。`audit-complexity-rendering.md` S-1 参照 |
 | ★★☆ | 1 | listPullRequests N+1 | 大 | 🟢 低 | concurrency 増加のみ。スロットリング監視を追加 |
 | ★★☆ | 3 | reaction 全件取得 | 中 | 🟡 中 | 遅延ロード化。テスト書き換え中程度 |
 | ★★☆ | 14 | blob キャッシュなし | 中 | 🟡 中 | app 層でキャッシュ。寿命管理に注意 |
@@ -200,13 +204,13 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 | ★☆☆ | 9 | Map 高頻度コピー | 中 | 🟠 高 | バッチ化推奨。UX 変化に注意 |
 | ★☆☆ | 2 | getCommitsForPR 直列 | 大 | 🟡 中 | 遅延ロードUI。テスト書き換え必要 |
 | ★☆☆ | 15 | loadDiffTexts 再実装 | — | 🟠 高 | ステイルガード喪失リスク。現状維持推奨 |
-| ★☆☆ | 12 | visibleLines key | 小 | 🟡 中 | Ink 環境では効果限定的。要プロファイリング |
 | ☆☆☆ | 4 | reloadReactions 全件 | 中 | 🟠 高 | 差分マージの整合性リスク |
 | ☆☆☆ | 5 | reloadComments 全件 | 中 | 🔴 非常に高 | 楽観的更新は複雑。現状維持推奨 |
 | ☆☆☆ | 11 | buildDisplayLines 依存 | 中 | 🟡 中 | #9 と連動。単独改修は非推奨 |
 
 ### 推奨アプローチ
 
+0. **⛔ 即対応: 描画バグ2件**（`audit-complexity-rendering.md` S-1, S-2）— blob load 時カーソル飛び、key フリッカー
 1. ~~**#10, #13, #16, #7, #8 を対応**（リスクなし、即効性あり）~~ → v0.1.1 で対応済み
 2. **次に #1 の concurrency 増加**（低リスクで最大の体感改善）
 3. **#6, #9 は十分なテスト追加後に着手**（スナップショットテスト必須）
