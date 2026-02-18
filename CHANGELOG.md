@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-02-18
+
+### Fixed
+- Address security vulnerabilities across the codebase
+- Add property-based tests for `mapWithLimit` and `formatErrorMessage` sanitization
+
+### Performance
+- Use spread copy instead of mutating cached `DisplayLine` objects (#8)
+- Pass pre-computed `headerIndices` to `find*HeaderIndex` functions (#7)
+- Add `Map` cache to `extractAuthorName` (#16)
+- Use module-level `TextDecoder` singleton (#13)
+- Stabilize `diffTextStatus` default value with module-level constant (#10)
+
+---
+
 ## [0.1.0] - 2026-02-15
 
 ### Highlights
@@ -90,7 +105,7 @@ First stable release! This version includes a comprehensive TUI for reviewing AW
 - Added content sanitization and validation improvements
 - Enhanced input validation for user-provided content
 
-## [0.0.2] - 2024-01-XX
+## [0.0.2] - 2026-01-XX
 
 ### Added
 - Initial TUI implementation for CodeCommit PR review
