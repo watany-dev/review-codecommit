@@ -1,8 +1,29 @@
 # アクティビティタイムライン設計書
 
 **バージョン**: v0.4.0
-**ステータス**: 設計中
+**ステータス**: 実装完了 ✅
 **最終更新**: 2026-02-18
+
+---
+
+## 実装ステータス
+
+> **✅ 実装完了 — 2026-02-18**
+>
+> `feat: implement v0.4 activity timeline` (commit `de104d6`) にてすべての実装が完了し、CI 全チェック通過（カバレッジ 95.12%）を確認済み。
+>
+> **実装済みファイル**:
+> - `src/services/codecommit.ts` — `getPullRequestActivity` 関数、`PrActivityEvent` 型、`PullRequestActivityResult` 型を追加
+> - `src/components/ActivityTimeline.tsx` — 新規コンポーネント（タイムライン表示、j/k ナビゲーション、ページネーション、エラー表示）
+> - `src/components/ActivityTimeline.test.tsx` — 20 件のテスト
+> - `src/components/PullRequestDetail.tsx` — `A` キーハンドラ、`onShowActivity` Props、フッター更新
+> - `src/app.tsx` — `"activity"` スクリーン、`loadActivity`/`handleShowActivity`/`handleLoadNextActivityPage` ハンドラ、activity 状態追加
+> - `src/components/Help.tsx` — `A - Activity timeline` キーバインド追加
+> - `src/utils/formatError.ts` — `"activity"` コンテキスト追加
+>
+> **設計との主な差異**: なし。設計書どおりに実装された。
+
+---
 
 ## 概要
 

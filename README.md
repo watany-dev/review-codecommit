@@ -32,6 +32,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 - Close PRs without merging (`x` key)
 - Commit-level review with Tab/Shift+Tab navigation between "All changes" and individual commits
 - Cursor-based diff navigation with `>` marker
+- View PR activity timeline (created, approved, merged, status changes, etc.) (`A` key)
 - Shell completion for bash, zsh, and fish (`--completions` option)
 - Vim-style keybindings (`j`/`k` navigation)
 - AWS profile and region configuration
@@ -40,7 +41,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 
 - [Bun](https://bun.sh/) (runtime and package manager)
 - AWS credentials configured (`aws configure` or environment variables)
-- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdateComment` and `codecommit:DeleteCommentContent` for comment edit/delete, `codecommit:PutCommentReaction` and `codecommit:GetCommentReactions` for reactions, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, and `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations
+- IAM permissions for CodeCommit read operations (`codecommit:GetCommit` for commit-level review), `codecommit:PostCommentForPullRequest` for comment posting, `codecommit:PostCommentReply` for reply posting, `codecommit:UpdateComment` and `codecommit:DeleteCommentContent` for comment edit/delete, `codecommit:PutCommentReaction` and `codecommit:GetCommentReactions` for reactions, `codecommit:UpdatePullRequestApprovalState`, `codecommit:GetPullRequestApprovalStates`, `codecommit:EvaluatePullRequestApprovalRules` for approval operations, `codecommit:MergePullRequestByFastForward`, `codecommit:MergePullRequestBySquash`, `codecommit:MergePullRequestByThreeWay`, `codecommit:GetMergeConflicts`, `codecommit:UpdatePullRequestStatus` for merge and close operations, and `codecommit:DescribePullRequestEvents` for activity timeline
 
 ## Installation
 
@@ -121,6 +122,7 @@ Completions support:
 | `r` | Revoke approval (with confirmation) | PR Detail |
 | `m` | Merge PR (strategy selection) | PR Detail |
 | `x` | Close PR without merge | PR Detail |
+| `A` | Show activity timeline | PR Detail |
 | `Tab` | Next view (All changes / Commits) | PR Detail |
 | `Shift+Tab` | Previous view | PR Detail |
 | `f` | Cycle status filter (Open → Closed → Merged) | PR List |
@@ -137,11 +139,11 @@ Start
  │
  ├─ with arg ─────────────────┐
  │                             ▼
- └─ no arg ──→ [1. Repo List] ──→ [2. PR List] ──→ [3. PR Detail]
-                  │                  │                 │
-                  │ q/Esc: exit      │ q/Esc: 1        │ q/Esc: 2
-                  ▼                  ▼                 ▼
-                Exit              Back to 1         Back to 2
+ └─ no arg ──→ [1. Repo List] ──→ [2. PR List] ──→ [3. PR Detail] ──→ [4. Activity Timeline]
+                  │                  │                 │                       │
+                  │ q/Esc: exit      │ q/Esc: 1        │ q/Esc: 2              │ q/Esc: 3
+                  ▼                  ▼                 ▼                       ▼
+                Exit              Back to 1         Back to 2              Back to 3
 ```
 
 ## Development

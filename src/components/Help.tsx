@@ -73,6 +73,7 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="r" description="Revoke approval" />
         <KeyRow keyName="m" description="Merge PR" />
         <KeyRow keyName="x" description="Close PR without merge" />
+        <KeyRow keyName="A" description="Activity timeline" />
         <KeyRow keyName="Tab" description="Switch to commit view" />
         <KeyRow keyName="Shift+Tab" description="Previous commit" />
       </Box>
