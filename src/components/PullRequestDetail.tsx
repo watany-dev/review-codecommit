@@ -210,13 +210,11 @@ export function PullRequestDetail({
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [isInlineCommenting, setIsInlineCommenting] = useState(false);
   const [inlineCommentLocation, setInlineCommentLocation] = useState<{
     filePath: string;
     filePosition: number;
     relativeFileVersion: "BEFORE" | "AFTER";
   } | null>(null);
-  const [isReplying, setIsReplying] = useState(false);
   const [replyTarget, setReplyTarget] = useState<{
     commentId: string;
     author: string;
@@ -238,16 +236,13 @@ export function PullRequestDetail({
     }
     return collapsed;
   });
-  const [isEditing, setIsEditing] = useState(false);
   const [editTarget, setEditTarget] = useState<{
     commentId: string;
     content: string;
   } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
     commentId: string;
   } | null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
   const [showFileList, setShowFileList] = useState(false);
@@ -260,31 +255,16 @@ export function PullRequestDetail({
   }, [differences]);
 
   useAsyncDismiss(isPostingComment, commentError, () => setIsCommenting(false));
-  useAsyncDismiss(isPostingInlineComment, inlineCommentError, () => {
-    setIsInlineCommenting(false);
-    setInlineCommentLocation(null);
-  });
-  useAsyncDismiss(isPostingReply, replyError, () => {
-    setIsReplying(false);
-    setReplyTarget(null);
-  });
+  useAsyncDismiss(isPostingInlineComment, inlineCommentError, () => setInlineCommentLocation(null));
+  useAsyncDismiss(isPostingReply, replyError, () => setReplyTarget(null));
   useAsyncDismiss(isApproving, approvalError, () => setApprovalAction(null));
   /* v8 ignore next -- merge success auto-close tested in app.test.tsx */
   useAsyncDismiss(isMerging, mergeError, () => setMergeStep(null));
   /* v8 ignore next -- close success auto-close tested in app.test.tsx */
   useAsyncDismiss(isClosingPR, closePRError, () => setIsClosing(false));
-  useAsyncDismiss(isUpdatingComment, updateCommentError, () => {
-    setIsEditing(false);
-    setEditTarget(null);
-  });
-  useAsyncDismiss(isDeletingComment, deleteCommentError, () => {
-    setIsDeleting(false);
-    setDeleteTarget(null);
-  });
-  useAsyncDismiss(isReacting, reactionError, () => {
-    setShowReactionPicker(false);
-    setReactionTarget(null);
-  });
+  useAsyncDismiss(isUpdatingComment, updateCommentError, () => setEditTarget(null));
+  useAsyncDismiss(isDeletingComment, deleteCommentError, () => setDeleteTarget(null));
+  useAsyncDismiss(isReacting, reactionError, () => setReactionTarget(null));
 
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
@@ -381,14 +361,14 @@ export function PullRequestDetail({
 
   const visibleLineCount =
     isCommenting ||
-    isInlineCommenting ||
-    isReplying ||
-    isEditing ||
-    isDeleting ||
+    inlineCommentLocation ||
+    replyTarget ||
+    editTarget ||
+    deleteTarget ||
     approvalAction ||
     mergeStep ||
     isClosing ||
-    showReactionPicker ||
+    reactionTarget ||
     showFileList
       ? 20
       : 30;
@@ -412,14 +392,14 @@ export function PullRequestDetail({
 
     if (
       isCommenting ||
-      isInlineCommenting ||
-      isReplying ||
-      isEditing ||
-      isDeleting ||
+      inlineCommentLocation ||
+      replyTarget ||
+      editTarget ||
+      deleteTarget ||
       approvalAction ||
       mergeStep ||
       isClosing ||
-      showReactionPicker
+      reactionTarget
     )
       return;
 
@@ -536,7 +516,6 @@ export function PullRequestDetail({
       const location = getLocationFromLine(currentLine);
       if (!location) return;
       setInlineCommentLocation(location);
-      setIsInlineCommenting(true);
       return;
     }
     if (input === "o") {
@@ -560,7 +539,6 @@ export function PullRequestDetail({
       const target = getReplyTargetFromLine(currentLine);
       if (!target) return;
       setReplyTarget(target);
-      setIsReplying(true);
       return;
     }
     if (input === "a") {
@@ -590,7 +568,6 @@ export function PullRequestDetail({
       if (!editInfo) return;
       const content = findCommentContent(commentThreads, editInfo.commentId);
       setEditTarget({ commentId: editInfo.commentId, content });
-      setIsEditing(true);
       return;
     }
     if (input === "d") {
@@ -599,7 +576,6 @@ export function PullRequestDetail({
       const delInfo = getCommentIdFromLine(currentLine);
       if (!delInfo) return;
       setDeleteTarget(delInfo);
-      setIsDeleting(true);
       return;
     }
     if (input === "g") {
@@ -609,7 +585,6 @@ export function PullRequestDetail({
       if (!COMMENT_LINE_TYPES.has(currentLine.type)) return;
       if (!currentLine.commentId) return;
       setReactionTarget(currentLine.commentId);
-      setShowReactionPicker(true);
       return;
     }
   });
@@ -727,24 +702,21 @@ export function PullRequestDetail({
           onClearError={onClearCommentError}
         />
       )}
-      {isInlineCommenting && inlineCommentLocation && (
+      {inlineCommentLocation && (
         <Box flexDirection="column">
           <Text dimColor>
             Inline comment on {inlineCommentLocation.filePath}:{inlineCommentLocation.filePosition}
           </Text>
           <CommentInput
             onSubmit={(content) => onPostInlineComment(content, inlineCommentLocation)}
-            onCancel={() => {
-              setIsInlineCommenting(false);
-              setInlineCommentLocation(null);
-            }}
+            onCancel={() => setInlineCommentLocation(null)}
             isPosting={isPostingInlineComment}
             error={inlineCommentError}
             onClearError={onClearInlineCommentError}
           />
         </Box>
       )}
-      {isReplying && replyTarget && (
+      {replyTarget && (
         <Box flexDirection="column">
           <Text dimColor>
             Replying to {replyTarget.author}: {replyTarget.content.slice(0, 50)}
@@ -753,7 +725,6 @@ export function PullRequestDetail({
           <CommentInput
             onSubmit={(content) => onPostReply(replyTarget.commentId, content)}
             onCancel={() => {
-              setIsReplying(false);
               setReplyTarget(null);
               onClearReplyError();
             }}
@@ -842,12 +813,11 @@ export function PullRequestDetail({
           }}
         />
       )}
-      {isEditing && editTarget && (
+      {editTarget && (
         <Box flexDirection="column">
           <CommentInput
             onSubmit={(content) => onUpdateComment(editTarget.commentId, content)}
             onCancel={() => {
-              setIsEditing(false);
               setEditTarget(null);
               onClearUpdateCommentError();
             }}
@@ -861,12 +831,11 @@ export function PullRequestDetail({
           />
         </Box>
       )}
-      {isDeleting && deleteTarget && (
+      {deleteTarget && (
         <ConfirmPrompt
           message="Delete this comment?"
           onConfirm={() => onDeleteComment(deleteTarget.commentId)}
           onCancel={() => {
-            setIsDeleting(false);
             setDeleteTarget(null);
             onClearDeleteCommentError();
           }}
@@ -875,16 +844,14 @@ export function PullRequestDetail({
           error={deleteCommentError}
           onClearError={() => {
             onClearDeleteCommentError();
-            setIsDeleting(false);
             setDeleteTarget(null);
           }}
         />
       )}
-      {showReactionPicker && reactionTarget && (
+      {reactionTarget && (
         <ReactionPicker
           onSelect={(shortCode) => onReact(reactionTarget, shortCode)}
           onCancel={() => {
-            setShowReactionPicker(false);
             setReactionTarget(null);
             onClearReactionError();
           }}
@@ -892,7 +859,6 @@ export function PullRequestDetail({
           error={reactionError}
           onClearError={() => {
             onClearReactionError();
-            setShowReactionPicker(false);
             setReactionTarget(null);
           }}
           currentReactions={reactionsByComment.get(reactionTarget) ?? []}
@@ -913,14 +879,14 @@ export function PullRequestDetail({
       <Box marginTop={1}>
         <Text dimColor>
           {isCommenting ||
-          isInlineCommenting ||
-          isReplying ||
-          isEditing ||
-          isDeleting ||
+          inlineCommentLocation ||
+          replyTarget ||
+          editTarget ||
+          deleteTarget ||
           approvalAction ||
           mergeStep ||
           isClosing ||
-          showReactionPicker ||
+          reactionTarget ||
           showFileList
             ? ""
             : viewIndex === -1 && (commits.length > 0 || commitsAvailable)

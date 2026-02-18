@@ -22,7 +22,6 @@ import {
   deleteComment,
   evaluateApprovalRules,
   getApprovalStates,
-  getBlobContent,
   getComments,
   getCommitDifferences,
   getCommitsForPR,
@@ -44,7 +43,7 @@ import {
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
-import { fetchBlobTexts } from "./utils/blobTexts.js";
+import { blobKey, fetchBlobTexts, streamBlobTexts } from "./utils/blobTexts.js";
 import { formatErrorMessage } from "./utils/formatError.js";
 
 type Screen = "repos" | "prs" | "detail" | "activity";
@@ -95,8 +94,19 @@ export function App({ client, initialRepo }: AppProps) {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [approvalEvaluation, setApprovalEvaluation] = useState<Evaluation | null>(null);
 
-  const [isApproving, setIsApproving] = useState(false);
-  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const approvalAction = useAsyncAction(
+    async (state: "APPROVE" | "REVOKE") => {
+      if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
+      await updateApprovalState(client, {
+        pullRequestId: prDetail.pullRequestId,
+        revisionId: prDetail.revisionId,
+        approvalState: state,
+      });
+      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
+    },
+    (err, state?: "APPROVE" | "REVOKE") =>
+      formatErrorMessage(err, "approval", state === "APPROVE" ? "approve" : "revoke"),
+  );
 
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [commitDifferences, setCommitDifferences] = useState<Difference[]>([]);
@@ -321,8 +331,7 @@ export function App({ client, initialRepo }: AppProps) {
 
       const status = new Map<string, "loading" | "loaded" | "error">();
       for (const diff of detail.differences) {
-        const key = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
-        status.set(key, "loading");
+        status.set(blobKey(diff), "loading");
       }
       setDiffTextStatus(status);
       setCommits([]);
@@ -330,7 +339,16 @@ export function App({ client, initialRepo }: AppProps) {
       setCommitDiffTexts(new Map());
 
       // Background: blob texts
-      void loadDiffTextsInBackground(detail.differences, selectedRepo, loadId);
+      void streamBlobTexts(client, selectedRepo, detail.differences, {
+        isStale: () => diffLoadRef.current !== loadId,
+        onLoaded: (key, texts) => {
+          setDiffTexts((prev) => new Map(prev).set(key, texts));
+          setDiffTextStatus((prev) => new Map(prev).set(key, "loaded"));
+        },
+        onError: (key) => {
+          setDiffTextStatus((prev) => new Map(prev).set(key, "error"));
+        },
+      });
 
       // Background: approvals
       const revisionId = detail.pullRequest.revisionId;
@@ -347,82 +365,6 @@ export function App({ client, initialRepo }: AppProps) {
       // Background: reactions
       void reloadReactions(detail.commentThreads);
     });
-  }
-
-  async function loadDiffTextsInBackground(
-    differences: Difference[],
-    repoName: string,
-    loadId: number,
-  ) {
-    const concurrency = 6;
-    let index = 0;
-
-    async function processNext(): Promise<void> {
-      const currentIndex = index;
-      index += 1;
-      if (currentIndex >= differences.length) return;
-
-      const diff = differences[currentIndex]!;
-      const beforeBlobId = diff.beforeBlob?.blobId;
-      const afterBlobId = diff.afterBlob?.blobId;
-      const key = `${beforeBlobId ?? ""}:${afterBlobId ?? ""}`;
-
-      /* v8 ignore start -- no-blob path rarely occurs; stale-load guard hard to test deterministically */
-      if (!beforeBlobId && !afterBlobId) {
-        if (diffLoadRef.current === loadId) {
-          setDiffTexts((prev) => {
-            const next = new Map(prev);
-            next.set(key, { before: "", after: "" });
-            return next;
-          });
-          setDiffTextStatus((prev) => {
-            const next = new Map(prev);
-            next.set(key, "loaded");
-            return next;
-          });
-        }
-        return processNext();
-      }
-      /* v8 ignore stop */
-
-      try {
-        const [before, after] = await Promise.all([
-          beforeBlobId ? getBlobContent(client, repoName, beforeBlobId) : Promise.resolve(""),
-          afterBlobId ? getBlobContent(client, repoName, afterBlobId) : Promise.resolve(""),
-        ]);
-
-        /* v8 ignore start -- stale-load guard hard to test deterministically */
-        if (diffLoadRef.current === loadId) {
-          setDiffTexts((prev) => {
-            const next = new Map(prev);
-            next.set(key, { before, after });
-            return next;
-          });
-          setDiffTextStatus((prev) => {
-            const next = new Map(prev);
-            next.set(key, "loaded");
-            return next;
-          });
-        }
-        /* v8 ignore stop */
-      } catch {
-        /* v8 ignore start -- stale-load guard + error path hard to test deterministically */
-        if (diffLoadRef.current === loadId) {
-          setDiffTextStatus((prev) => {
-            const next = new Map(prev);
-            next.set(key, "error");
-            return next;
-          });
-        }
-        /* v8 ignore stop */
-      }
-
-      return processNext();
-    }
-
-    const workerCount = Math.min(concurrency, differences.length);
-    const workers = Array.from({ length: workerCount }, () => processNext());
-    await Promise.all(workers);
   }
 
   function handleSelectRepo(repoName: string) {
@@ -495,30 +437,10 @@ export function App({ client, initialRepo }: AppProps) {
     await reloadReactions(threads);
   }
 
-  async function handleApprovalAction(state: "APPROVE" | "REVOKE") {
-    if (!prDetail?.pullRequestId || !prDetail?.revisionId) return;
-
-    setIsApproving(true);
-    setApprovalError(null);
-    try {
-      await updateApprovalState(client, {
-        pullRequestId: prDetail.pullRequestId,
-        revisionId: prDetail.revisionId,
-        approvalState: state,
-      });
-      await reloadApprovals(prDetail.pullRequestId, prDetail.revisionId);
-    } catch (err) {
-      setApprovalError(
-        formatErrorMessage(err, "approval", state === "APPROVE" ? "approve" : "revoke"),
-      );
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
   async function reloadApprovals(pullRequestId: string, revisionId: string) {
     const [approvalStates, evaluation] = await Promise.all([
       getApprovalStates(client, { pullRequestId, revisionId }),
+      /* v8 ignore next -- defensive: evaluation failure should not block approval */
       evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
     ]);
     setApprovals(approvalStates);
@@ -582,12 +504,14 @@ export function App({ client, initialRepo }: AppProps) {
       }
       setActivityNextToken(result.nextToken);
     } catch (err) {
+      /* v8 ignore start -- defensive: retry on stale continuation token */
       if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
         setActivityEvents([]);
         setActivityNextToken(undefined);
         void loadActivity(pullRequestId);
         return;
       }
+      /* v8 ignore stop */
       setActivityError(formatErrorMessage(err, "activity"));
     } finally {
       setIsLoadingActivity(false);
@@ -714,11 +638,11 @@ export function App({ client, initialRepo }: AppProps) {
           approval={{
             approvals,
             evaluation: approvalEvaluation,
-            onApprove: () => handleApprovalAction("APPROVE"),
-            onRevoke: () => handleApprovalAction("REVOKE"),
-            isProcessing: isApproving,
-            error: approvalError,
-            onClearError: () => setApprovalError(null),
+            onApprove: () => approvalAction.execute("APPROVE"),
+            onRevoke: () => approvalAction.execute("REVOKE"),
+            isProcessing: approvalAction.isProcessing,
+            error: approvalAction.error,
+            onClearError: approvalAction.clearError,
           }}
           merge={{
             onMerge: mergeAction.execute,
