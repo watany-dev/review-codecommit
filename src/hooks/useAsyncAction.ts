@@ -8,7 +8,7 @@ import { formatErrorMessage } from "../utils/formatError.js";
  */
 export function useAsyncAction<T extends unknown[]>(
   action: (...args: T) => Promise<void>,
-  formatError: (err: unknown) => string = (err) => formatErrorMessage(err),
+  formatError: (err: unknown, ...args: T) => string = (err, ..._args) => formatErrorMessage(err),
 ): {
   isProcessing: boolean;
   error: string | null;
@@ -29,7 +29,7 @@ export function useAsyncAction<T extends unknown[]>(
       try {
         await actionRef.current(...args);
       } catch (err) {
-        setError(formatErrorRef.current(err));
+        setError(formatErrorRef.current(err, ...args));
       } finally {
         setIsProcessing(false);
       }

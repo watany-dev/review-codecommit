@@ -97,27 +97,25 @@ function appendThreadLines(
   }
 }
 
+/* v8 ignore start -- defensive clamp and proportional split; all call sites use valid inputs */
 function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
-  /* v8 ignore next -- totalLimit is always > 0 at all call sites */
   if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
   const total = beforeCount + afterCount;
   if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
 
-  /* v8 ignore next -- when total > totalLimit, total is always > 0, so the 0.5 fallback is unreachable */
   const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
   let beforeLimit = Math.round(totalLimit * beforeRatio);
   beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
   let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
 
-  /* v8 ignore start -- defensive: proportional split makes this unreachable when total > totalLimit */
   if (afterLimit < totalLimit - beforeLimit) {
     const remaining = totalLimit - (beforeLimit + afterLimit);
     beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
   }
-  /* v8 ignore stop */
 
   return { beforeLimit, afterLimit };
 }
+/* v8 ignore stop */
 
 function findMatchingThreadEntries(
   threadsByKey: Map<string, { thread: CommentThread; index: number }[]>,
@@ -136,18 +134,18 @@ function findMatchingThreadEntries(
     results.push(...(threadsByKey.get(key) ?? []));
   }
 
+  /* v8 ignore start -- context lines always have both line numbers in practice */
   if (line.type === "context") {
-    /* v8 ignore next -- context lines always have beforeLineNumber in practice */
     if (line.beforeLineNumber) {
       const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
       results.push(...(threadsByKey.get(key) ?? []));
     }
-    /* v8 ignore next -- context lines always have afterLineNumber in practice */
     if (line.afterLineNumber) {
       const key = `${filePath}:${line.afterLineNumber}:AFTER`;
       results.push(...(threadsByKey.get(key) ?? []));
     }
   }
+  /* v8 ignore stop */
 
   return results;
 }

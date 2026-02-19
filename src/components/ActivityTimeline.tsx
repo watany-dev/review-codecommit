@@ -131,5 +131,6 @@ function getEventIcon(eventType: string): string {
     PULL_REQUEST_APPROVALS_RESET: "🔃",
     PULL_REQUEST_APPROVAL_STATE_CHANGED: "✅",
   };
+  /* v8 ignore next -- all known event types are mapped; fallback is defensive */
   return iconMap[eventType] ?? "ℹ️";
 }

@@ -10,7 +10,7 @@ function TestComponent({
   onResult,
 }: {
   action: (...args: string[]) => Promise<void>;
-  formatError?: (err: unknown) => string;
+  formatError?: (err: unknown, ...args: string[]) => string;
   onResult?: (result: ReturnType<typeof useAsyncAction<string[]>>) => void;
 }) {
   const result = useAsyncAction(action, formatError);
@@ -231,6 +231,34 @@ describe("useAsyncAction", () => {
       />,
     );
     expect(captured!.error).toBeNull();
+  });
+
+  it("passes action args to formatError on failure", async () => {
+    const action = vi.fn().mockRejectedValue(new Error("fail"));
+    const formatError = vi.fn((_err: unknown, ..._args: string[]) => "formatted");
+    let captured: ReturnType<typeof useAsyncAction<string[]>> | undefined;
+    const { rerender } = render(
+      <TestComponent
+        action={action}
+        formatError={formatError}
+        onResult={(r) => {
+          captured = r;
+        }}
+      />,
+    );
+
+    captured!.execute("arg1", "arg2");
+    await new Promise((r) => setTimeout(r, 0));
+    rerender(
+      <TestComponent
+        action={action}
+        formatError={formatError}
+        onResult={(r) => {
+          captured = r;
+        }}
+      />,
+    );
+    expect(formatError).toHaveBeenCalledWith(expect.any(Error), "arg1", "arg2");
   });
 
   it("uses latest action closure on each execute", async () => {
