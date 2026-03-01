@@ -25,7 +25,11 @@ PR 詳細画面の diff 表示に split view（side-by-side）モードを追加
 - 左右独立スクロール → 複雑度が高くユースケースが限定的。将来検討
 - シンタックスハイライト → v0.3.0（UX 強化）で別途検討
 - word-level diff（行内の差分ハイライト）→ 将来検討
-- コミットビュー（Tab 切り替え）での split view → Phase 2 で対応検討
+
+### 動作範囲
+
+- **All changes ビュー**: split view 対応（`s` キーで切り替え）
+- **コミットビュー（Tab 切り替え後）**: split view 対応（同じ `s` キーで切り替え）。`buildSplitRows()` は `DisplayLine[]` を入力とするため、ビューの種類に依存しない
 
 ## 技術的評価
 
@@ -216,25 +220,96 @@ codeWidth = paneWidth - lineNumWidth                         // 53
 
 1 行分の split view レンダリング。
 
+##### Props 型定義
+
+```typescript
+interface SplitDiffLineProps {
+  row: SplitRow;
+  isCursor: boolean;
+  paneWidth: number;
+}
+```
+
+| Prop | 型 | 必須 | 説明 |
+|------|------|------|------|
+| `row` | `SplitRow` | ✅ | 表示する split 行データ |
+| `isCursor` | `boolean` | ✅ | カーソルが当該行にあるか |
+| `paneWidth` | `number` | ✅ | 各ペインの文字幅 |
+
+##### レンダリング
+
 ```tsx
-// full-width 行: 既存の renderDiffLine() を再利用
-// split 行: Box flexDirection="row" で左右ペイン
-<Box flexDirection="row">
-  <Text>{isCursor ? "> " : "  "}</Text>
-  <Box width={paneWidth}>
-    {/* 行番号(dimColor, 4桁右寄せ) + コード(色付き) */}
-  </Box>
-  <Text dimColor>│</Text>
-  <Box width={paneWidth}>
-    {/* 行番号(dimColor, 4桁右寄せ) + コード(色付き) */}
-  </Box>
-</Box>
+export function SplitDiffLine({ row, isCursor, paneWidth }: SplitDiffLineProps) {
+  if (row.kind === "full-width") {
+    return (
+      <Box>
+        <Text>{isCursor ? "> " : "  "}</Text>
+        {renderDiffLine(row.line, isCursor)}
+      </Box>
+    );
+  }
+
+  const codeWidth = paneWidth - 5; // 4桁行番号 + 1スペース
+  return (
+    <>
+      <Box>
+        <Text>{isCursor ? "> " : "  "}</Text>
+        <Box width={paneWidth}>
+          {renderSplitCell(row.left, codeWidth)}
+        </Box>
+        <Text dimColor>│</Text>
+        <Box width={paneWidth}>
+          {renderSplitCell(row.right, codeWidth)}
+        </Box>
+      </Box>
+      {row.fullWidthLines.map((fl, i) => (
+        <Box key={i}>
+          <Text>{"  "}</Text>
+          {renderDiffLine(fl)}
+        </Box>
+      ))}
+    </>
+  );
+}
+```
+
+##### renderSplitCell ヘルパー
+
+```typescript
+function renderSplitCell(cell: SplitDiffCell, codeWidth: number): React.ReactNode {
+  if (cell.type === "empty") {
+    return <Text dimColor>{" ".repeat(codeWidth + 5)}</Text>;
+  }
+  const lineNum = cell.lineNumber ? String(cell.lineNumber).padStart(4) : "    ";
+  const code = cell.text.length > codeWidth ? cell.text.slice(0, codeWidth) : cell.text;
+  const color = cell.type === "delete" ? "red" : cell.type === "add" ? "green" : undefined;
+  return (
+    <Text color={color}>
+      <Text dimColor>{lineNum}</Text> {code}
+    </Text>
+  );
+}
 ```
 
 再利用する既存コード:
 - `renderDiffLine()`（`src/components/DiffLine.tsx`）— full-width 行のレンダリング
 
 ### PullRequestDetail.tsx の変更
+
+#### Props の追加
+
+既存の `Props` インターフェースに `terminalWidth` を追加する:
+
+```typescript
+interface Props {
+  // ... 既存の Props すべて（変更なし） ...
+
+  /** テスト用: ターミナル幅を外部から指定。省略時は useStdout() から取得 */
+  terminalWidth?: number;
+}
+```
+
+**設計判断**: ink-testing-library では `useStdout()` が `{ stdout: null }` を返す。テスト時に split view をトリガーするため、プロップでオーバーライド可能にする。本番コードではこのプロップを渡さないため、`useStdout()` から取得する動作がデフォルト。
 
 #### State 追加
 
@@ -251,8 +326,6 @@ const effectiveViewMode = diffViewMode === "split" && terminalWidth >= 100
   ? "split"
   : "unified";
 ```
-
-テスト容易性のため `terminalWidth?` プロップを追加（ink-testing-library では `useStdout()` が `{ stdout: null }` を返すため）。
 
 #### `s` キーハンドラ
 
@@ -278,7 +351,43 @@ unified / split でレンダリングを分岐:
 
 #### カーソルモデル
 
-**変更なし**。`cursorIndex` は `lines[]`（unified 形式）上で動作。`SplitRow.sourceIndex` で対応する split 行を特定する。j/k, Ctrl+d/u, n/N, G のナビゲーションは既存ロジックのまま。
+**変更なし**。`cursorIndex` は `lines[]`（unified 形式）上で動作。j/k, Ctrl+d/u, n/N, G のナビゲーションは既存ロジックのまま。
+
+#### scrollOffset → splitRows マッピング
+
+split view 時のレンダリングは、既存の `scrollOffset` / `visibleLines` の仕組みをそのまま活用する:
+
+```typescript
+// 1. 既存の scrollOffset 計算（変更なし）
+const scrollOffset = useMemo(() => {
+  const halfVisible = Math.floor(visibleLineCount / 2);
+  const maxOffset = Math.max(0, lines.length - visibleLineCount);
+  const idealOffset = cursorIndex - halfVisible;
+  return Math.max(0, Math.min(idealOffset, maxOffset));
+}, [cursorIndex, lines.length, visibleLineCount]);
+
+// 2. 可視範囲の lines[] インデックス集合（変更なし）
+const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
+
+// 3. split view 時: visibleLines の sourceIndex に対応する SplitRow を抽出
+const visibleSplitRows = useMemo(() => {
+  if (!splitRows) return [];
+  const visibleIndices = new Set(
+    Array.from({ length: visibleLineCount }, (_, i) => scrollOffset + i)
+      .filter((i) => i < lines.length),
+  );
+  // splitRows を走査し、sourceIndex が可視範囲内のものを抽出（重複排除）
+  const seen = new Set<number>();
+  return splitRows.filter((row) => {
+    if (seen.has(row.sourceIndex)) return false;
+    if (!visibleIndices.has(row.sourceIndex)) return false;
+    seen.add(row.sourceIndex);
+    return true;
+  });
+}, [splitRows, scrollOffset, visibleLineCount, lines.length]);
+```
+
+**ポイント**: unified の `lines[]` と split の `splitRows[]` は多対一の関係（連続する delete+add がペアリングで 1 行に圧縮される）。このため split view では表示行数が少なくなるが、スクロール位置の計算は `lines[]` ベースのため画面下部に空白が生じることがある。これは v1 では許容し、将来の最適化候補とする。
 
 #### フッター更新
 
@@ -369,6 +478,62 @@ DisplayLine[] (buildDisplayLines() で生成 — 変更なし)
 | 9 | 空入力 | 空配列 |
 | 10 | text の先頭 +/-/空白の除去 | SplitDiffCell.text から除去済み |
 
+**テストコード例（splitDiff.test.ts）**:
+
+```typescript
+import { describe, expect, it } from "vitest";
+import type { DisplayLine } from "../utils/formatDiff.js";
+import { buildSplitRows } from "./splitDiff.js";
+
+describe("buildSplitRows", () => {
+  it("converts context line to split row with both sides", () => {
+    const lines: DisplayLine[] = [
+      { type: "context", text: " hello", beforeLineNumber: 1, afterLineNumber: 1 },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "split",
+      left: { type: "context", text: "hello", lineNumber: 1 },
+      right: { type: "context", text: "hello", lineNumber: 1 },
+    });
+  });
+
+  it("pairs consecutive delete and add lines", () => {
+    const lines: DisplayLine[] = [
+      { type: "delete", text: "-old1", beforeLineNumber: 1 },
+      { type: "delete", text: "-old2", beforeLineNumber: 2 },
+      { type: "add", text: "+new1", afterLineNumber: 1 },
+    ];
+    const rows = buildSplitRows(lines);
+    const splitRows = rows.filter((r) => r.kind === "split");
+    expect(splitRows).toHaveLength(2);
+    // Row 1: delete paired with add
+    expect(splitRows[0]).toMatchObject({
+      left: { type: "delete", text: "old1" },
+      right: { type: "add", text: "new1" },
+    });
+    // Row 2: unpaired delete
+    expect(splitRows[1]).toMatchObject({
+      left: { type: "delete", text: "old2" },
+      right: { type: "empty" },
+    });
+  });
+
+  it("converts header to full-width row", () => {
+    const lines: DisplayLine[] = [
+      { type: "header", text: "src/auth.ts" },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows[0]).toMatchObject({ kind: "full-width" });
+  });
+
+  it("returns empty array for empty input", () => {
+    expect(buildSplitRows([])).toEqual([]);
+  });
+});
+```
+
 #### SplitDiffLine.tsx（レンダリングテスト）
 
 | # | テストケース | 期待結果 |
@@ -380,6 +545,48 @@ DisplayLine[] (buildDisplayLines() で生成 — 変更なし)
 | 5 | 行番号の表示 | 4 桁右寄せ |
 | 6 | カーソル表示 | `> ` プレフィックス |
 | 7 | fullWidthLines の表示 | split 行の下に全幅で表示 |
+
+**テストコード例（SplitDiffLine.test.tsx）**:
+
+```typescript
+import { render } from "ink-testing-library";
+import React from "react";
+import { describe, expect, it } from "vitest";
+import { SplitDiffLine } from "./SplitDiffLine.js";
+import type { SplitRow } from "../utils/splitDiff.js";
+
+describe("SplitDiffLine", () => {
+  it("renders split context line with both sides", () => {
+    const row: SplitRow = {
+      kind: "split",
+      left: { type: "context", lineNumber: 10, text: "const x = 1;" },
+      right: { type: "context", lineNumber: 10, text: "const x = 1;" },
+      sourceIndex: 0,
+      fullWidthLines: [],
+    };
+    const { lastFrame } = render(
+      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
+    );
+    const output = lastFrame() ?? "";
+    expect(output).toContain("const x = 1;");
+    expect(output).toContain("│");
+  });
+
+  it("renders cursor indicator on active row", () => {
+    const row: SplitRow = {
+      kind: "split",
+      left: { type: "context", lineNumber: 1, text: "hello" },
+      right: { type: "context", lineNumber: 1, text: "hello" },
+      sourceIndex: 0,
+      fullWidthLines: [],
+    };
+    const { lastFrame } = render(
+      <SplitDiffLine row={row} isCursor={true} paneWidth={50} />,
+    );
+    expect(lastFrame()).toContain("> ");
+  });
+});
+```
 
 #### PullRequestDetail.test.tsx（統合テスト追加分）
 
@@ -393,11 +600,119 @@ DisplayLine[] (buildDisplayLines() で生成 — 変更なし)
 | 6 | split mode で Ctrl+d/u | 半ページスクロール |
 | 7 | コメント入力中に `s` が無効 | モーダルガードで無視 |
 
+**テストコード例（PullRequestDetail.test.tsx に追加）**:
+
+```typescript
+it("toggles to split view with s key", () => {
+  const { stdin, lastFrame } = render(
+    <PullRequestDetail
+      pullRequest={pullRequest as any}
+      differences={differences as any}
+      commentThreads={[]}
+      diffTexts={diffTexts}
+      onBack={vi.fn()}
+      onHelp={vi.fn()}
+      onShowActivity={vi.fn()}
+      comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+      inlineComment={defaultInlineCommentProps}
+      reply={defaultReplyProps}
+      approval={defaultApprovalProps}
+      merge={defaultMergeProps}
+      close={defaultCloseProps}
+      commitView={defaultCommitProps}
+      editComment={defaultEditCommentProps}
+      deleteComment={defaultDeleteCommentProps}
+      reaction={defaultReactionProps}
+      terminalWidth={120}
+    />,
+  );
+  // s キーで split view に切り替え
+  stdin.write("s");
+  const output = lastFrame() ?? "";
+  // split view では区切り線「│」が表示される
+  expect(output).toContain("│");
+  // フッターに "s unified" が表示される（split → unified への切り替え案内）
+  expect(output).toContain("s unified");
+});
+
+it("falls back to unified when terminal is too narrow", () => {
+  const { stdin, lastFrame } = render(
+    <PullRequestDetail
+      pullRequest={pullRequest as any}
+      differences={differences as any}
+      commentThreads={[]}
+      diffTexts={diffTexts}
+      onBack={vi.fn()}
+      onHelp={vi.fn()}
+      onShowActivity={vi.fn()}
+      comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+      inlineComment={defaultInlineCommentProps}
+      reply={defaultReplyProps}
+      approval={defaultApprovalProps}
+      merge={defaultMergeProps}
+      close={defaultCloseProps}
+      commitView={defaultCommitProps}
+      editComment={defaultEditCommentProps}
+      deleteComment={defaultDeleteCommentProps}
+      reaction={defaultReactionProps}
+      terminalWidth={80}
+    />,
+  );
+  stdin.write("s");
+  const output = lastFrame() ?? "";
+  // 80列では split が無効、unified のまま
+  expect(output).not.toContain("│");
+});
+
+it("does not toggle split view during comment input", async () => {
+  const { stdin, lastFrame } = render(
+    <PullRequestDetail
+      pullRequest={pullRequest as any}
+      differences={differences as any}
+      commentThreads={[]}
+      diffTexts={diffTexts}
+      onBack={vi.fn()}
+      onHelp={vi.fn()}
+      onShowActivity={vi.fn()}
+      comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+      inlineComment={defaultInlineCommentProps}
+      reply={defaultReplyProps}
+      approval={defaultApprovalProps}
+      merge={defaultMergeProps}
+      close={defaultCloseProps}
+      commitView={defaultCommitProps}
+      editComment={defaultEditCommentProps}
+      deleteComment={defaultDeleteCommentProps}
+      reaction={defaultReactionProps}
+      terminalWidth={120}
+    />,
+  );
+  // コメントモーダルを開く
+  stdin.write("c");
+  await vi.waitFor(() => {
+    expect(lastFrame()).toContain("Comment:");
+  });
+  // モーダル中に s を入力
+  stdin.write("s");
+  // モーダルが閉じていない（s が無視された）
+  expect(lastFrame()).toContain("Comment:");
+});
+```
+
 #### Help.test.tsx
 
 | # | テストケース | 期待結果 |
 |---|-------------|---------|
 | 1 | `s` キーがヘルプに表示 | "Split/unified diff" が表示される |
+
+```typescript
+it("displays split view keybinding", () => {
+  const { lastFrame } = render(<Help onClose={vi.fn()} />);
+  const output = lastFrame();
+  expect(output).toContain("s");
+  expect(output).toContain("Split/unified diff");
+});
+```
 
 ## 実装順序
 
@@ -405,25 +720,56 @@ Tidy First の原則に従い、構造的変更と機能的変更を分離する
 
 ### Step 1: `splitDiff.ts` — データ変換ユーティリティ（Red → Green → Refactor）
 
-`src/utils/splitDiff.ts` と `src/utils/splitDiff.test.ts` を作成。純粋関数のため UI 非依存でテスト可能。
+**変更ファイル**:
+- `src/utils/splitDiff.ts`（新規）: `SplitRow`, `SplitDiffCell` 型定義、`buildSplitRows()` 関数
+- `src/utils/splitDiff.test.ts`（新規）: テストケース #1〜#10
+
+**完了条件**: `buildSplitRows()` のユニットテスト 10 件が全て通過。`bun run test` で既存テストに影響なし。
 
 ### Step 2: `SplitDiffLine.tsx` — レンダリングコンポーネント（Red → Green → Refactor）
 
-`src/components/SplitDiffLine.tsx` と `src/components/SplitDiffLine.test.tsx` を作成。
+**変更ファイル**:
+- `src/components/SplitDiffLine.tsx`（新規）: `SplitDiffLineProps` 型定義、`SplitDiffLine` コンポーネント、`renderSplitCell` ヘルパー
+- `src/components/SplitDiffLine.test.tsx`（新規）: テストケース #1〜#7
+
+**完了条件**: `SplitDiffLine` のレンダリングテスト 7 件が全て通過。
 
 ### Step 3: `PullRequestDetail.tsx` — 統合（Red → Green → Refactor）
 
-state 追加、`s` キーハンドラ、`useStdout`、条件分岐レンダリング、フッター更新。
+**変更ファイル**:
+- `src/components/PullRequestDetail.tsx`（修正）:
+  - `Props` に `terminalWidth?: number` 追加
+  - `diffViewMode` state 追加
+  - `useStdout()` import 追加
+  - `s` キーハンドラ追加（`useInput` 内、モーダルガードの後）
+  - `effectiveViewMode` / `splitRows` / `visibleSplitRows` の `useMemo` 追加
+  - レンダリング部分を unified/split で条件分岐
+  - フッターに `s split`/`s unified` を追加
+- `src/components/PullRequestDetail.test.tsx`（修正）: テストケース #1〜#7 追加
+
+**完了条件**: `s` キーで split/unified 切り替え可能。`terminalWidth < 100` で fallback。既存テスト全て通過。
 
 ### Step 4: `Help.tsx` — キーバインド表示更新
 
-`s` キーの説明を追加。
+**変更ファイル**:
+- `src/components/Help.tsx`（修正）: Navigation セクションに `s` キー追加
+- `src/components/Help.test.tsx`（修正）: テスト 1 件追加
+
+**完了条件**: ヘルプ画面に `s` キーの説明が表示される。
 
 ### Step 5: 全体テスト・CI
 
 ```bash
 bun run ci
 ```
+
+**完了条件**:
+- oxlint: エラーなし
+- Biome: フォーマットチェック通過
+- TypeScript: 型チェック通過
+- knip: 未使用 export なし（`SplitRow`, `buildSplitRows`, `SplitDiffLine` が全て import されていること）
+- vitest: カバレッジ 95% 以上
+- build: 本番ビルド成功
 
 ## コミット戦略
 
