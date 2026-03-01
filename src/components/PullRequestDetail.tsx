@@ -1,5 +1,5 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useStdout } from "ink";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAsyncDismiss } from "../hooks/useAsyncDismiss.js";
 import type {
@@ -18,12 +18,14 @@ import {
   LARGE_DIFF_THRESHOLD,
 } from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
+import { buildSplitRows } from "../utils/splitDiff.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
 import { renderDiffLine } from "./DiffLine.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
+import { SplitDiffLine } from "./SplitDiffLine.js";
 
 type InlineLocation = {
   filePath: string;
@@ -129,6 +131,7 @@ interface Props {
   editComment: EditCommentAction;
   deleteComment: DeleteCommentAction;
   reaction: ReactionProps;
+  terminalWidth?: number;
 }
 
 export function PullRequestDetail({
@@ -207,6 +210,7 @@ export function PullRequestDetail({
     error: reactionError,
     onClearError: onClearReactionError,
   },
+  terminalWidth: propsTerminalWidth,
 }: Props) {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
@@ -247,7 +251,12 @@ export function PullRequestDetail({
   const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
   const [showFileList, setShowFileList] = useState(false);
   const [fileListCursor, setFileListCursor] = useState(0);
+  const [diffViewMode, setDiffViewMode] = useState<"unified" | "split">("unified");
   const diffCacheRef = useRef<Map<string, DisplayLine[]>>(new Map());
+
+  const { stdout } = useStdout();
+  const terminalWidth = propsTerminalWidth ?? stdout?.columns ?? 120;
+  const effectiveViewMode = diffViewMode === "split" && terminalWidth >= 100 ? "split" : "unified";
 
   useEffect(() => {
     setDiffLineLimits(new Map());
@@ -402,6 +411,11 @@ export function PullRequestDetail({
       reactionTarget
     )
       return;
+
+    if (input === "s") {
+      setDiffViewMode((prev) => (prev === "unified" ? "split" : "unified"));
+      return;
+    }
 
     if (key.tab && (commits.length > 0 || commitsAvailable)) {
       if (commits.length === 0) {
@@ -597,6 +611,32 @@ export function PullRequestDetail({
   }, [cursorIndex, lines.length, visibleLineCount]);
   const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleLineCount);
 
+  const splitRows = useMemo(() => {
+    if (effectiveViewMode !== "split") return null;
+    return buildSplitRows(lines);
+  }, [effectiveViewMode, lines]);
+
+  const paneWidth = useMemo(() => {
+    return Math.floor((terminalWidth - 2 - 1) / 2);
+  }, [terminalWidth]);
+
+  const visibleSplitRows = useMemo(() => {
+    if (!splitRows) return [];
+    const visibleIndices = new Set(
+      Array.from({ length: visibleLineCount }, (_, i) => scrollOffset + i).filter(
+        (idx) => idx < lines.length,
+      ),
+    );
+    const seen = new Set<number>();
+    return splitRows.filter((row) => {
+      /* v8 ignore next -- buildSplitRows generates unique sourceIndex */
+      if (seen.has(row.sourceIndex)) return false;
+      if (!visibleIndices.has(row.sourceIndex)) return false;
+      seen.add(row.sourceIndex);
+      return true;
+    });
+  }, [splitRows, scrollOffset, visibleLineCount, lines.length]);
+
   return (
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={0}>
@@ -682,16 +722,25 @@ export function PullRequestDetail({
         </Box>
       )}
       <Box flexDirection="column">
-        {visibleLines.map((line, index) => {
-          const globalIndex = scrollOffset + index;
-          const isCursor = globalIndex === cursorIndex;
-          return (
-            <Box key={globalIndex}>
-              <Text>{isCursor ? "> " : "  "}</Text>
-              {renderDiffLine(line, isCursor)}
-            </Box>
-          );
-        })}
+        {effectiveViewMode === "split" && splitRows
+          ? visibleSplitRows.map((row) => (
+              <SplitDiffLine
+                key={row.sourceIndex}
+                row={row}
+                isCursor={row.sourceIndex === cursorIndex}
+                paneWidth={paneWidth}
+              />
+            ))
+          : visibleLines.map((line, index) => {
+              const globalIndex = scrollOffset + index;
+              const isCursor = globalIndex === cursorIndex;
+              return (
+                <Box key={globalIndex}>
+                  <Text>{isCursor ? "> " : "  "}</Text>
+                  {renderDiffLine(line, isCursor)}
+                </Box>
+              );
+            })}
       </Box>
       {isCommenting && (
         <CommentInput
@@ -890,10 +939,10 @@ export function PullRequestDetail({
           showFileList
             ? ""
             : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
-              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`
+              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity${terminalWidth >= 100 ? ` s ${effectiveViewMode === "split" ? "unified" : "split"}` : ""} q ? help${hasTruncation ? " t more" : ""}`
               : viewIndex >= 0
-                ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`}
+                ? `Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close${terminalWidth >= 100 ? ` s ${effectiveViewMode === "split" ? "unified" : "split"}` : ""} q ? help`
+                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity${terminalWidth >= 100 ? ` s ${effectiveViewMode === "split" ? "unified" : "split"}` : ""} q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>
