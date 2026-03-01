@@ -15,9 +15,22 @@ function renderSplitCell(cell: SplitDiffCell, codeWidth: number): React.ReactNod
   }
   const lineNum = cell.lineNumber ? String(cell.lineNumber).padStart(4) : "    ";
   const code = cell.text.length > codeWidth ? cell.text.slice(0, codeWidth) : cell.text;
-  const color = cell.type === "delete" ? "red" : cell.type === "add" ? "green" : undefined;
+  if (cell.type === "delete") {
+    return (
+      <Text color="red">
+        <Text dimColor>{lineNum}</Text> {code}
+      </Text>
+    );
+  }
+  if (cell.type === "add") {
+    return (
+      <Text color="green">
+        <Text dimColor>{lineNum}</Text> {code}
+      </Text>
+    );
+  }
   return (
-    <Text color={color}>
+    <Text>
       <Text dimColor>{lineNum}</Text> {code}
     </Text>
   );
@@ -38,16 +51,12 @@ export function SplitDiffLine({ row, isCursor, paneWidth }: SplitDiffLineProps) 
     <>
       <Box>
         <Text>{isCursor ? "> " : "  "}</Text>
-        <Box width={paneWidth}>
-          {renderSplitCell(row.left, codeWidth)}
-        </Box>
+        <Box width={paneWidth}>{renderSplitCell(row.left, codeWidth)}</Box>
         <Text dimColor>│</Text>
-        <Box width={paneWidth}>
-          {renderSplitCell(row.right, codeWidth)}
-        </Box>
+        <Box width={paneWidth}>{renderSplitCell(row.right, codeWidth)}</Box>
       </Box>
-      {row.fullWidthLines.map((fl, idx) => (
-        <Box key={idx}>
+      {row.fullWidthLines.map((fl) => (
+        <Box key={fl.commentId ?? fl.text}>
           <Text>{"  "}</Text>
           {renderDiffLine(fl)}
         </Box>

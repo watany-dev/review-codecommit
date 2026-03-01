@@ -11,9 +11,7 @@ describe("SplitDiffLine", () => {
       line: { type: "header", text: "src/auth.ts" },
       sourceIndex: 0,
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     expect(lastFrame()).toContain("src/auth.ts");
   });
 
@@ -25,9 +23,7 @@ describe("SplitDiffLine", () => {
       sourceIndex: 0,
       fullWidthLines: [],
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     const output = lastFrame() ?? "";
     expect(output).toContain("const x = 1;");
     expect(output).toContain("│");
@@ -41,9 +37,7 @@ describe("SplitDiffLine", () => {
       sourceIndex: 0,
       fullWidthLines: [],
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     const output = lastFrame() ?? "";
     expect(output).toContain("old value");
     expect(output).toContain("new value");
@@ -58,9 +52,7 @@ describe("SplitDiffLine", () => {
       sourceIndex: 0,
       fullWidthLines: [],
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     const output = lastFrame() ?? "";
     expect(output).toContain("removed");
     expect(output).toContain("│");
@@ -74,9 +66,7 @@ describe("SplitDiffLine", () => {
       sourceIndex: 0,
       fullWidthLines: [],
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     const output = lastFrame() ?? "";
     expect(output).toContain("  42");
   });
@@ -110,10 +100,48 @@ describe("SplitDiffLine", () => {
         { type: "inline-comment", text: "💬 taro: LGTM", threadIndex: 0, commentId: "c1" },
       ],
     };
-    const { lastFrame } = render(
-      <SplitDiffLine row={row} isCursor={false} paneWidth={50} />,
-    );
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
     const output = lastFrame() ?? "";
     expect(output).toContain("taro: LGTM");
+  });
+
+  it("truncates long text to fit pane width", () => {
+    const row: SplitRow = {
+      kind: "split",
+      left: { type: "context", lineNumber: 1, text: "a".repeat(100) },
+      right: { type: "context", lineNumber: 1, text: "b".repeat(100) },
+      sourceIndex: 0,
+      fullWidthLines: [],
+    };
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={20} />);
+    const output = lastFrame() ?? "";
+    // paneWidth=20, codeWidth=15, text should be truncated
+    expect(output).not.toContain("a".repeat(100));
+  });
+
+  it("renders cell without line number", () => {
+    const row: SplitRow = {
+      kind: "split",
+      left: { type: "context", text: "no-num" },
+      right: { type: "context", text: "no-num" },
+      sourceIndex: 0,
+      fullWidthLines: [],
+    };
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
+    const output = lastFrame() ?? "";
+    expect(output).toContain("no-num");
+  });
+
+  it("renders fullWidthLines without commentId using text as key", () => {
+    const row: SplitRow = {
+      kind: "split",
+      left: { type: "context", lineNumber: 1, text: "code" },
+      right: { type: "context", lineNumber: 1, text: "code" },
+      sourceIndex: 0,
+      fullWidthLines: [{ type: "fold-indicator", text: "[+3 replies]", threadIndex: 0 }],
+    };
+    const { lastFrame } = render(<SplitDiffLine row={row} isCursor={false} paneWidth={50} />);
+    const output = lastFrame() ?? "";
+    expect(output).toContain("[+3 replies]");
   });
 });

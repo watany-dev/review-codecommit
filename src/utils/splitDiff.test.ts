@@ -18,9 +18,7 @@ describe("buildSplitRows", () => {
   });
 
   it("converts delete line to split row with empty right", () => {
-    const lines: DisplayLine[] = [
-      { type: "delete", text: "-removed", beforeLineNumber: 5 },
-    ];
+    const lines: DisplayLine[] = [{ type: "delete", text: "-removed", beforeLineNumber: 5 }];
     const rows = buildSplitRows(lines);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -31,9 +29,7 @@ describe("buildSplitRows", () => {
   });
 
   it("converts add line to split row with empty left", () => {
-    const lines: DisplayLine[] = [
-      { type: "add", text: "+added", afterLineNumber: 3 },
-    ];
+    const lines: DisplayLine[] = [{ type: "add", text: "+added", afterLineNumber: 3 }];
     const rows = buildSplitRows(lines);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -158,5 +154,114 @@ describe("buildSplitRows", () => {
       left: { text: "return x;" },
       right: { text: "return x;" },
     });
+  });
+
+  it("flushes pending deletes before comment line", () => {
+    const lines: DisplayLine[] = [
+      { type: "delete", text: "-old", beforeLineNumber: 1 },
+      { type: "inline-comment", text: "💬 note", threadIndex: 0, commentId: "c1" },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.kind).toBe("split");
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left).toMatchObject({ type: "delete", text: "old" });
+      expect(rows[0]!.right).toMatchObject({ type: "empty" });
+      expect(rows[0]!.fullWidthLines).toHaveLength(1);
+    }
+  });
+
+  it("treats comment as full-width when no previous split row", () => {
+    const lines: DisplayLine[] = [
+      { type: "inline-comment", text: "💬 orphan comment", threadIndex: 0, commentId: "c1" },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: "full-width" });
+  });
+
+  it("flushes pending deletes before full-width line", () => {
+    const lines: DisplayLine[] = [
+      { type: "delete", text: "-old", beforeLineNumber: 1 },
+      { type: "header", text: "next-file.ts" },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.kind).toBe("split");
+    expect(rows[1]).toMatchObject({ kind: "full-width" });
+  });
+
+  it("flushes pending deletes before context line", () => {
+    const lines: DisplayLine[] = [
+      { type: "delete", text: "-old", beforeLineNumber: 1 },
+      { type: "context", text: " same", beforeLineNumber: 2, afterLineNumber: 1 },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(2);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left).toMatchObject({ type: "delete", text: "old" });
+      expect(rows[0]!.right).toMatchObject({ type: "empty" });
+    }
+    if (rows[1]!.kind === "split") {
+      expect(rows[1]!.left).toMatchObject({ type: "context", text: "same" });
+    }
+  });
+
+  it("handles empty text without prefix removal", () => {
+    const lines: DisplayLine[] = [
+      { type: "context", text: "", beforeLineNumber: 1, afterLineNumber: 1 },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left.text).toBe("");
+      expect(rows[0]!.right.text).toBe("");
+    }
+  });
+
+  it("omits lineNumber for context line without beforeLineNumber/afterLineNumber", () => {
+    const lines: DisplayLine[] = [{ type: "context", text: " hello" }];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left).toEqual({ type: "context", text: "hello" });
+      expect(rows[0]!.right).toEqual({ type: "context", text: "hello" });
+    }
+  });
+
+  it("omits lineNumber for standalone add without afterLineNumber", () => {
+    const lines: DisplayLine[] = [{ type: "add", text: "+new" }];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left).toEqual({ type: "empty", text: "" });
+      expect(rows[0]!.right).toEqual({ type: "add", text: "new" });
+    }
+  });
+
+  it("omits lineNumber for paired delete/add without line numbers", () => {
+    const lines: DisplayLine[] = [
+      { type: "delete", text: "-old" },
+      { type: "add", text: "+new" },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.left).toEqual({ type: "delete", text: "old" });
+      expect(rows[0]!.right).toEqual({ type: "add", text: "new" });
+    }
+  });
+
+  it("handles fold-indicator in fullWidthLines", () => {
+    const lines: DisplayLine[] = [
+      { type: "context", text: " code", beforeLineNumber: 1, afterLineNumber: 1 },
+      { type: "fold-indicator", text: "[+3 replies]", threadIndex: 0 },
+    ];
+    const rows = buildSplitRows(lines);
+    expect(rows).toHaveLength(1);
+    if (rows[0]!.kind === "split") {
+      expect(rows[0]!.fullWidthLines).toHaveLength(1);
+      expect(rows[0]!.fullWidthLines[0]!.type).toBe("fold-indicator");
+    }
   });
 });

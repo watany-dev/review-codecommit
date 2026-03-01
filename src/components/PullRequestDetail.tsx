@@ -18,14 +18,14 @@ import {
   LARGE_DIFF_THRESHOLD,
 } from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
+import { buildSplitRows } from "../utils/splitDiff.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
 import { renderDiffLine } from "./DiffLine.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
-import { SplitDiffLine } from "./SplitDiffLine.js";
-import { buildSplitRows } from "../utils/splitDiff.js";
 import { ReactionPicker } from "./ReactionPicker.js";
+import { SplitDiffLine } from "./SplitDiffLine.js";
 
 type InlineLocation = {
   filePath: string;
@@ -256,8 +256,7 @@ export function PullRequestDetail({
 
   const { stdout } = useStdout();
   const terminalWidth = propsTerminalWidth ?? stdout?.columns ?? 120;
-  const effectiveViewMode =
-    diffViewMode === "split" && terminalWidth >= 100 ? "split" : "unified";
+  const effectiveViewMode = diffViewMode === "split" && terminalWidth >= 100 ? "split" : "unified";
 
   useEffect(() => {
     setDiffLineLimits(new Map());
@@ -630,6 +629,7 @@ export function PullRequestDetail({
     );
     const seen = new Set<number>();
     return splitRows.filter((row) => {
+      /* v8 ignore next -- buildSplitRows generates unique sourceIndex */
       if (seen.has(row.sourceIndex)) return false;
       if (!visibleIndices.has(row.sourceIndex)) return false;
       seen.add(row.sourceIndex);

@@ -50,11 +50,19 @@ function flushDeleteAddBuffer(
     const sourceIndex = del?.index ?? add!.index;
 
     const left: SplitDiffCell = del
-      ? { type: "delete", lineNumber: del.line.beforeLineNumber, text: removePrefix(del.line.text) }
+      ? {
+          type: "delete",
+          ...(del.line.beforeLineNumber != null ? { lineNumber: del.line.beforeLineNumber } : {}),
+          text: removePrefix(del.line.text),
+        }
       : emptyCell();
 
     const right: SplitDiffCell = add
-      ? { type: "add", lineNumber: add.line.afterLineNumber, text: removePrefix(add.line.text) }
+      ? {
+          type: "add",
+          ...(add.line.afterLineNumber != null ? { lineNumber: add.line.afterLineNumber } : {}),
+          text: removePrefix(add.line.text),
+        }
       : emptyCell();
 
     rows.push({ kind: "split", left, right, sourceIndex, fullWidthLines: [] });
@@ -101,8 +109,16 @@ export function buildSplitRows(lines: DisplayLine[]): SplitRow[] {
       const text = removePrefix(line.text);
       rows.push({
         kind: "split",
-        left: { type: "context", lineNumber: line.beforeLineNumber, text },
-        right: { type: "context", lineNumber: line.afterLineNumber, text },
+        left: {
+          type: "context",
+          ...(line.beforeLineNumber != null ? { lineNumber: line.beforeLineNumber } : {}),
+          text,
+        },
+        right: {
+          type: "context",
+          ...(line.afterLineNumber != null ? { lineNumber: line.afterLineNumber } : {}),
+          text,
+        },
         sourceIndex: i,
         fullWidthLines: [],
       });
@@ -129,7 +145,11 @@ export function buildSplitRows(lines: DisplayLine[]): SplitRow[] {
         rows.push({
           kind: "split",
           left: emptyCell(),
-          right: { type: "add", lineNumber: line.afterLineNumber, text: removePrefix(line.text) },
+          right: {
+            type: "add",
+            ...(line.afterLineNumber != null ? { lineNumber: line.afterLineNumber } : {}),
+            text: removePrefix(line.text),
+          },
           sourceIndex: i,
           fullWidthLines: [],
         });

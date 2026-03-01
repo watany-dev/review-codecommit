@@ -7795,5 +7795,69 @@ describe("PullRequestDetail", () => {
       stdin.write("s");
       expect(lastFrame()).toContain("Comment:");
     });
+
+    it("defaults to 120 width when terminalWidth prop is not provided", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // No terminalWidth prop → falls back to stdout?.columns ?? 120
+      // Since ink-testing-library has no real stdout, uses 120 which is >= 100
+      expect(lastFrame()).toContain("s split");
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+    });
+  });
+
+  describe("navigation guards with empty diff", () => {
+    it("handles Ctrl+d, Ctrl+u, and G when lines are empty", () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={[]}
+          commentThreads={[]}
+          diffTexts={new Map()}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      // These should hit early return guards (lines.length === 0)
+      stdin.write("\x04"); // Ctrl+d
+      stdin.write("\x15"); // Ctrl+u
+      stdin.write("G");
+      // Component should still render without crash
+      expect(lastFrame()).toBeDefined();
+    });
   });
 });
