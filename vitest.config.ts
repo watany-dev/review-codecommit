@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./src/vitest-setup.ts"],
+    pool: "forks",
+    testTimeout: 10_000,
+    teardownTimeout: 5_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],

@@ -26,12 +26,13 @@
     "lint:fix": "oxlint -c .oxlintrc.json --tsconfig ./tsconfig.json --import-plugin --fix ./src",
     "format": "biome check --write ./src",
     "format:check": "biome check ./src",
-    "check": "tsc --noEmit",
+    "check": "tsc -p tsconfig.check.json",
     "dead-code": "knip",
     "audit": "bun audit",
     "security": "bun run dead-code && bun run audit",
     "validate": "bun run check && bun run lint && bun run format:check && bun run test:coverage",
-    "ci": "bun run lint && bun run format:check && bun run check && bun run dead-code && bun run audit && bun run test:coverage && bun run build",
+    "ci": "bun run scripts/ci-parallel.ts",
+    "ci:seq": "bun run lint && bun run format:check && bun run check && bun run dead-code && bun run audit && bun run test:coverage && bun run build",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
@@ -73,7 +74,8 @@
   },
   "license": "MIT",
   "overrides": {
-    "fast-xml-parser": ">=5.3.6"
+    "fast-xml-parser": ">=5.3.8",
+    "rollup": ">=4.59.0"
   },
   "dependencies": {}
 }

@@ -1,4 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": ["src/**/*.test.{ts,tsx}"]
+  "ignore": ["src/**/*.test.{ts,tsx}"],
+  "ignoreDependencies": [],
+  "entry": ["src/index.ts", "src/cli.tsx", "build.ts", "scripts/ci-parallel.ts"]
 }
