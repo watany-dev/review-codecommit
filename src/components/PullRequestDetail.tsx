@@ -27,6 +27,20 @@ import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
 import { SplitDiffLine } from "./SplitDiffLine.js";
 
+interface DiffLineRowProps {
+  line: DisplayLine;
+  isCursor: boolean;
+}
+
+const DiffLineRow = React.memo(function DiffLineRow({ line, isCursor }: DiffLineRowProps) {
+  return (
+    <Box>
+      <Text>{isCursor ? "> " : "  "}</Text>
+      {renderDiffLine(line, isCursor)}
+    </Box>
+  );
+});
+
 type InlineLocation = {
   filePath: string;
   filePosition: number;
@@ -733,12 +747,8 @@ export function PullRequestDetail({
             ))
           : visibleLines.map((line, index) => {
               const globalIndex = scrollOffset + index;
-              const isCursor = globalIndex === cursorIndex;
               return (
-                <Box key={globalIndex}>
-                  <Text>{isCursor ? "> " : "  "}</Text>
-                  {renderDiffLine(line, isCursor)}
-                </Box>
+                <DiffLineRow key={globalIndex} line={line} isCursor={globalIndex === cursorIndex} />
               );
             })}
       </Box>

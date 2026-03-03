@@ -61,7 +61,9 @@ const pullRequest = {
 };
 
 const noop = vi.fn();
-const noopAsync = vi.fn().mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] });
+const noopAsync = vi
+  .fn()
+  .mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] });
 
 function makeProps(overrides: { differences: any[]; diffTexts: Map<string, any> }) {
   return {
@@ -131,15 +133,22 @@ describe("PullRequestDetail scroll rendering", () => {
     expect(initialCalls).toBeGreaterThan(0);
   });
 
-  it("baseline: renderDiffLine calls per single j-press", async () => {
+  it("baseline: renderDiffLine calls per single j-press (after warmup)", async () => {
     const props = makeProps({ differences, diffTexts });
     const { stdin, lastFrame } = render(<PullRequestDetail {...props} />);
 
-    // Wait for initial render to settle
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("src/module0/index.ts");
     });
 
+    // Warmup: first press absorbs one-time React effect settling cost
+    const warmupFrame = lastFrame();
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).not.toBe(warmupFrame);
+    });
+
+    // Measured press
     const frameBefore = lastFrame();
     counter.value = 0;
 
@@ -150,7 +159,9 @@ describe("PullRequestDetail scroll rendering", () => {
     });
 
     const callsPerKeystroke = counter.value;
-    console.log(`[perf] single j-press: renderDiffLine called ${callsPerKeystroke} times`);
+    console.log(
+      `[perf] single j-press (after warmup): renderDiffLine called ${callsPerKeystroke} times`,
+    );
 
     // Before optimization: 30 (all visible lines re-render)
     // After optimization: ≤5 (only cursor-changed + new scroll-in lines)
@@ -211,7 +222,9 @@ describe("PullRequestDetail scroll rendering", () => {
     });
 
     const callsPerKeystroke = counter.value;
-    console.log(`[perf] split-mode single j-press: renderDiffLine called ${callsPerKeystroke} times`);
+    console.log(
+      `[perf] split-mode single j-press: renderDiffLine called ${callsPerKeystroke} times`,
+    );
     expect(callsPerKeystroke).toBeGreaterThan(0);
   });
 });
