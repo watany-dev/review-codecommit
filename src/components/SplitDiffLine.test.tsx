@@ -132,6 +132,36 @@ describe("SplitDiffLine", () => {
     expect(output).toContain("no-num");
   });
 
+  it("aligns separator at same column regardless of text length", () => {
+    const shortRow: SplitRow = {
+      kind: "split",
+      left: { type: "context", lineNumber: 1, text: "hi" },
+      right: { type: "context", lineNumber: 1, text: "hi" },
+      sourceIndex: 0,
+      fullWidthLines: [],
+    };
+    const longRow: SplitRow = {
+      kind: "split",
+      left: { type: "delete", lineNumber: 2, text: "a".repeat(100) },
+      right: { type: "add", lineNumber: 2, text: "b".repeat(100) },
+      sourceIndex: 1,
+      fullWidthLines: [],
+    };
+    const paneWidth = 30;
+    const { lastFrame: shortFrame } = render(
+      <SplitDiffLine row={shortRow} isCursor={false} paneWidth={paneWidth} />,
+    );
+    const { lastFrame: longFrame } = render(
+      <SplitDiffLine row={longRow} isCursor={false} paneWidth={paneWidth} />,
+    );
+    const shortOutput = shortFrame() ?? "";
+    const longOutput = longFrame() ?? "";
+    const shortPos = shortOutput.indexOf("│");
+    const longPos = longOutput.indexOf("│");
+    expect(shortPos).toBeGreaterThan(0);
+    expect(shortPos).toBe(longPos);
+  });
+
   it("renders fullWidthLines without commentId using text as key", () => {
     const row: SplitRow = {
       kind: "split",

@@ -7828,6 +7828,43 @@ describe("PullRequestDetail", () => {
     });
   });
 
+  describe("split view separator alignment", () => {
+    it("aligns separator at same column on all split lines", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      const output = lastFrame() ?? "";
+      const lines = output.split("\n").filter((l) => l.includes("│"));
+      expect(lines.length).toBeGreaterThan(0);
+      const positions = lines.map((l) => l.indexOf("│"));
+      const uniquePositions = new Set(positions);
+      expect(uniquePositions.size).toBe(1);
+    });
+  });
+
   describe("navigation guards with empty diff", () => {
     it("handles Ctrl+d, Ctrl+u, and G when lines are empty", () => {
       const { stdin, lastFrame } = render(

@@ -617,7 +617,8 @@ export function PullRequestDetail({
   }, [effectiveViewMode, lines]);
 
   const paneWidth = useMemo(() => {
-    return Math.floor((terminalWidth - 2 - 1) / 2);
+    // 2 (padding left+right) + 2 (cursor "> ") + 1 (separator "│")
+    return Math.floor((terminalWidth - 2 - 2 - 1) / 2);
   }, [terminalWidth]);
 
   const visibleSplitRows = useMemo(() => {
