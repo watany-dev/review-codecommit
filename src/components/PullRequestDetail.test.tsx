@@ -7558,4 +7558,306 @@ describe("PullRequestDetail", () => {
       expect(output).toContain("baz");
     });
   });
+
+  describe("split view", () => {
+    it("toggles to split view with s key", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      const output = lastFrame() ?? "";
+      expect(output).toContain("│");
+    });
+
+    it("toggles back to unified view with s key", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s split");
+      });
+    });
+
+    it("falls back to unified when terminal is too narrow", () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={80}
+        />,
+      );
+      stdin.write("s");
+      const output = lastFrame() ?? "";
+      // 80列ではsplit view区切り線が表示されない
+      expect(output).not.toContain("s split");
+      expect(output).not.toContain("s unified");
+    });
+
+    it("navigates with j/k in split mode", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      stdin.write("j");
+      stdin.write("j");
+      const output = lastFrame() ?? "";
+      expect(output).toContain("> ");
+    });
+
+    it("navigates with n/N in split mode", async () => {
+      const multiFileDiffTexts = new Map([
+        ["b1:b2", { before: "line1\nline2", after: "line1\nmodified" }],
+        ["b3:b4", { before: "foo\nbar", after: "foo\nbaz" }],
+      ]);
+      const multiDifferences = [
+        {
+          beforeBlob: { blobId: "b1", path: "file1.ts" },
+          afterBlob: { blobId: "b2", path: "file1.ts" },
+        },
+        {
+          beforeBlob: { blobId: "b3", path: "file2.ts" },
+          afterBlob: { blobId: "b4", path: "file2.ts" },
+        },
+      ];
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={multiDifferences as any}
+          commentThreads={[]}
+          diffTexts={multiFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      stdin.write("n");
+      const output = lastFrame() ?? "";
+      expect(output).toContain("file2.ts");
+    });
+
+    it("scrolls with Ctrl+d in split mode", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+      stdin.write("\x04"); // Ctrl+d
+      const output = lastFrame() ?? "";
+      expect(output).toBeDefined();
+    });
+
+    it("does not toggle split view during comment input", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      stdin.write("c");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Comment:");
+      });
+      stdin.write("s");
+      expect(lastFrame()).toContain("Comment:");
+    });
+
+    it("defaults to 120 width when terminalWidth prop is not provided", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      // No terminalWidth prop → falls back to stdout?.columns ?? 120
+      // Since ink-testing-library has no real stdout, uses 120 which is >= 100
+      expect(lastFrame()).toContain("s split");
+      stdin.write("s");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("s unified");
+      });
+    });
+  });
+
+  describe("navigation guards with empty diff", () => {
+    it("handles Ctrl+d, Ctrl+u, and G when lines are empty", () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={[]}
+          commentThreads={[]}
+          diffTexts={new Map()}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          terminalWidth={120}
+        />,
+      );
+      // These should hit early return guards (lines.length === 0)
+      stdin.write("\x04"); // Ctrl+d
+      stdin.write("\x15"); // Ctrl+u
+      stdin.write("G");
+      // Component should still render without crash
+      expect(lastFrame()).toBeDefined();
+    });
+  });
 });

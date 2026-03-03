@@ -162,4 +162,11 @@ describe("Help", () => {
     const { lastFrame } = render(<Help onClose={vi.fn()} />);
     expect(lastFrame()).toContain("File list");
   });
+
+  it("shows s Split/unified diff keybinding", () => {
+    const { lastFrame } = render(<Help onClose={vi.fn()} />);
+    const output = lastFrame();
+    expect(output).toContain("s");
+    expect(output).toContain("Split/unified diff");
+  });
 });
