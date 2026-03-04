@@ -18,7 +18,7 @@ import {
   LARGE_DIFF_THRESHOLD,
 } from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
-import { buildSplitRows } from "../utils/splitDiff.js";
+import { buildSplitRows, findSplitRowIndex } from "../utils/splitDiff.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
@@ -621,22 +621,23 @@ export function PullRequestDetail({
     return Math.floor((terminalWidth - 2 - 2 - 1) / 2);
   }, [terminalWidth]);
 
+  const splitCursorRowIndex = useMemo(() => {
+    if (!splitRows) return 0;
+    return findSplitRowIndex(splitRows, cursorIndex);
+  }, [splitRows, cursorIndex]);
+
+  const splitScrollOffset = useMemo(() => {
+    if (!splitRows) return 0;
+    const halfVisible = Math.floor(visibleLineCount / 2);
+    const maxOffset = Math.max(0, splitRows.length - visibleLineCount);
+    const idealOffset = splitCursorRowIndex - halfVisible;
+    return Math.max(0, Math.min(idealOffset, maxOffset));
+  }, [splitRows, splitCursorRowIndex, visibleLineCount]);
+
   const visibleSplitRows = useMemo(() => {
     if (!splitRows) return [];
-    const visibleIndices = new Set(
-      Array.from({ length: visibleLineCount }, (_, i) => scrollOffset + i).filter(
-        (idx) => idx < lines.length,
-      ),
-    );
-    const seen = new Set<number>();
-    return splitRows.filter((row) => {
-      /* v8 ignore next -- buildSplitRows generates unique sourceIndex */
-      if (seen.has(row.sourceIndex)) return false;
-      if (!visibleIndices.has(row.sourceIndex)) return false;
-      seen.add(row.sourceIndex);
-      return true;
-    });
-  }, [splitRows, scrollOffset, visibleLineCount, lines.length]);
+    return splitRows.slice(splitScrollOffset, splitScrollOffset + visibleLineCount);
+  }, [splitRows, splitScrollOffset, visibleLineCount]);
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -724,14 +725,21 @@ export function PullRequestDetail({
       )}
       <Box flexDirection="column">
         {effectiveViewMode === "split" && splitRows
-          ? visibleSplitRows.map((row) => (
-              <SplitDiffLine
-                key={row.sourceIndex}
-                row={row}
-                isCursor={row.sourceIndex === cursorIndex}
-                paneWidth={paneWidth}
-              />
-            ))
+          ? visibleSplitRows.map((row, localIndex) => {
+              const globalIndex = splitScrollOffset + localIndex;
+              const nextSourceIndex = splitRows![globalIndex + 1]?.sourceIndex;
+              const isCursor =
+                cursorIndex >= row.sourceIndex &&
+                (nextSourceIndex === undefined || cursorIndex < nextSourceIndex);
+              return (
+                <SplitDiffLine
+                  key={row.sourceIndex}
+                  row={row}
+                  isCursor={isCursor}
+                  paneWidth={paneWidth}
+                />
+              );
+            })
           : visibleLines.map((line, index) => {
               const globalIndex = scrollOffset + index;
               const isCursor = globalIndex === cursorIndex;

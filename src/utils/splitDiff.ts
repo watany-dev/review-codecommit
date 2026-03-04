@@ -165,3 +165,24 @@ export function buildSplitRows(lines: DisplayLine[]): SplitRow[] {
 
   return rows;
 }
+
+/**
+ * 二分探索で cursorIndex に対応する splitRows 内のインデックスを返す。
+ * sourceIndex が cursorIndex 以下の最大のエントリを探す。
+ */
+export function findSplitRowIndex(splitRows: SplitRow[], cursorIndex: number): number {
+  if (splitRows.length === 0) return 0;
+  let lo = 0;
+  let hi = splitRows.length - 1;
+  let result = 0;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (splitRows[mid]!.sourceIndex <= cursorIndex) {
+      result = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return result;
+}

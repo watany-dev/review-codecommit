@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DisplayLine } from "./formatDiff.js";
-import { buildSplitRows } from "./splitDiff.js";
+import type { SplitRow } from "./splitDiff.js";
+import { buildSplitRows, findSplitRowIndex } from "./splitDiff.js";
 
 describe("buildSplitRows", () => {
   it("converts context line to split row with both sides", () => {
@@ -263,5 +264,42 @@ describe("buildSplitRows", () => {
       expect(rows[0]!.fullWidthLines).toHaveLength(1);
       expect(rows[0]!.fullWidthLines[0]!.type).toBe("fold-indicator");
     }
+  });
+});
+
+describe("findSplitRowIndex", () => {
+  const mkSplit = (sourceIndex: number): SplitRow => ({
+    kind: "split",
+    left: { type: "context", text: "" },
+    right: { type: "context", text: "" },
+    sourceIndex,
+    fullWidthLines: [],
+  });
+
+  it("returns 0 for empty array", () => {
+    expect(findSplitRowIndex([], 5)).toBe(0);
+  });
+
+  it("finds exact sourceIndex match", () => {
+    const rows = [mkSplit(0), mkSplit(2), mkSplit(5)];
+    expect(findSplitRowIndex(rows, 2)).toBe(1);
+  });
+
+  it("finds row for cursor between sourceIndices (paired add line)", () => {
+    // delete at index 1 paired with add at index 2 → sourceIndex=1
+    // context at index 3 → sourceIndex=3
+    const rows = [mkSplit(0), mkSplit(1), mkSplit(3)];
+    // cursor on add line (index 2) maps to split row at index 1
+    expect(findSplitRowIndex(rows, 2)).toBe(1);
+  });
+
+  it("returns last row index when cursor is beyond all sourceIndices", () => {
+    const rows = [mkSplit(0), mkSplit(2)];
+    expect(findSplitRowIndex(rows, 10)).toBe(1);
+  });
+
+  it("returns 0 when cursor is at sourceIndex 0", () => {
+    const rows = [mkSplit(0), mkSplit(3), mkSplit(5)];
+    expect(findSplitRowIndex(rows, 0)).toBe(0);
   });
 });

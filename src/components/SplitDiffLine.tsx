@@ -14,7 +14,8 @@ function renderSplitCell(cell: SplitDiffCell, codeWidth: number): React.ReactNod
     return <Text dimColor>{" ".repeat(codeWidth + 5)}</Text>;
   }
   const lineNum = cell.lineNumber ? String(cell.lineNumber).padStart(4) : "    ";
-  const code = cell.text.length > codeWidth ? cell.text.slice(0, codeWidth) : cell.text;
+  const code =
+    cell.text.length > codeWidth ? cell.text.slice(0, codeWidth) : cell.text.padEnd(codeWidth);
   if (cell.type === "delete") {
     return (
       <Text color="red">
