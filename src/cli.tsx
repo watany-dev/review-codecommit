@@ -93,5 +93,9 @@ const client = createClient({
 });
 
 render(
-  <App client={client} {...(parsed.repoName != null ? { initialRepo: parsed.repoName } : {})} />,
+  <App
+    client={client}
+    {...(parsed.repoName != null ? { initialRepo: parsed.repoName } : {})}
+    {...(parsed.region != null ? { region: parsed.region } : {})}
+  />,
 );

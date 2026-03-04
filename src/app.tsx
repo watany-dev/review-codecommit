@@ -44,7 +44,9 @@ import {
   updateComment,
 } from "./services/codecommit.js";
 import { blobKey, fetchBlobTexts, streamBlobTexts } from "./utils/blobTexts.js";
+import { buildConsoleUrl } from "./utils/consoleUrl.js";
 import { formatErrorMessage } from "./utils/formatError.js";
+import { openBrowser } from "./utils/openBrowser.js";
 
 type Screen = "repos" | "prs" | "detail" | "activity";
 
@@ -69,9 +71,10 @@ const initialPagination: PaginationState = {
 interface AppProps {
   client: CodeCommitClient;
   initialRepo?: string;
+  region?: string;
 }
 
-export function App({ client, initialRepo }: AppProps) {
+export function App({ client, initialRepo, region }: AppProps) {
   const [screen, setScreen] = useState<Screen>(initialRepo ? "prs" : "repos");
   const [showHelp, setShowHelp] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -518,6 +521,13 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
+  async function handleOpenConsole() {
+    if (!prDetail?.pullRequestId) return;
+    const resolvedRegion = region ?? (await client.config.region());
+    const url = buildConsoleUrl(resolvedRegion, selectedRepo, prDetail.pullRequestId);
+    openBrowser(url);
+  }
+
   function handleShowActivity() {
     if (!prDetail?.pullRequestId) return;
     setScreen("activity");
@@ -617,6 +627,7 @@ export function App({ client, initialRepo }: AppProps) {
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
           onShowActivity={handleShowActivity}
+          onOpenConsole={handleOpenConsole}
           comment={{
             onPost: postCommentAction.execute,
             isProcessing: postCommentAction.isProcessing,

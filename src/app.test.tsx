@@ -2,6 +2,10 @@ import { render } from "ink-testing-library";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("./utils/openBrowser.js", () => ({
+  openBrowser: vi.fn(),
+}));
+
 vi.mock("./services/codecommit.js", () => ({
   listRepositories: vi.fn(),
   listPullRequests: vi.fn(),
@@ -48,6 +52,7 @@ import {
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
+import { openBrowser } from "./utils/openBrowser.js";
 
 const mockClient = {} as any;
 
@@ -4850,6 +4855,53 @@ describe("App", () => {
         mockClient,
         expect.objectContaining({ pullRequestId: "42", nextToken: "token123" }),
       );
+    });
+
+    it("pressing O opens console URL in browser with explicit region", async () => {
+      setupPRListAndDetail();
+
+      const { lastFrame, stdin } = render(
+        <App client={mockClient} initialRepo="my-service" region="ap-northeast-1" />,
+      );
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("O");
+      await vi.waitFor(() => {
+        expect(vi.mocked(openBrowser)).toHaveBeenCalledWith(
+          "https://ap-northeast-1.console.aws.amazon.com/codesuite/codecommit/repositories/my-service/pull-requests/42/details",
+        );
+      });
+    });
+
+    it("pressing O resolves region from client config when not provided", async () => {
+      setupPRListAndDetail();
+      const clientWithRegion = { config: { region: () => Promise.resolve("us-west-2") } } as any;
+
+      const { lastFrame, stdin } = render(
+        <App client={clientWithRegion} initialRepo="my-service" />,
+      );
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("O");
+      await vi.waitFor(() => {
+        expect(vi.mocked(openBrowser)).toHaveBeenCalledWith(
+          "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/my-service/pull-requests/42/details",
+        );
+      });
     });
 
     it("shows PR not found error for PullRequestDoesNotExistException", async () => {

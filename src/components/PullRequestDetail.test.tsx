@@ -527,6 +527,34 @@ describe("PullRequestDetail", () => {
     expect(onShowActivity).toHaveBeenCalled();
   });
 
+  it("calls onOpenConsole on O key", () => {
+    const onOpenConsole = vi.fn();
+    const { stdin } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={commentThreads as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        onOpenConsole={onOpenConsole}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    stdin.write("O");
+    expect(onOpenConsole).toHaveBeenCalled();
+  });
+
   it("shows A activity in footer", () => {
     const { lastFrame } = render(
       <PullRequestDetail

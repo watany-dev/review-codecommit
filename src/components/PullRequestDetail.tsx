@@ -121,6 +121,7 @@ interface Props {
   onBack: () => void;
   onHelp: () => void;
   onShowActivity: () => void;
+  onOpenConsole?: () => void;
   comment: CommentAction;
   inlineComment: InlineCommentAction;
   reply: ReplyAction;
@@ -143,6 +144,7 @@ export function PullRequestDetail({
   onBack,
   onHelp,
   onShowActivity,
+  onOpenConsole,
   comment: {
     onPost: onPostComment,
     isProcessing: isPostingComment,
@@ -573,6 +575,10 @@ export function PullRequestDetail({
     }
     if (input === "A") {
       onShowActivity();
+      return;
+    }
+    if (input === "O") {
+      onOpenConsole?.();
       return;
     }
     if (input === "e") {
