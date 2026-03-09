@@ -1773,6 +1773,35 @@ describe("PullRequestDetail", () => {
     expect(lastFrame()).toBe(before);
   });
 
+  it("t key does nothing on small diff footer", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[]}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    stdin.write("G");
+    const before = lastFrame();
+    stdin.write("t");
+    expect(lastFrame()).toBe(before);
+  });
+
   it("t key does nothing on non-diff line", () => {
     const { stdin, lastFrame } = render(
       <PullRequestDetail
@@ -5377,6 +5406,40 @@ describe("PullRequestDetail", () => {
       stdin.write("C"); // try to inline comment
       expect(lastFrame()).not.toContain("Inline comment on");
     });
+
+    it("f and g keys are disabled in commit view", async () => {
+      const { lastFrame, stdin } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={{ ...defaultCommitProps, commits: sampleCommits, commitsAvailable: true }}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      stdin.write("\t"); // switch to commit view
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("[Commit 1/3]");
+      });
+      const before = lastFrame();
+      stdin.write("f");
+      stdin.write("g");
+      expect(lastFrame()).toBe(before);
+      expect(lastFrame()).not.toContain("Files");
+      expect(lastFrame()).not.toContain("React to comment:");
+    });
   });
 
   describe("commit view - loading indicator", () => {
@@ -7542,6 +7605,50 @@ describe("PullRequestDetail", () => {
       });
     });
 
+    it("moves file list selection back up with k and closes with q", async () => {
+      const { stdin, lastFrame } = render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={twoFileDifferences as any}
+          commentThreads={[]}
+          diffTexts={twoFileDiffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+
+      stdin.write("f");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Files");
+      });
+
+      stdin.write("j");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/beta\.ts/);
+      });
+
+      stdin.write("k");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/> .*src\/alpha\.ts/);
+      });
+
+      stdin.write("q");
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain("Files (2)");
+      });
+    });
+
     it("closes file list with Esc", async () => {
       const { stdin, lastFrame } = render(
         <PullRequestDetail
@@ -7752,5 +7859,99 @@ describe("PullRequestDetail", () => {
       expect(output).toContain("bar");
       expect(output).toContain("baz");
     });
+  });
+
+  it("ignores navigation keys when there are no display lines", () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={[]}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    const before = lastFrame();
+    stdin.write("G");
+    stdin.write("n");
+    stdin.write("N");
+    stdin.write("g");
+    expect(lastFrame()).toBe(before);
+  });
+
+  it("does not open ReactionPicker on a folded thread indicator", async () => {
+    const foldedThreads = [
+      {
+        location: null,
+        comments: [
+          {
+            commentId: "comment-root",
+            authorArn: "arn:aws:iam::123456789012:user/taro",
+            content: "Root comment",
+          },
+          {
+            commentId: "comment-reply-1",
+            inReplyTo: "comment-root",
+            authorArn: "arn:aws:iam::123456789012:user/hanako",
+            content: "Reply 1",
+          },
+          {
+            commentId: "comment-reply-2",
+            inReplyTo: "comment-root",
+            authorArn: "arn:aws:iam::123456789012:user/jiro",
+            content: "Reply 2",
+          },
+          {
+            commentId: "comment-reply-3",
+            inReplyTo: "comment-root",
+            authorArn: "arn:aws:iam::123456789012:user/saburo",
+            content: "Reply 3",
+          },
+        ],
+      },
+    ];
+
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={foldedThreads as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    stdin.write("G");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/>.*\[\+3 replies\]/);
+    });
+
+    stdin.write("g");
+    expect(lastFrame()).not.toContain("React to comment:");
   });
 });
