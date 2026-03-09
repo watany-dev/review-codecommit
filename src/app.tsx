@@ -50,21 +50,51 @@ type Screen = "repos" | "prs" | "detail" | "activity";
 
 interface PaginationState {
   currentPage: number;
-  currentToken: string | undefined;
-  nextToken: string | undefined;
-  previousTokens: (string | undefined)[];
+  currentCursor: PaginationCursor;
+  nextCursor: PaginationCursor;
+  previousCursors: PaginationCursor[];
   hasNextPage: boolean;
   hasPreviousPage: boolean;
 }
 
-const initialPagination: PaginationState = {
-  currentPage: 1,
-  currentToken: undefined,
-  nextToken: undefined,
-  previousTokens: [],
-  hasNextPage: false,
-  hasPreviousPage: false,
-};
+interface PaginationCursor {
+  apiToken: string | undefined;
+  pending: PullRequestSummary[];
+}
+
+const PAGE_SIZE = 25;
+
+function createPaginationCursor(
+  apiToken: string | undefined = undefined,
+  pending: PullRequestSummary[] = [],
+): PaginationCursor {
+  return { apiToken, pending };
+}
+
+function createInitialPagination(): PaginationState {
+  return {
+    currentPage: 1,
+    currentCursor: createPaginationCursor(),
+    nextCursor: createPaginationCursor(),
+    previousCursors: [],
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
+}
+
+function filterPullRequestsByStatus(
+  pullRequests: PullRequestSummary[],
+  status: PullRequestDisplayStatus,
+): PullRequestSummary[] {
+  switch (status) {
+    case "OPEN":
+      return pullRequests;
+    case "CLOSED":
+      return pullRequests.filter((pr) => pr.status === "CLOSED");
+    case "MERGED":
+      return pullRequests.filter((pr) => pr.status === "MERGED");
+  }
+}
 
 interface AppProps {
   client: CodeCommitClient;
@@ -115,7 +145,8 @@ export function App({ client, initialRepo }: AppProps) {
   >(new Map());
   const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
 
-  const diffLoadRef = useRef(0);
+  const detailLoadRef = useRef(0);
+  const commitLoadRef = useRef(0);
 
   const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
 
@@ -229,16 +260,33 @@ export function App({ client, initialRepo }: AppProps) {
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<PullRequestDisplayStatus>("OPEN");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState<PaginationState>(initialPagination);
+  const [pagination, setPagination] = useState<PaginationState>(createInitialPagination);
 
-  async function reloadReactions(threads: CommentThread[]) {
+  function isDetailLoadStale(loadId: number): boolean {
+    return detailLoadRef.current !== loadId;
+  }
+
+  function isCommitLoadStale(loadId: number): boolean {
+    return commitLoadRef.current !== loadId;
+  }
+
+  function beginDetailLoad(): number {
+    const loadId = detailLoadRef.current + 1;
+    detailLoadRef.current = loadId;
+    commitLoadRef.current += 1;
+    return loadId;
+  }
+
+  async function reloadReactions(threads: CommentThread[], loadId = detailLoadRef.current) {
     const allCommentIds = threads.flatMap((t) =>
       t.comments.map((c) => c.commentId).filter((id): id is string => !!id),
     );
     if (allCommentIds.length > 0) {
       const reactions = await getReactionsForComments(client, allCommentIds);
+      if (isDetailLoadStale(loadId)) return;
       setReactionsByComment(reactions);
     } else {
+      if (isDetailLoadStale(loadId)) return;
       setReactionsByComment(new Map());
     }
   }
@@ -282,35 +330,64 @@ export function App({ client, initialRepo }: AppProps) {
     });
   }
 
+  async function fetchPullRequestPage(
+    repoName: string,
+    status: PullRequestDisplayStatus,
+    cursor: PaginationCursor,
+  ): Promise<{
+    pullRequests: PullRequestSummary[];
+    nextCursor: PaginationCursor;
+    hasNextPage: boolean;
+  }> {
+    if (status === "OPEN") {
+      const result = await listPullRequests(client, repoName, cursor.apiToken, "OPEN");
+      return {
+        pullRequests: result.pullRequests,
+        nextCursor: createPaginationCursor(result.nextToken),
+        hasNextPage: result.nextToken != null,
+      };
+    }
+
+    const filteredPullRequests = [...cursor.pending];
+    let nextToken = cursor.apiToken;
+    let canFetch = cursor.apiToken !== undefined || cursor.pending.length === 0;
+
+    while (filteredPullRequests.length < PAGE_SIZE && canFetch) {
+      const result = await listPullRequests(client, repoName, nextToken, "CLOSED");
+      filteredPullRequests.push(...filterPullRequestsByStatus(result.pullRequests, status));
+      nextToken = result.nextToken;
+      canFetch = nextToken !== undefined;
+    }
+
+    const pullRequests = filteredPullRequests.slice(0, PAGE_SIZE);
+    const remaining = filteredPullRequests.slice(PAGE_SIZE);
+
+    return {
+      pullRequests,
+      nextCursor: createPaginationCursor(nextToken, remaining),
+      hasNextPage: remaining.length > 0 || nextToken !== undefined,
+    };
+  }
+
   async function loadPullRequests(
     repoName: string,
-    status?: PullRequestDisplayStatus,
-    pageToken?: string,
+    status: PullRequestDisplayStatus = "OPEN",
+    cursor: PaginationCursor = createPaginationCursor(),
   ) {
-    const apiStatus = status === "MERGED" || status === "CLOSED" ? "CLOSED" : "OPEN";
-
     await withLoadingState(
       async () => {
-        const result = await listPullRequests(client, repoName, pageToken, apiStatus);
-
-        let filtered = result.pullRequests;
-        if (status === "CLOSED") {
-          filtered = result.pullRequests.filter((pr) => pr.status === "CLOSED");
-        } else if (status === "MERGED") {
-          filtered = result.pullRequests.filter((pr) => pr.status === "MERGED");
-        }
-
-        setPullRequests(filtered);
+        const result = await fetchPullRequestPage(repoName, status, cursor);
+        setPullRequests(result.pullRequests);
         setPagination((prev) => ({
           ...prev,
-          nextToken: result.nextToken,
-          hasNextPage: !!result.nextToken,
+          nextCursor: result.nextCursor,
+          hasNextPage: result.hasNextPage,
         }));
       },
       (err) => {
         if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
           setError("Page token expired. Returning to first page.");
-          setPagination(initialPagination);
+          setPagination(createInitialPagination());
         } else {
           setError(formatErrorMessage(err));
         }
@@ -319,15 +396,19 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function loadPullRequestDetail(pullRequestId: string) {
-    const loadId = diffLoadRef.current + 1;
-    diffLoadRef.current = loadId;
+    const loadId = beginDetailLoad();
 
     await withLoadingState(async () => {
       const detail = await getPullRequestDetail(client, pullRequestId, selectedRepo);
+      if (isDetailLoadStale(loadId)) return;
+
       setPrDetail(detail.pullRequest);
       setPrDifferences(detail.differences);
       setCommentThreads(detail.commentThreads);
       setDiffTexts(new Map());
+      setApprovals([]);
+      setApprovalEvaluation(null);
+      setReactionsByComment(new Map());
 
       const status = new Map<string, "loading" | "loaded" | "error">();
       for (const diff of detail.differences) {
@@ -340,7 +421,7 @@ export function App({ client, initialRepo }: AppProps) {
 
       // Background: blob texts
       void streamBlobTexts(client, selectedRepo, detail.differences, {
-        isStale: () => diffLoadRef.current !== loadId,
+        isStale: () => isDetailLoadStale(loadId),
         onLoaded: (key, texts) => {
           setDiffTexts((prev) => new Map(prev).set(key, texts));
           setDiffTextStatus((prev) => new Map(prev).set(key, "loaded"));
@@ -357,13 +438,14 @@ export function App({ client, initialRepo }: AppProps) {
           getApprovalStates(client, { pullRequestId, revisionId }),
           evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
         ]).then(([states, evaluation]) => {
+          if (isDetailLoadStale(loadId)) return;
           setApprovals(states);
           setApprovalEvaluation(evaluation);
         });
       }
 
       // Background: reactions
-      void reloadReactions(detail.commentThreads);
+      void reloadReactions(detail.commentThreads, loadId);
     });
   }
 
@@ -372,8 +454,8 @@ export function App({ client, initialRepo }: AppProps) {
     setScreen("prs");
     setStatusFilter("OPEN");
     setSearchQuery("");
-    setPagination(initialPagination);
-    loadPullRequests(repoName, "OPEN");
+    setPagination(createInitialPagination());
+    void loadPullRequests(repoName, "OPEN", createPaginationCursor());
   }
 
   function handleSelectPR(pullRequestId: string) {
@@ -384,44 +466,44 @@ export function App({ client, initialRepo }: AppProps) {
   function handleChangeStatusFilter(filter: PullRequestDisplayStatus) {
     setStatusFilter(filter);
     setSearchQuery("");
-    setPagination(initialPagination);
-    loadPullRequests(selectedRepo, filter);
+    setPagination(createInitialPagination());
+    void loadPullRequests(selectedRepo, filter, createPaginationCursor());
   }
 
   function handleNextPage() {
-    if (!pagination.nextToken) return;
-
-    const nextToken = pagination.nextToken;
+    if (!pagination.hasNextPage) return;
+    const nextCursor = pagination.nextCursor;
 
     setPagination((prev) => ({
       ...prev,
-      previousTokens: [...prev.previousTokens, prev.currentToken],
-      currentToken: nextToken,
+      previousCursors: [...prev.previousCursors, prev.currentCursor],
+      currentCursor: nextCursor,
       currentPage: prev.currentPage + 1,
       hasPreviousPage: true,
     }));
 
-    loadPullRequests(selectedRepo, statusFilter, nextToken);
+    void loadPullRequests(selectedRepo, statusFilter, nextCursor);
   }
 
   function handlePreviousPage() {
-    if (pagination.previousTokens.length === 0) return;
+    if (pagination.previousCursors.length === 0) return;
 
-    const newPreviousTokens = [...pagination.previousTokens];
-    const prevToken = newPreviousTokens.pop();
+    const newPreviousCursors = [...pagination.previousCursors];
+    const prevCursor = newPreviousCursors.pop();
+    if (!prevCursor) return;
 
     setPagination((prev) => ({
       ...prev,
-      previousTokens: newPreviousTokens,
-      currentToken: prevToken,
+      previousCursors: newPreviousCursors,
+      currentCursor: prevCursor,
       currentPage: prev.currentPage - 1,
-      hasPreviousPage: newPreviousTokens.length > 0,
+      hasPreviousPage: newPreviousCursors.length > 0,
     }));
 
-    loadPullRequests(selectedRepo, statusFilter, prevToken);
+    void loadPullRequests(selectedRepo, statusFilter, prevCursor);
   }
 
-  async function reloadComments(pullRequestId: string) {
+  async function reloadComments(pullRequestId: string, loadId = detailLoadRef.current) {
     // Optimized: fetch only comments instead of full PR detail
     const target = prDetail?.pullRequestTargets?.[0];
     const threads = await getComments(client, pullRequestId, {
@@ -433,16 +515,22 @@ export function App({ client, initialRepo }: AppProps) {
           }
         : {}),
     });
+    if (isDetailLoadStale(loadId)) return;
     setCommentThreads(threads);
-    await reloadReactions(threads);
+    await reloadReactions(threads, loadId);
   }
 
-  async function reloadApprovals(pullRequestId: string, revisionId: string) {
+  async function reloadApprovals(
+    pullRequestId: string,
+    revisionId: string,
+    loadId = detailLoadRef.current,
+  ) {
     const [approvalStates, evaluation] = await Promise.all([
       getApprovalStates(client, { pullRequestId, revisionId }),
       /* v8 ignore next -- defensive: evaluation failure should not block approval */
       evaluateApprovalRules(client, { pullRequestId, revisionId }).catch(() => null),
     ]);
+    if (isDetailLoadStale(loadId)) return;
     setApprovals(approvalStates);
     setApprovalEvaluation(evaluation);
   }
@@ -461,7 +549,12 @@ export function App({ client, initialRepo }: AppProps) {
   }
 
   async function handleLoadCommitDiff(commitIndex: number) {
+    const loadId = commitLoadRef.current + 1;
+    commitLoadRef.current = loadId;
+
     setIsLoadingCommitDiff(true);
+    setCommitDifferences([]);
+    setCommitDiffTexts(new Map());
     try {
       let currentCommits = commits;
       if (currentCommits.length === 0) {
@@ -471,6 +564,7 @@ export function App({ client, initialRepo }: AppProps) {
         if (!sourceCommit || !mergeBase) return;
         /* v8 ignore stop */
         currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        if (isCommitLoadStale(loadId)) return;
         setCommits(currentCommits);
       }
 
@@ -479,12 +573,16 @@ export function App({ client, initialRepo }: AppProps) {
 
       const parentId = commit.parentIds[0]!;
       const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
+      if (isCommitLoadStale(loadId)) return;
       setCommitDifferences(diffs);
 
       const texts = await fetchBlobTexts(client, selectedRepo, diffs);
+      if (isCommitLoadStale(loadId)) return;
       setCommitDiffTexts(texts);
     } finally {
-      setIsLoadingCommitDiff(false);
+      if (!isCommitLoadStale(loadId)) {
+        setIsLoadingCommitDiff(false);
+      }
     }
   }
 
@@ -541,7 +639,7 @@ export function App({ client, initialRepo }: AppProps) {
       }
       setStatusFilter("OPEN");
       setSearchQuery("");
-      setPagination(initialPagination);
+      setPagination(createInitialPagination());
       setScreen("repos");
       setDiffTexts(new Map());
       setDiffTextStatus(new Map());

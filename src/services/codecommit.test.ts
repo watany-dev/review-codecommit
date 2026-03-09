@@ -61,6 +61,27 @@ describe("listRepositories", () => {
     const repos = await listRepositories(mockClient);
     expect(repos).toHaveLength(0);
   });
+
+  it("fetches all repository pages when nextToken is present", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        repositories: [{ repositoryName: "repo-1", repositoryId: "1" }],
+        nextToken: "page-2",
+      })
+      .mockResolvedValueOnce({
+        repositories: [{ repositoryName: "repo-2", repositoryId: "2" }],
+      });
+
+    const repos = await listRepositories(mockClient);
+
+    expect(repos).toEqual([
+      { repositoryName: "repo-1", repositoryId: "1" },
+      { repositoryName: "repo-2", repositoryId: "2" },
+    ]);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(mockSend.mock.calls[0][0].input.nextToken).toBeUndefined();
+    expect(mockSend.mock.calls[1][0].input.nextToken).toBe("page-2");
+  });
 });
 
 describe("listPullRequests", () => {
