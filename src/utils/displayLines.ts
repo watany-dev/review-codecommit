@@ -17,11 +17,6 @@ export const COMMENT_LINE_TYPES = new Set<DisplayLine["type"]>([
 
 export const FOLD_THRESHOLD = 4;
 
-export function getThreadKey(thread: CommentThread, index: number): string {
-  const rootComment = thread.comments.find((comment) => !comment.inReplyTo) ?? thread.comments[0];
-  return rootComment?.commentId ?? `thread-${index}`;
-}
-
 function formatReactionBadge(reactions: ReactionSummary[] | undefined): string {
   if (!reactions || reactions.length === 0) return "";
   return reactions
@@ -34,8 +29,7 @@ function appendThreadLines(
   lines: DisplayLine[],
   thread: CommentThread,
   threadIndex: number,
-  collapsedThreads: Map<string, boolean>,
-  threadKey: string,
+  collapsedThreads: Set<number>,
   mode: "inline" | "general",
   reactionsByComment: ReactionsByComment,
 ): void {
@@ -44,8 +38,8 @@ function appendThreadLines(
 
   const rootComment = comments.find((c) => !c.inReplyTo) ?? comments[0]!;
   const replies = comments.filter((c) => c !== rootComment);
+  const isCollapsed = collapsedThreads.has(threadIndex);
   const shouldFold = comments.length >= FOLD_THRESHOLD;
-  const isCollapsed = collapsedThreads.get(threadKey) ?? shouldFold;
 
   const rootAuthor = extractAuthorName(rootComment.authorArn ?? "unknown");
   const rootContent = rootComment.content ?? "";
@@ -162,7 +156,7 @@ export function buildDisplayLines(
   diffTextStatus: Map<string, "loading" | "loaded" | "error">,
   diffLineLimits: Map<string, number>,
   commentThreads: CommentThread[],
-  collapsedThreads: Map<string, boolean>,
+  collapsedThreads: Set<number>,
   reactionsByComment: ReactionsByComment,
   diffCache?: Map<string, DisplayLine[]>,
 ): DisplayLine[] {
@@ -220,7 +214,6 @@ export function buildDisplayLines(
             thread,
             threadIdx,
             collapsedThreads,
-            getThreadKey(thread, threadIdx),
             "inline",
             reactionsByComment,
           );
@@ -272,15 +265,7 @@ export function buildDisplayLines(
     lines.push({ type: "separator", text: "─".repeat(50) });
     lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
     for (const { thread, index: threadIdx } of generalThreads) {
-      appendThreadLines(
-        lines,
-        thread,
-        threadIdx,
-        collapsedThreads,
-        getThreadKey(thread, threadIdx),
-        "general",
-        reactionsByComment,
-      );
+      appendThreadLines(lines, thread, threadIdx, collapsedThreads, "general", reactionsByComment);
     }
   }
 

@@ -15,7 +15,6 @@ import {
   DIFF_CHUNK_SIZE,
   type DisplayLine,
   FOLD_THRESHOLD,
-  getThreadKey,
   LARGE_DIFF_THRESHOLD,
 } from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
@@ -209,19 +208,6 @@ export function PullRequestDetail({
     onClearError: onClearReactionError,
   },
 }: Props) {
-  function buildCollapsedThreadState(
-    threads: CommentThread[],
-    previous?: Map<string, boolean>,
-  ): Map<string, boolean> {
-    const next = new Map<string, boolean>();
-    for (let i = 0; i < threads.length; i++) {
-      const thread = threads[i]!;
-      const key = getThreadKey(thread, i);
-      next.set(key, previous?.get(key) ?? thread.comments.length >= FOLD_THRESHOLD);
-    }
-    return next;
-  }
-
   const [cursorIndex, setCursorIndex] = useState(0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [inlineCommentLocation, setInlineCommentLocation] = useState<{
@@ -241,9 +227,15 @@ export function PullRequestDetail({
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [viewIndex, setViewIndex] = useState(-1); // -1 = All changes
-  const [collapsedThreads, setCollapsedThreads] = useState<Map<string, boolean>>(() =>
-    buildCollapsedThreadState(commentThreads),
-  );
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(() => {
+    const collapsed = new Set<number>();
+    for (let i = 0; i < commentThreads.length; i++) {
+      if ((commentThreads[i]?.comments.length ?? 0) >= FOLD_THRESHOLD) {
+        collapsed.add(i);
+      }
+    }
+    return collapsed;
+  });
   const [editTarget, setEditTarget] = useState<{
     commentId: string;
     content: string;
@@ -261,10 +253,6 @@ export function PullRequestDetail({
     setDiffLineLimits(new Map());
     diffCacheRef.current = new Map();
   }, [differences]);
-
-  useEffect(() => {
-    setCollapsedThreads((prev) => buildCollapsedThreadState(commentThreads, prev));
-  }, [commentThreads]);
 
   useAsyncDismiss(isPostingComment, commentError, () => setIsCommenting(false));
   useAsyncDismiss(isPostingInlineComment, inlineCommentError, () => setInlineCommentLocation(null));
@@ -311,7 +299,7 @@ export function PullRequestDetail({
       new Map(),
       new Map(),
       [],
-      new Map(),
+      new Set(),
       new Map(),
     );
   }, [
@@ -534,13 +522,13 @@ export function PullRequestDetail({
       const currentLine = lines[cursorIndex];
       if (!currentLine) return;
       if (currentLine.threadIndex === undefined) return;
-      const thread = commentThreads[currentLine.threadIndex];
-      if (!thread) return;
-      const threadKey = getThreadKey(thread, currentLine.threadIndex);
-      const defaultCollapsed = thread.comments.length >= FOLD_THRESHOLD;
       setCollapsedThreads((prev) => {
-        const next = new Map(prev);
-        next.set(threadKey, !(prev.get(threadKey) ?? defaultCollapsed));
+        const next = new Set(prev);
+        if (next.has(currentLine.threadIndex!)) {
+          next.delete(currentLine.threadIndex!);
+        } else {
+          next.add(currentLine.threadIndex!);
+        }
         return next;
       });
       return;

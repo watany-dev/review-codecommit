@@ -76,21 +76,12 @@ export function createClient(config: CodeCommitConfig): CodeCommitClient {
 }
 
 export async function listRepositories(client: CodeCommitClient): Promise<RepositoryNameIdPair[]> {
-  const repositories: RepositoryNameIdPair[] = [];
-  let nextToken: string | undefined;
-
-  do {
-    const command = new ListRepositoriesCommand({
-      sortBy: "lastModifiedDate",
-      order: "descending",
-      nextToken,
-    });
-    const response = await client.send(command);
-    repositories.push(...(response.repositories ?? []));
-    nextToken = response.nextToken;
-  } while (nextToken);
-
-  return repositories;
+  const command = new ListRepositoriesCommand({
+    sortBy: "lastModifiedDate",
+    order: "descending",
+  });
+  const response = await client.send(command);
+  return response.repositories ?? [];
 }
 
 export async function listPullRequests(
