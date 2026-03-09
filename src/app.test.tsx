@@ -4440,6 +4440,90 @@ describe("App", () => {
     });
   });
 
+  it("fills MERGED results from later CLOSED pages", async () => {
+    const openPage = {
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    };
+    const closedPage = {
+      pullRequests: [
+        {
+          pullRequestId: "35",
+          title: "fix: typos",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-09T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+      nextToken: "page-2",
+    };
+    const mergedPage = {
+      pullRequests: [
+        {
+          pullRequestId: "40",
+          title: "feat: auth",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-11T10:00:00Z"),
+          status: "MERGED" as const,
+        },
+      ],
+    };
+    let phase: "initial" | "closed-filter" | "merged-filter" = "initial";
+
+    vi.mocked(listPullRequests).mockImplementation(async (_client, _repo, token, apiStatus) => {
+      if (apiStatus === "OPEN") {
+        return openPage;
+      }
+      if (phase === "closed-filter") {
+        phase = "merged-filter";
+        return closedPage;
+      }
+      if (phase === "merged-filter" && token === undefined) {
+        return closedPage;
+      }
+      if (phase === "merged-filter" && token === "page-2") {
+        return mergedPage;
+      }
+      return { pullRequests: [] };
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+
+    phase = "closed-filter";
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Closed]");
+    });
+
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Merged]");
+      expect(lastFrame()).toContain("feat: auth");
+      expect(lastFrame()).not.toContain("fix: typos");
+    });
+    expect(
+      vi
+        .mocked(listPullRequests)
+        .mock.calls.some(
+          ([calledClient, repoName, pageToken, apiStatus]) =>
+            calledClient === mockClient &&
+            repoName === "my-service" &&
+            pageToken === "page-2" &&
+            apiStatus === "CLOSED",
+        ),
+    ).toBe(true);
+  });
+
   // v0.8: Pagination integration tests
   it("navigates to next page with n key", async () => {
     vi.mocked(listPullRequests).mockResolvedValueOnce({

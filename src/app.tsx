@@ -50,21 +50,37 @@ type Screen = "repos" | "prs" | "detail" | "activity";
 
 interface PaginationState {
   currentPage: number;
-  currentToken: string | undefined;
-  nextToken: string | undefined;
-  previousTokens: (string | undefined)[];
+  currentCursor: PaginationCursor;
+  nextCursor: PaginationCursor;
+  previousCursors: PaginationCursor[];
   hasNextPage: boolean;
   hasPreviousPage: boolean;
 }
 
-const initialPagination: PaginationState = {
-  currentPage: 1,
-  currentToken: undefined,
-  nextToken: undefined,
-  previousTokens: [],
-  hasNextPage: false,
-  hasPreviousPage: false,
-};
+interface PaginationCursor {
+  apiToken: string | undefined;
+  pending: PullRequestSummary[];
+}
+
+const PAGE_SIZE = 25;
+
+function createPaginationCursor(
+  apiToken: string | undefined = undefined,
+  pending: PullRequestSummary[] = [],
+): PaginationCursor {
+  return { apiToken, pending };
+}
+
+function createInitialPagination(): PaginationState {
+  return {
+    currentPage: 1,
+    currentCursor: createPaginationCursor(),
+    nextCursor: createPaginationCursor(),
+    previousCursors: [],
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
+}
 
 interface AppProps {
   client: CodeCommitClient;
@@ -230,7 +246,7 @@ export function App({ client, initialRepo }: AppProps) {
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<PullRequestDisplayStatus>("OPEN");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState<PaginationState>(initialPagination);
+  const [pagination, setPagination] = useState<PaginationState>(createInitialPagination);
 
   function isDetailLoadStale(loadId: number): boolean {
     return detailLoadRef.current !== loadId;
@@ -300,35 +316,78 @@ export function App({ client, initialRepo }: AppProps) {
     });
   }
 
+  function filterPullRequestsByStatus(
+    pullRequests: PullRequestSummary[],
+    status: PullRequestDisplayStatus,
+  ): PullRequestSummary[] {
+    switch (status) {
+      case "OPEN":
+        return pullRequests;
+      case "CLOSED":
+        return pullRequests.filter((pr) => pr.status === "CLOSED");
+      case "MERGED":
+        return pullRequests.filter((pr) => pr.status === "MERGED");
+    }
+  }
+
+  async function fetchPullRequestPage(
+    repoName: string,
+    status: PullRequestDisplayStatus,
+    cursor: PaginationCursor,
+  ): Promise<{
+    pullRequests: PullRequestSummary[];
+    nextCursor: PaginationCursor;
+    hasNextPage: boolean;
+  }> {
+    if (status === "OPEN") {
+      const result = await listPullRequests(client, repoName, cursor.apiToken, "OPEN");
+      return {
+        pullRequests: result.pullRequests,
+        nextCursor: createPaginationCursor(result.nextToken),
+        hasNextPage: result.nextToken != null,
+      };
+    }
+
+    const filteredPullRequests = [...cursor.pending];
+    let nextToken = cursor.apiToken;
+    let canFetch = cursor.apiToken !== undefined || cursor.pending.length === 0;
+
+    while (filteredPullRequests.length < PAGE_SIZE && canFetch) {
+      const result = await listPullRequests(client, repoName, nextToken, "CLOSED");
+      filteredPullRequests.push(...filterPullRequestsByStatus(result.pullRequests, status));
+      nextToken = result.nextToken;
+      canFetch = nextToken !== undefined;
+    }
+
+    const pullRequests = filteredPullRequests.slice(0, PAGE_SIZE);
+    const remaining = filteredPullRequests.slice(PAGE_SIZE);
+
+    return {
+      pullRequests,
+      nextCursor: createPaginationCursor(nextToken, remaining),
+      hasNextPage: remaining.length > 0 || nextToken !== undefined,
+    };
+  }
+
   async function loadPullRequests(
     repoName: string,
-    status?: PullRequestDisplayStatus,
-    pageToken?: string,
+    status: PullRequestDisplayStatus = "OPEN",
+    cursor: PaginationCursor = createPaginationCursor(),
   ) {
-    const apiStatus = status === "MERGED" || status === "CLOSED" ? "CLOSED" : "OPEN";
-
     await withLoadingState(
       async () => {
-        const result = await listPullRequests(client, repoName, pageToken, apiStatus);
-
-        let filtered = result.pullRequests;
-        if (status === "CLOSED") {
-          filtered = result.pullRequests.filter((pr) => pr.status === "CLOSED");
-        } else if (status === "MERGED") {
-          filtered = result.pullRequests.filter((pr) => pr.status === "MERGED");
-        }
-
-        setPullRequests(filtered);
+        const result = await fetchPullRequestPage(repoName, status, cursor);
+        setPullRequests(result.pullRequests);
         setPagination((prev) => ({
           ...prev,
-          nextToken: result.nextToken,
-          hasNextPage: !!result.nextToken,
+          nextCursor: result.nextCursor,
+          hasNextPage: result.hasNextPage,
         }));
       },
       (err) => {
         if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
           setError("Page token expired. Returning to first page.");
-          setPagination(initialPagination);
+          setPagination(createInitialPagination());
         } else {
           setError(formatErrorMessage(err));
         }
@@ -395,8 +454,8 @@ export function App({ client, initialRepo }: AppProps) {
     setScreen("prs");
     setStatusFilter("OPEN");
     setSearchQuery("");
-    setPagination(initialPagination);
-    loadPullRequests(repoName, "OPEN");
+    setPagination(createInitialPagination());
+    void loadPullRequests(repoName, "OPEN", createPaginationCursor());
   }
 
   function handleSelectPR(pullRequestId: string) {
@@ -407,41 +466,41 @@ export function App({ client, initialRepo }: AppProps) {
   function handleChangeStatusFilter(filter: PullRequestDisplayStatus) {
     setStatusFilter(filter);
     setSearchQuery("");
-    setPagination(initialPagination);
-    loadPullRequests(selectedRepo, filter);
+    setPagination(createInitialPagination());
+    void loadPullRequests(selectedRepo, filter, createPaginationCursor());
   }
 
   function handleNextPage() {
-    if (!pagination.nextToken) return;
-
-    const nextToken = pagination.nextToken;
+    if (!pagination.hasNextPage) return;
+    const nextCursor = pagination.nextCursor;
 
     setPagination((prev) => ({
       ...prev,
-      previousTokens: [...prev.previousTokens, prev.currentToken],
-      currentToken: nextToken,
+      previousCursors: [...prev.previousCursors, prev.currentCursor],
+      currentCursor: nextCursor,
       currentPage: prev.currentPage + 1,
       hasPreviousPage: true,
     }));
 
-    loadPullRequests(selectedRepo, statusFilter, nextToken);
+    void loadPullRequests(selectedRepo, statusFilter, nextCursor);
   }
 
   function handlePreviousPage() {
-    if (pagination.previousTokens.length === 0) return;
+    if (pagination.previousCursors.length === 0) return;
 
-    const newPreviousTokens = [...pagination.previousTokens];
-    const prevToken = newPreviousTokens.pop();
+    const newPreviousCursors = [...pagination.previousCursors];
+    const prevCursor = newPreviousCursors.pop();
+    if (!prevCursor) return;
 
     setPagination((prev) => ({
       ...prev,
-      previousTokens: newPreviousTokens,
-      currentToken: prevToken,
+      previousCursors: newPreviousCursors,
+      currentCursor: prevCursor,
       currentPage: prev.currentPage - 1,
-      hasPreviousPage: newPreviousTokens.length > 0,
+      hasPreviousPage: newPreviousCursors.length > 0,
     }));
 
-    loadPullRequests(selectedRepo, statusFilter, prevToken);
+    void loadPullRequests(selectedRepo, statusFilter, prevCursor);
   }
 
   async function reloadComments(pullRequestId: string, loadId = detailLoadRef.current) {
@@ -580,7 +639,7 @@ export function App({ client, initialRepo }: AppProps) {
       }
       setStatusFilter("OPEN");
       setSearchQuery("");
-      setPagination(initialPagination);
+      setPagination(createInitialPagination());
       setScreen("repos");
       setDiffTexts(new Map());
       setDiffTextStatus(new Map());
