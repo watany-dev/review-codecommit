@@ -51,6 +51,16 @@ import {
 
 const mockClient = {} as any;
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -1165,6 +1175,130 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
       expect(lastFrame()).toContain("taro");
       expect(lastFrame()).toContain("Approved");
+    });
+  });
+
+  it("ignores stale approval and reaction loads from a previous PR detail", async () => {
+    const approvalDeferred = createDeferred<any[]>();
+    const reactionDeferred = createDeferred<any>();
+
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "first pr",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail)
+      .mockResolvedValueOnce({
+        pullRequest: {
+          pullRequestId: "42",
+          title: "first pr",
+          revisionId: "rev-1",
+          pullRequestTargets: [],
+        },
+        differences: [],
+        commentThreads: [
+          {
+            location: null,
+            comments: [
+              {
+                commentId: "shared-comment",
+                authorArn: "arn:aws:iam::123456789012:user/taro",
+                content: "stale comment",
+              },
+            ],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        pullRequest: {
+          pullRequestId: "43",
+          title: "second pr",
+          revisionId: "rev-2",
+          pullRequestTargets: [],
+        },
+        differences: [],
+        commentThreads: [
+          {
+            location: null,
+            comments: [
+              {
+                commentId: "shared-comment",
+                authorArn: "arn:aws:iam::123456789012:user/hanako",
+                content: "current comment",
+              },
+            ],
+          },
+        ],
+      });
+    vi.mocked(getApprovalStates)
+      .mockImplementationOnce(() => approvalDeferred.promise as Promise<any[]>)
+      .mockResolvedValueOnce([]);
+    vi.mocked(evaluateApprovalRules).mockResolvedValue(null);
+    vi.mocked(getReactionsForComments)
+      .mockImplementationOnce(() => reactionDeferred.promise as Promise<any>)
+      .mockResolvedValueOnce(new Map());
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("first pr");
+    });
+
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("q");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("first pr");
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    vi.mocked(listPullRequests).mockResolvedValueOnce({
+      pullRequests: [
+        {
+          pullRequestId: "43",
+          title: "second pr",
+          authorArn: "arn:aws:iam::123456789012:user/hanako",
+          creationDate: new Date("2026-02-14T10:00:00Z"),
+          status: "CLOSED" as const,
+        },
+      ],
+    });
+    stdin.write("f");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("second pr");
+      expect(lastFrame()).toContain("[Closed]");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #43");
+      expect(lastFrame()).toContain("current comment");
+      expect(lastFrame()).not.toContain("taro");
+      expect(lastFrame()).not.toContain("👍×1");
+    });
+
+    approvalDeferred.resolve([
+      { userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" },
+    ]);
+    reactionDeferred.resolve(
+      new Map([
+        ["shared-comment", [{ emoji: "👍", shortCode: ":thumbsup:", count: 1, userArns: [] }]],
+      ]),
+    );
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #43");
+      expect(lastFrame()).toContain("current comment");
+      expect(lastFrame()).not.toContain("taro");
+      expect(lastFrame()).not.toContain("👍×1");
     });
   });
 
@@ -3476,6 +3610,105 @@ describe("App", () => {
     // But getCommitDifferences should be called for the second commit
     await vi.waitFor(() => {
       expect(getCommitDifferences).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("ignores stale commit diff results when switching commits quickly", async () => {
+    const firstCommitDeferred = createDeferred<any[]>();
+
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockResolvedValue([
+      {
+        commitId: "c1",
+        shortId: "c1short",
+        message: "First commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T09:00:00Z"),
+        parentIds: ["base789"],
+      },
+      {
+        commitId: "c2",
+        shortId: "c2short",
+        message: "Second commit",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["c1"],
+      },
+    ]);
+    vi.mocked(getCommitDifferences)
+      .mockImplementationOnce(() => firstCommitDeferred.promise as Promise<any[]>)
+      .mockResolvedValueOnce([
+        {
+          beforeBlob: { blobId: "commit2-before", path: "src/commit2.ts" },
+          afterBlob: { blobId: "commit2-after", path: "src/commit2.ts" },
+        },
+      ]);
+    vi.mocked(getBlobContent).mockImplementation(async (_client, _repo, blobId) => {
+      if (blobId === "commit1-before") return "old first";
+      if (blobId === "commit1-after") return "new first";
+      if (blobId === "commit2-before") return "old second";
+      if (blobId === "commit2-after") return "new second";
+      return "";
+    });
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/2]");
+    });
+
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 2/2]");
+    });
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("+new second");
+    });
+
+    firstCommitDeferred.resolve([
+      {
+        beforeBlob: { blobId: "commit1-before", path: "src/commit1.ts" },
+        afterBlob: { blobId: "commit1-after", path: "src/commit1.ts" },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 2/2]");
+      expect(lastFrame()).toContain("+new second");
+      expect(lastFrame()).not.toContain("+new first");
     });
   });
 
