@@ -3047,6 +3047,201 @@ describe("PullRequestDetail", () => {
     });
   });
 
+  it("preserves an expanded thread when commentThreads prop changes", async () => {
+    const longThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+          {
+            commentId: "c2",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/b",
+            content: "reply1",
+          },
+          {
+            commentId: "c3",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/c",
+            content: "reply2",
+          },
+          {
+            commentId: "c4",
+            inReplyTo: "c1",
+            authorArn: "arn:aws:iam::123456789012:user/d",
+            content: "reply3",
+          },
+        ],
+      },
+    ];
+
+    const { stdin, lastFrame, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/> .*a: root/);
+    });
+
+    stdin.write("o");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+    });
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={
+          [
+            ...longThread,
+            {
+              location: null,
+              comments: [
+                {
+                  commentId: "c10",
+                  authorArn: "arn:aws:iam::123456789012:user/z",
+                  content: "another root",
+                },
+              ],
+            },
+          ] as any
+        }
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("└ b: reply1");
+      expect(lastFrame()).toContain("another root");
+      expect(lastFrame()).not.toContain("[+3 replies]");
+    });
+  });
+
+  it("auto-folds newly added long threads after comment reload", async () => {
+    const shortThread = [
+      {
+        location: null,
+        comments: [
+          { commentId: "c1", authorArn: "arn:aws:iam::123456789012:user/a", content: "root" },
+        ],
+      },
+    ];
+    const longThread = [
+      ...shortThread,
+      {
+        location: null,
+        comments: [
+          { commentId: "c10", authorArn: "arn:aws:iam::123456789012:user/x", content: "root2" },
+          {
+            commentId: "c11",
+            inReplyTo: "c10",
+            authorArn: "arn:aws:iam::123456789012:user/y",
+            content: "reply1",
+          },
+          {
+            commentId: "c12",
+            inReplyTo: "c10",
+            authorArn: "arn:aws:iam::123456789012:user/z",
+            content: "reply2",
+          },
+          {
+            commentId: "c13",
+            inReplyTo: "c10",
+            authorArn: "arn:aws:iam::123456789012:user/w",
+            content: "reply3",
+          },
+        ],
+      },
+    ];
+
+    const { lastFrame, rerender } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={shortThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    expect(lastFrame()).toContain("a: root");
+    expect(lastFrame()).not.toContain("[+3 replies]");
+
+    rerender(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={[]}
+        commentThreads={longThread as any}
+        diffTexts={new Map()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("x: root2");
+      expect(lastFrame()).toContain("[+3 replies]");
+      expect(lastFrame()).not.toContain("reply1");
+    });
+  });
+
   // v0.5: Reply posting tests
   it("shows reply input on R key when cursor is on comment line", async () => {
     const threadWithComment = [
