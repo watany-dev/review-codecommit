@@ -217,7 +217,7 @@ export function PullRequestDetail({
     for (let i = 0; i < threads.length; i++) {
       const thread = threads[i]!;
       const key = getThreadKey(thread, i);
-      next.set(key, previous?.get(key) ?? (thread.comments.length >= FOLD_THRESHOLD));
+      next.set(key, previous?.get(key) ?? thread.comments.length >= FOLD_THRESHOLD);
     }
     return next;
   }
