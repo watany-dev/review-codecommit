@@ -82,6 +82,20 @@ function createInitialPagination(): PaginationState {
   };
 }
 
+function filterPullRequestsByStatus(
+  pullRequests: PullRequestSummary[],
+  status: PullRequestDisplayStatus,
+): PullRequestSummary[] {
+  switch (status) {
+    case "OPEN":
+      return pullRequests;
+    case "CLOSED":
+      return pullRequests.filter((pr) => pr.status === "CLOSED");
+    case "MERGED":
+      return pullRequests.filter((pr) => pr.status === "MERGED");
+  }
+}
+
 interface AppProps {
   client: CodeCommitClient;
   initialRepo?: string;
@@ -314,20 +328,6 @@ export function App({ client, initialRepo }: AppProps) {
       const repos = await listRepositories(client);
       setRepositories(repos);
     });
-  }
-
-  function filterPullRequestsByStatus(
-    pullRequests: PullRequestSummary[],
-    status: PullRequestDisplayStatus,
-  ): PullRequestSummary[] {
-    switch (status) {
-      case "OPEN":
-        return pullRequests;
-      case "CLOSED":
-        return pullRequests.filter((pr) => pr.status === "CLOSED");
-      case "MERGED":
-        return pullRequests.filter((pr) => pr.status === "MERGED");
-    }
   }
 
   async function fetchPullRequestPage(
