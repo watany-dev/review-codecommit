@@ -21,11 +21,11 @@ jobs:
 
       - name: Extract tag version
         id: tag
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
       - name: Read package.json version
         id: package
-        run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '.version' package.json)" >> "$GITHUB_OUTPUT"
 
       - name: Validate version match
         env:
