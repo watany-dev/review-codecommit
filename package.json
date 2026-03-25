@@ -73,7 +73,7 @@
   },
   "license": "MIT",
   "overrides": {
-    "fast-xml-parser": ">=5.3.8",
+    "fast-xml-parser": ">=5.5.7",
     "rollup": ">=4.59.0"
   },
   "dependencies": {}
