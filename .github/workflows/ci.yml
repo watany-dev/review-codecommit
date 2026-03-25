@@ -19,9 +19,8 @@ jobs:
           persist-credentials: false
 
       - name: actionlint
-        uses: raven-actions/actionlint@01fce4f43a270a612932cb1c64d40505a029f821 # v2
-        with:
-          matcher: true
+        shell: bash
+        run: bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) && ./actionlint -color
 
       - name: zizmor
         uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
