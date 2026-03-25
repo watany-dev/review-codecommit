@@ -24,7 +24,7 @@ jobs:
           matcher: true
 
       - name: zizmor
-        uses: zizmor-project/zizmor-action@4e6702b1c1288b6d8ddf8f29e84dbc1c4aab9d79 # v1
+        uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
         with:
           min-severity: informational
   lint:
