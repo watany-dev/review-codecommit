@@ -49,6 +49,8 @@ export function Help({ onClose }: Props) {
         <KeyRow keyName="G" description="Jump to end" />
         <KeyRow keyName="n" description="Next file" />
         <KeyRow keyName="N" description="Previous file" />
+        <KeyRow keyName="]c" description="Next change (add/delete line)" />
+        <KeyRow keyName="[c" description="Previous change (add/delete line)" />
         <KeyRow keyName="f" description="File list" />
         <KeyRow keyName="Enter" description="Select / confirm" />
         <KeyRow keyName="q / Esc" description="Back / quit" />
