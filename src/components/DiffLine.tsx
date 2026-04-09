@@ -2,6 +2,14 @@ import { Text } from "ink";
 import React from "react";
 import type { DisplayLine } from "../utils/formatDiff.js";
 
+function formatGutter(line: DisplayLine): string {
+  const before =
+    line.beforeLineNumber !== undefined ? String(line.beforeLineNumber).padStart(4) : "    ";
+  const after =
+    line.afterLineNumber !== undefined ? String(line.afterLineNumber).padStart(4) : "    ";
+  return `${before} ${after} │ `;
+}
+
 export function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
   const bold = isCursor;
   switch (line.type) {
@@ -16,17 +24,24 @@ export function renderDiffLine(line: DisplayLine, isCursor = false): React.React
     case "add":
       return (
         <Text color="green" bold={bold}>
+          <Text dimColor>{formatGutter(line)}</Text>
           {line.text}
         </Text>
       );
     case "delete":
       return (
         <Text color="red" bold={bold}>
+          <Text dimColor>{formatGutter(line)}</Text>
           {line.text}
         </Text>
       );
     case "context":
-      return <Text bold={bold}>{line.text}</Text>;
+      return (
+        <Text bold={bold}>
+          <Text dimColor>{formatGutter(line)}</Text>
+          {line.text}
+        </Text>
+      );
     case "truncate-context":
       return <Text dimColor>{line.text}</Text>;
     case "truncation":

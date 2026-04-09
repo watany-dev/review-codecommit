@@ -1,6 +1,6 @@
 # レビュー画面の可読性改善設計書
 
-> **ステータス**: 設計完了（2026-04-09）
+> **✅ 実装完了** (2026-04-09)
 >
 > PR詳細画面のdiff表示に行番号ガターと変更行ジャンプ（`]c`/`[c`）を追加し、コードレビュー体験を改善する。
 
@@ -60,10 +60,12 @@ PR詳細画面（`PullRequestDetail`）のdiff表示に2つの機能を追加し
 `DiffLine.tsx` に `formatGutter(line: DisplayLine): string` ヘルパーを追加:
 ```typescript
 function formatGutter(line: DisplayLine): string {
-  const before = line.beforeLineNumber ? String(line.beforeLineNumber).padStart(4) : "    ";
-  const after = line.afterLineNumber ? String(line.afterLineNumber).padStart(4) : "    ";
+  const before = line.beforeLineNumber !== undefined ? String(line.beforeLineNumber).padStart(4) : "    ";
+  const after = line.afterLineNumber !== undefined ? String(line.afterLineNumber).padStart(4) : "    ";
   return `${before} ${after} │ `;
 }
+// Note: computeSimpleDiff() は bi+1/ai+1 で行番号を生成するため 0 は来ないが、
+// DisplayLine の型定義（number | undefined）に対して防御的に !== undefined を使用する。
 ```
 
 `add`, `delete`, `context` の各caseでガター部分を `<Text dimColor>` で先頭に追加:
@@ -120,6 +122,8 @@ Vim diff風の `]c` (次の変更行) / `[c` (前の変更行) キーバイン�
 **2キーシーケンスの設計判断:**
 
 `design-review-keybindings.md:349` で「2ストローク操作はタイムアウトベースのキーシーケンス管理が必要」と記載されている。しかしこれは `gg` のように**1キー目が既存キーバインドと衝突する場合**（`g` はリアクション操作に使用中）の話。`[`/`]` は現在どのキーバインドにも使用されていないため、押下時点で即座に `pendingBracket` state を設定する state ベースアプローチが使える。タイムアウト管理は不要。
+
+**タイムアウトなしのUX影響**: `]` を押した後に長時間放置してから `c` を押すと、コメント投稿ではなく変更行ジャンプが発火する。ただし、間に別のキー（`j`/`k` 等）を1つでも押せば `pendingBracket` はリセットされるため、誤発火は「`]`→（何もしない）→`c`」のパターンに限定される。実用上問題にならないと判断し、タイムアウトは導入しない。
 
 **state遷移図:**
 ```
@@ -190,6 +194,8 @@ if (input === "[") {
 | `[` 押下直後に `q` を押す | pendingBracket リセット、`q` で画面遷移 | 同上 |
 | All changes / コミットビュー | 両方で動作する | diff行のtype判定は共通。`viewIndex` によるガードなし |
 | 連続して `]c`/`[c` を押す | 変更行を順にたどれる | 毎回 `cursorIndex` から検索するため |
+| `n`/`N` とのラップアラウンド差異 | `]c`/`[c` はラップアラウンドしない | `n`/`N`（ファイルジャンプ）はラップアラウンドするが、`]c`/`[c` はVimの `]c` に準拠しラップしない。意図的な設計差異 |
+| コミットビューでの行番号ガター | 表示される | `DiffLine.tsx` はビューモード非依存の共通コンポーネントであり、コミットビューでも行番号ガターが表示される |
 
 **キーバインドの整合性:**
 
@@ -200,6 +206,12 @@ if (input === "[") {
 
 **フッター更新** (`PullRequestDetail.tsx` line 905付近):
 `n/N file` の直後に `]c/[c change` を追加。
+
+**`pendingBracket` の視覚的フィードバック**: `]` または `[` 押下時、フッターに pending 状態を表示する。`pendingBracket` が非 null の場合、通常のフッターヒントの代わりに以下を表示:
+```
+]_ Press c for next change, other key to cancel
+```
+これにより、ユーザーが2キー目の入力を待っている状態であることを明示する。Vimのpending operator表示に倣った設計。
 
 **Help.tsx更新:**
 Navigation セクション内（line 50-51 の `n`/`N` の直後）に追加:
@@ -251,24 +263,25 @@ TDDサイクル:
 - フッター情報量の削減（`design-review-keybindings.md` P2 として別途対応）
 - 表示行数のターミナル高さ連動
 - 要件定義書（`docs/requirements.md`）のキーバインド表への `]c`/`[c` 追記は実装完了後に `/update-docs` で対応
+- ロードマップ（`docs/roadmap.md`）の v0.3.0 セクションへの行番号ガター・`]c`/`[c` 追記は実装完了後に `/update-docs` で対応
 
 ---
 
 ## update-plan 検証結果
 
-### 設計書品質評価
+### 設計書品質評価（レビュー反映後）
 
 | # | カテゴリ | 点数 | コメント |
 |---|---------|------|---------|
 | 1 | 基本構造 | 9/10 | 概要・コンポーネント設計・実装詳細・テスト・検証方法・ファイル構成が揃っている |
 | 2 | 目的・スコープの明確性 | 9/10 | 何を実装し何を実装しないかが明確。対象外も列挙済み |
-| 3 | コンポーネント設計の完全性 | 9/10 | DiffLine.tsx の全case、pendingBracket の型定義、state遷移図、データフローを記載 |
+| 3 | コンポーネント設計の完全性 | 9/10 | DiffLine.tsx の全case、pendingBracket の型定義・state遷移図・視覚的フィードバック・データフローを記載 |
 | 4 | AWS SDK連携設計 | N/A | 本変更にAWS SDK連携なし |
 | 5 | 内部アーキテクチャ | 9/10 | ファイル構成表、データフロー図、state遷移図、`useInput` 内の配置順序を記載 |
-| 6 | エッジケース・異常系 | 9/10 | 8ケースの網羅的な表、行番号オーバーフロー、モーダル中の挙動を記載 |
+| 6 | エッジケース・異常系 | 9/10 | 10ケースの網羅的な表（`n`/`N` とのラップアラウンド差異、コミットビューのガター表示を追記）、行番号オーバーフロー、モーダル中の挙動を記載 |
 | 7 | テスト戦略 | 9/10 | TDDサイクル（Red→Green→Refactor）で構成。具体的なテストケース、既存テスト影響分析を記載 |
 | 8 | セキュリティ考慮 | N/A | 本変更にセキュリティ影響なし |
-| 9 | 技術選定の根拠 | 9/10 | stateベース vs タイムアウトの比較、`design-review-keybindings.md` との整合性説明、ユーザー選択の経緯 |
+| 9 | 技術選定の根拠 | 9/10 | stateベース vs タイムアウトの比較、タイムアウトなしのUX影響分析、`design-review-keybindings.md` との整合性説明を記載 |
 | 10 | 実装計画 | 9/10 | 2イテレーション、Tidy First判定、TDDサイクル、対象ファイル/行番号が明確 |
 | | **合計** | **72/80 (90%)** | N/A 2項目を除外した8項目での評価 |
 
@@ -278,14 +291,25 @@ TDDサイクル:
 
 | チェック項目 | 結果 | 詳細 |
 |-------------|------|------|
-| 設計書 ↔ ソースコード | ✅ | `DisplayLine` に `beforeLineNumber`/`afterLineNumber` が既存（`formatDiff.ts:1-24`）。`DiffLine.tsx` の switch-case 構造と一致 |
-| ロードマップ ↔ 設計書 ↔ 要件定義 | ✅ | v0.3.0 UX強化（diff可読性・ナビゲーション向上）に合致 |
+| 設計書 ↔ ソースコード | ✅ | `DisplayLine` に `beforeLineNumber`/`afterLineNumber` が既存（`formatDiff.ts:1-24`）。`DiffLine.tsx` の switch-case 構造と一致。`formatGutter` は `!== undefined` で型安全にチェック |
+| ロードマップ ↔ 設計書 ↔ 要件定義 | ✅ | v0.3.0 UX強化（diff可読性・ナビゲーション向上）に合致。`roadmap.md`・`requirements.md` の更新は対象外セクションで言及済み |
 | CLAUDE.md との整合性 | ✅ | TDDサイクル、Tidy First判定、カバレッジ95%を担保 |
 | ソースコード規約 | ✅ | 既存のキーハンドラパターン、`Help.tsx` の `SectionHeader`+`KeyRow` パターンに従う |
-| design-review-keybindings.md | ✅ | 2ストローク操作にタイムアウト不要の根拠を記載 |
+| design-review-keybindings.md | ✅ | 2ストローク操作にタイムアウト不要の根拠・UX影響を記載 |
+
+### レビュー反映事項
+
+以下の指摘をレビューに基づき設計書に反映済み:
+
+- **P1-1**: `pendingBracket` の視覚的フィードバック → フッターに pending 状態表示を追加する設計を追記
+- **P1-2**: `formatGutter` の truthiness チェック → `!== undefined` に変更し、`computeSimpleDiff` が1始まりである根拠をコメントで明記
+- **P2-3**: `n`/`N` とのラップアラウンド差異 → エッジケース表に追記
+- **P2-4**: タイムアウトなしのUX影響 → 2キーシーケンスの設計判断セクションに追記
+- **P2-5**: コミットビューの行番号ガター → エッジケース表に追記
+- **P2-6**: `roadmap.md` 更新 → 対象外セクションに追記
 
 ### 修正事項
 
 - **P0**: なし
-- **P1**: なし
-- **P2**: フッターがさらに長くなる（`]c/[c change` 追加）が、`design-review-keybindings.md` P2（フッター整理）で別途対応
+- **P1**: なし（反映済み）
+- **P2**: フッターがさらに長くなる（`]c/[c change` + pending状態表示）が、`design-review-keybindings.md` P2（フッター整理）で別途対応

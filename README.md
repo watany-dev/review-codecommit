@@ -14,7 +14,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 - Browse pull requests with status filter (Open / Closed / Merged, `f` key cycle)
 - Search pull requests by title or author (`/` key)
 - Paginate through PR lists (`n`/`p` keys)
-- View PR details with color-coded unified diffs (green for additions, red for deletions)
+- View PR details with color-coded unified diffs (green for additions, red for deletions) with line number gutter
 - Read PR comments inline
 - Post comments on pull requests (`c` key in PR detail view)
 - Post inline comments on specific diff lines (`C` key at cursor position)
@@ -32,6 +32,7 @@ review-codecommit lets you browse AWS CodeCommit repositories, view pull request
 - Close PRs without merging (`x` key)
 - Commit-level review with Tab/Shift+Tab navigation between "All changes" and individual commits
 - Cursor-based diff navigation with `>` marker
+- Jump to next/previous change line with `]c`/`[c` (Vim diff-style)
 - View PR activity timeline (created, approved, merged, status changes, etc.) (`A` key)
 - Shell completion for bash, zsh, and fish (`--completions` option)
 - Vim-style keybindings (`j`/`k` navigation)
@@ -107,6 +108,9 @@ Completions support:
 | `Ctrl+d` | Half page down | PR Detail |
 | `Ctrl+u` | Half page up | PR Detail |
 | `G` | Jump to end | PR Detail |
+| `n` / `N` | Next / previous file | PR Detail |
+| `]c` | Jump to next change (add/delete line) | PR Detail |
+| `[c` | Jump to previous change (add/delete line) | PR Detail |
 | `Enter` | Select / confirm / submit comment | List screens / Comment input |
 | `q` / `Esc` | Go back / cancel | All / Comment input / Confirm prompt |
 | `c` | Post comment | PR Detail |

@@ -251,6 +251,38 @@ describe("PullRequestDetail", () => {
     expect(output).toContain("line1");
   });
 
+  it("renders line number gutter on diff lines", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    const output = lastFrame()!;
+    // Diff lines should contain the │ gutter separator
+    expect(output).toContain("│");
+    // Context line "line1" should have both before and after line numbers
+    expect(output).toMatch(/1\s+1\s*│.*line1/);
+    // Header line should NOT contain gutter
+    const headerLine = output.split("\n").find((l) => l.includes("src/auth.ts"));
+    expect(headerLine).not.toContain("│");
+  });
+
   it("renders comments", () => {
     const { lastFrame } = render(
       <PullRequestDetail
@@ -7953,5 +7985,160 @@ describe("PullRequestDetail", () => {
 
     stdin.write("g");
     expect(lastFrame()).not.toContain("React to comment:");
+  });
+
+  it("]c jumps to next add/delete line", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    // Cursor starts at index 0 (header). Press ]c to jump to first change line.
+    stdin.write("]");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("]_");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      const output = lastFrame()!;
+      // Should land on a delete or add line (contains - or +)
+      expect(output).toMatch(/>.*│.*[-+]/);
+    });
+  });
+
+  it("[c jumps to previous add/delete line", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    // Jump to end first, then [c to find previous change
+    stdin.write("G");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toBeTruthy();
+    });
+    stdin.write("[");
+    // Wait for pendingBracket to be processed and shown in footer
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[_");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      const output = lastFrame()!;
+      expect(output).toMatch(/>.*│.*[-+]/);
+    });
+  });
+
+  it("]c does nothing when no change lines ahead", async () => {
+    // Use diffTexts with no changes (identical before/after)
+    const noDiffTexts = new Map([["b1:b2", { before: "line1\nline2", after: "line1\nline2" }]]);
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={noDiffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    stdin.write("]");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("]_");
+    });
+    stdin.write("c");
+    await vi.waitFor(() => {
+      // After ]c with no changes, footer returns to normal (no pending bracket)
+      expect(lastFrame()).not.toContain("]_");
+    });
+    // Cursor position should be unchanged (still on header line)
+    expect(lastFrame()).toContain("> ");
+    expect(lastFrame()).toContain("src/auth.ts");
+  });
+
+  it("[ + j resets pendingBracket and j moves cursor normally", async () => {
+    const { stdin, lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+
+    // Press [ (sets pendingBracket), then j (resets and does normal cursor down)
+    stdin.write("[");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[_");
+    });
+    stdin.write("j");
+    await vi.waitFor(() => {
+      const output = lastFrame()!;
+      // Cursor should have moved down one line (to separator, the second line)
+      const lines = output.split("\n");
+      const cursorLine = lines.find((l) => l.startsWith(">") || l.includes("> "));
+      // The cursor should be on a line that is NOT the header (first line)
+      expect(cursorLine).toBeTruthy();
+      expect(cursorLine).not.toContain("src/auth.ts");
+    });
   });
 });
