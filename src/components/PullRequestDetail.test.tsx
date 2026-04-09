@@ -251,6 +251,38 @@ describe("PullRequestDetail", () => {
     expect(output).toContain("line1");
   });
 
+  it("renders line number gutter on diff lines", () => {
+    const { lastFrame } = render(
+      <PullRequestDetail
+        pullRequest={pullRequest as any}
+        differences={differences as any}
+        commentThreads={[] as any}
+        diffTexts={diffTexts}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+        onShowActivity={vi.fn()}
+        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        inlineComment={defaultInlineCommentProps}
+        reply={defaultReplyProps}
+        approval={defaultApprovalProps}
+        merge={defaultMergeProps}
+        close={defaultCloseProps}
+        commitView={defaultCommitProps}
+        editComment={defaultEditCommentProps}
+        deleteComment={defaultDeleteCommentProps}
+        reaction={defaultReactionProps}
+      />,
+    );
+    const output = lastFrame()!;
+    // Diff lines should contain the │ gutter separator
+    expect(output).toContain("│");
+    // Context line "line1" should have both before and after line numbers
+    expect(output).toMatch(/1\s+1\s*│.*line1/);
+    // Header line should NOT contain gutter
+    const headerLine = output.split("\n").find((l) => l.includes("src/auth.ts"));
+    expect(headerLine).not.toContain("│");
+  });
+
   it("renders comments", () => {
     const { lastFrame } = render(
       <PullRequestDetail
