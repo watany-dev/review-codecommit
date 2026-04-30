@@ -1,1 +1,34 @@
-{}
+{
+  "effortLevel": "high",
+  "language": "japanese",
+  "autoMemoryEnabled": false,
+  "env": {
+    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun install --frozen-lockfile"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bun run build:*)",
+      "Bash(bun run test:*)",
+      "Bash(bun run lint:*)",
+      "Bash(bun run format:*)",
+      "Bash(bun run check:*)",
+      "Bash(bun run dead-code:*)",
+      "Bash(bun run audit:*)",
+      "Bash(bun run ci:*)",
+      "Bash(bun install:*)",
+      "Bash(git:*)"
+    ]
+  }
+}
