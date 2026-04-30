@@ -73,11 +73,12 @@
   },
   "license": "MIT",
   "overrides": {
-    "fast-xml-parser": ">=5.5.7",
+    "fast-xml-parser": ">=5.7.0",
     "rollup": ">=4.59.0",
     "smol-toml": ">=1.6.1",
     "vite": ">=7.3.2 <8.0.0",
-    "picomatch": ">=4.0.4"
+    "picomatch": ">=4.0.4",
+    "postcss": ">=8.5.10"
   },
   "dependencies": {}
 }
