@@ -12,6 +12,7 @@ import type {
 import {
   buildDisplayLines,
   COMMENT_LINE_TYPES,
+  countLines,
   DIFF_CHUNK_SIZE,
   type DisplayLine,
   FOLD_THRESHOLD,
@@ -22,7 +23,7 @@ import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
-import { renderDiffLine } from "./DiffLine.js";
+import { DiffRow } from "./DiffLine.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
 
@@ -488,7 +489,7 @@ export function PullRequestDetail({
       const texts = diffTexts.get(diffKey);
       /* v8 ignore next -- diffKey originates from diffTexts entries */
       if (!texts) return;
-      const totalLines = texts.before.split("\n").length + texts.after.split("\n").length;
+      const totalLines = countLines(texts.before) + countLines(texts.after);
       if (totalLines <= LARGE_DIFF_THRESHOLD) return;
       const currentLimit = diffLineLimits.get(diffKey) ?? DIFF_CHUNK_SIZE;
       /* v8 ignore next -- requires many t-presses to reach full expansion */
@@ -728,13 +729,7 @@ export function PullRequestDetail({
       <Box flexDirection="column">
         {visibleLines.map((line, index) => {
           const globalIndex = scrollOffset + index;
-          const isCursor = globalIndex === cursorIndex;
-          return (
-            <Box key={globalIndex}>
-              <Text>{isCursor ? "> " : "  "}</Text>
-              {renderDiffLine(line, isCursor)}
-            </Box>
-          );
+          return <DiffRow key={globalIndex} line={line} isCursor={globalIndex === cursorIndex} />;
         })}
       </Box>
       {isCommenting && (

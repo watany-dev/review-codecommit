@@ -2,6 +2,27 @@ import { Text } from "ink";
 import React from "react";
 import type { DisplayLine } from "../utils/formatDiff.js";
 
+/**
+ * Memoized row: display lines have stable identity (cached in buildDisplayLines),
+ * so rows re-render only when the cursor enters or leaves them.
+ * A single top-level Text (nested Texts render inline) keeps the layout
+ * tree at one node per row instead of a Box plus two Texts.
+ */
+export const DiffRow = React.memo(function DiffRow({
+  line,
+  isCursor,
+}: {
+  line: DisplayLine;
+  isCursor: boolean;
+}) {
+  return (
+    <Text>
+      {isCursor ? "> " : "  "}
+      {renderDiffLine(line, isCursor)}
+    </Text>
+  );
+});
+
 function formatGutter(line: DisplayLine): string {
   const before =
     line.beforeLineNumber !== undefined ? String(line.beforeLineNumber).padStart(4) : "    ";
@@ -10,7 +31,7 @@ function formatGutter(line: DisplayLine): string {
   return `${before} ${after} │ `;
 }
 
-export function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
+function renderDiffLine(line: DisplayLine, isCursor = false): React.ReactNode {
   const bold = isCursor;
   switch (line.type) {
     case "header":
