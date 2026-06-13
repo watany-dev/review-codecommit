@@ -1,11 +1,14 @@
+diff --git a/node_modules/ink/.bun-tag-5dd4471ad757e97a b/.bun-tag-5dd4471ad757e97a
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/ink/.bun-tag-d5e25726408cb9c1 b/.bun-tag-d5e25726408cb9c1
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/build/output.js b/build/output.js
-index 59d2c970a51245212ab72def70b556fea95386e4..33d6f3c05fa8eebbad64b34f51a2845293a123f1 100644
+index 59d2c970a51245212ab72def70b556fea95386e4..4d31d0fadeb9573109afec2743f52c526be0859e 100644
 --- a/build/output.js
 +++ b/build/output.js
-@@ -1,5 +1,17 @@
+@@ -1,7 +1,81 @@
  import sliceAnsi from 'slice-ansi';
  import stringWidth from 'string-width';
 +
@@ -21,9 +24,97 @@ index 59d2c970a51245212ab72def70b556fea95386e4..33d6f3c05fa8eebbad64b34f51a28452
 +    return width;
 +};
  import widestLine from 'widest-line';
- import { styledCharsFromTokens, styledCharsToString, tokenize, } from '@alcalzone/ansi-tokenize';
+-import { styledCharsFromTokens, styledCharsToString, tokenize, } from '@alcalzone/ansi-tokenize';
++import { ansiCodesToString, diffAnsiCodes, styledCharsFromTokens, tokenize, } from '@alcalzone/ansi-tokenize';
++
++// Styled-char cache for whole lines; rendered lines repeat across frames
++// (only the cursor row changes on scroll), so tokenizing each line once
++// avoids re-running grapheme segmentation every frame. The cached char
++// objects are treated as immutable by the grid below.
++const styledCharsCache = new Map();
++const MAX_STYLED_CHARS_CACHE = 2000;
++const styledCharsForLine = (line) => {
++    let chars = styledCharsCache.get(line);
++    if (chars === undefined) {
++        if (styledCharsCache.size >= MAX_STYLED_CHARS_CACHE) {
++            styledCharsCache.clear();
++        }
++        chars = styledCharsFromTokens(tokenize(line));
++        styledCharsCache.set(line, chars);
++    }
++    return chars;
++};
++
++// Shared blank cell: grid cells are replaced, never mutated, so all empty
++// cells can point at one object instead of width*height fresh ones per frame.
++const BLANK_CHAR = Object.freeze({
++    type: 'char',
++    value: ' ',
++    fullWidth: false,
++    styles: Object.freeze([]),
++});
++
++// Memoized ANSI style transitions. Styles arrays come from the line cache
++// above, so their identities are stable across frames and the WeakMap hits
++// on every frame after the first.
++const styleTransitionCache = new WeakMap();
++const styleTransition = (from, to) => {
++    if (from === to) {
++        return '';
++    }
++    let byTarget = styleTransitionCache.get(from);
++    if (byTarget === undefined) {
++        byTarget = new WeakMap();
++        styleTransitionCache.set(from, byTarget);
++    }
++    let transition = byTarget.get(to);
++    if (transition === undefined) {
++        transition = ansiCodesToString(diffAnsiCodes(from, to));
++        byTarget.set(to, transition);
++    }
++    return transition;
++};
++
++// Equivalent of styledCharsToString, but with memoized style transitions
++// (diffAnsiCodes between neighboring cells dominated frame rendering).
++const styledCharsToStringCached = (chars) => {
++    let ret = '';
++    let previousStyles = BLANK_CHAR.styles;
++    for (const char of chars) {
++        ret += styleTransition(previousStyles, char.styles);
++        ret += char.value;
++        previousStyles = char.styles;
++    }
++    ret += styleTransition(previousStyles, BLANK_CHAR.styles);
++    return ret;
++};
  export default class Output {
-@@ -116,7 +128,7 @@ export default class Output {
+     width;
+     height;
+@@ -39,15 +113,7 @@ export default class Output {
+         // Initialize output array with a specific set of rows, so that margin/padding at the bottom is preserved
+         const output = [];
+         for (let y = 0; y < this.height; y++) {
+-            const row = [];
+-            for (let x = 0; x < this.width; x++) {
+-                row.push({
+-                    type: 'char',
+-                    value: ' ',
+-                    fullWidth: false,
+-                    styles: [],
+-                });
+-            }
++            const row = new Array(this.width).fill(BLANK_CHAR);
+             output.push(row);
+         }
+         const clips = [];
+@@ -111,12 +177,12 @@ export default class Output {
+                     for (const transformer of transformers) {
+                         line = transformer(line, index);
+                     }
+-                    const characters = styledCharsFromTokens(tokenize(line));
++                    const characters = styledCharsForLine(line);
+                     let offsetX = x;
                      for (const character of characters) {
                          currentLine[offsetX] = character;
                          // Determine printed width using string-width to align with measurement
@@ -32,6 +123,15 @@ index 59d2c970a51245212ab72def70b556fea95386e4..33d6f3c05fa8eebbad64b34f51a28452
                          // For multi-column characters, clear following cells to avoid stray spaces/artifacts
                          if (characterWidth > 1) {
                              for (let index = 1; index < characterWidth; index++) {
+@@ -138,7 +204,7 @@ export default class Output {
+             .map(line => {
+             // See https://github.com/vadimdemedes/ink/pull/564#issuecomment-1637022742
+             const lineWithoutEmptyItems = line.filter(item => item !== undefined);
+-            return styledCharsToString(lineWithoutEmptyItems).trimEnd();
++            return styledCharsToStringCached(lineWithoutEmptyItems).trimEnd();
+         })
+             .join('\n');
+         return {
 diff --git a/build/render-node-to-output.js b/build/render-node-to-output.js
 index f00a27842045de18edfc7fbd6c65467a1d6f641c..5d2acc0045a47c87bb2fe70824a3a5008cf186e5 100644
 --- a/build/render-node-to-output.js
