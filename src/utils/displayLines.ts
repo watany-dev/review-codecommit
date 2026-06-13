@@ -17,6 +17,19 @@ export const COMMENT_LINE_TYPES = new Set<DisplayLine["type"]>([
 
 export const FOLD_THRESHOLD = 4;
 
+const SEPARATOR_TEXT = "─".repeat(50);
+
+/** Counts lines in `text` without allocating an array (equivalent to split("\n").length). */
+export function countLines(text: string): number {
+  let count = 1;
+  let idx = text.indexOf("\n");
+  while (idx !== -1) {
+    count++;
+    idx = text.indexOf("\n", idx + 1);
+  }
+  return count;
+}
+
 export function getThreadKey(thread: CommentThread, index: number): string {
   const rootComment = thread.comments.find((comment) => !comment.inReplyTo) ?? thread.comments[0];
   return rootComment?.commentId ?? `thread-${index}`;
@@ -183,22 +196,25 @@ export function buildDisplayLines(
   for (const diff of differences) {
     const filePath = diff.afterBlob?.path ?? diff.beforeBlob?.path ?? "(unknown file)";
     lines.push({ type: "header", text: filePath });
-    lines.push({ type: "separator", text: "─".repeat(50) });
+    lines.push({ type: "separator", text: SEPARATOR_TEXT });
 
     const blobKey = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
     const texts = diffTexts.get(blobKey);
     const status = diffTextStatus.get(blobKey) ?? "loading";
 
     if (texts) {
-      const beforeLines = texts.before.split("\n");
-      const afterLines = texts.after.split("\n");
-      const totalLines = beforeLines.length + afterLines.length;
+      const beforeCount = countLines(texts.before);
+      const afterCount = countLines(texts.after);
+      const totalLines = beforeCount + afterCount;
       const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
       const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
       const displayLimit = Math.min(currentLimit, totalLines);
       const cacheKey = `${blobKey}:${displayLimit}`;
       let diffLines = diffCache?.get(cacheKey);
       if (!diffLines) {
+        // Split only on cache miss; the warm path never needs the line arrays
+        const beforeLines = texts.before.split("\n");
+        const afterLines = texts.after.split("\n");
         const { beforeLimit, afterLimit } = getSliceLimits(
           beforeLines.length,
           afterLines.length,
@@ -208,11 +224,18 @@ export function buildDisplayLines(
           beforeLines.slice(0, beforeLimit),
           afterLines.slice(0, afterLimit),
         );
+        // Enrich once here so the hot loop below can push lines without per-call copies
+        for (const dl of diffLines) {
+          dl.filePath = filePath;
+          dl.diffKey = blobKey;
+        }
         diffCache?.set(cacheKey, diffLines);
       }
+      const hasInlineThreads = inlineThreadsByKey.size > 0;
       for (const dl of diffLines) {
-        lines.push({ ...dl, filePath, diffKey: blobKey });
+        lines.push(dl);
 
+        if (!hasInlineThreads) continue;
         const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
           appendThreadLines(
@@ -269,7 +292,7 @@ export function buildDisplayLines(
       (sum, { thread }) => sum + thread.comments.length,
       0,
     );
-    lines.push({ type: "separator", text: "─".repeat(50) });
+    lines.push({ type: "separator", text: SEPARATOR_TEXT });
     lines.push({ type: "comment-header", text: `Comments (${totalComments}):` });
     for (const { thread, index: threadIdx } of generalThreads) {
       appendThreadLines(
