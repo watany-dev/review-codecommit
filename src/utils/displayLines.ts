@@ -138,35 +138,52 @@ function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: num
 
 function findMatchingThreadEntries(
   threadsByKey: Map<string, { thread: CommentThread; index: number }[]>,
-  filePath: string,
   line: DisplayLine,
 ): { thread: CommentThread; index: number }[] {
   const results: { thread: CommentThread; index: number }[] = [];
 
   if (line.type === "delete" && line.beforeLineNumber) {
-    const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+    const key = `${line.beforeLineNumber}:BEFORE`;
     results.push(...(threadsByKey.get(key) ?? []));
   }
 
   if (line.type === "add" && line.afterLineNumber) {
-    const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+    const key = `${line.afterLineNumber}:AFTER`;
     results.push(...(threadsByKey.get(key) ?? []));
   }
 
   /* v8 ignore start -- context lines always have both line numbers in practice */
   if (line.type === "context") {
     if (line.beforeLineNumber) {
-      const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
+      const key = `${line.beforeLineNumber}:BEFORE`;
       results.push(...(threadsByKey.get(key) ?? []));
     }
     if (line.afterLineNumber) {
-      const key = `${filePath}:${line.afterLineNumber}:AFTER`;
+      const key = `${line.afterLineNumber}:AFTER`;
       results.push(...(threadsByKey.get(key) ?? []));
     }
   }
   /* v8 ignore stop */
 
   return results;
+}
+
+// Line counts are derived from immutable text pairs fetched per blob, so a
+// WeakMap keyed by the pair object stays correct and skips re-scanning the
+// same strings on every rebuild (cursor moves rebuild nothing, but comment
+// or limit changes rebuild all files).
+const lineCountCache = new WeakMap<object, { before: number; after: number }>();
+
+function getLineCounts(texts: { before: string; after: string }): {
+  before: number;
+  after: number;
+} {
+  let counts = lineCountCache.get(texts);
+  if (counts === undefined) {
+    counts = { before: countLines(texts.before), after: countLines(texts.after) };
+    lineCountCache.set(texts, counts);
+  }
+  return counts;
 }
 
 export function buildDisplayLines(
@@ -181,15 +198,24 @@ export function buildDisplayLines(
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
-  // Index inline comments by file:position:version for efficient lookup
-  const inlineThreadsByKey = new Map<string, { thread: CommentThread; index: number }[]>();
+  // Index inline comments per file, then by position:version, so files
+  // without threads skip per-line lookups (and key strings) entirely
+  const inlineThreadsByFile = new Map<
+    string,
+    Map<string, { thread: CommentThread; index: number }[]>
+  >();
   for (let i = 0; i < commentThreads.length; i++) {
     const thread = commentThreads[i]!;
     if (thread.location) {
-      const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
-      const existing = inlineThreadsByKey.get(key) ?? [];
+      let fileThreads = inlineThreadsByFile.get(thread.location.filePath);
+      if (!fileThreads) {
+        fileThreads = new Map();
+        inlineThreadsByFile.set(thread.location.filePath, fileThreads);
+      }
+      const key = `${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
+      const existing = fileThreads.get(key) ?? [];
       existing.push({ thread, index: i });
-      inlineThreadsByKey.set(key, existing);
+      fileThreads.set(key, existing);
     }
   }
 
@@ -203,8 +229,7 @@ export function buildDisplayLines(
     const status = diffTextStatus.get(blobKey) ?? "loading";
 
     if (texts) {
-      const beforeCount = countLines(texts.before);
-      const afterCount = countLines(texts.after);
+      const { before: beforeCount, after: afterCount } = getLineCounts(texts);
       const totalLines = beforeCount + afterCount;
       const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
       const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
@@ -231,12 +256,12 @@ export function buildDisplayLines(
         }
         diffCache?.set(cacheKey, diffLines);
       }
-      const hasInlineThreads = inlineThreadsByKey.size > 0;
+      const fileThreads = inlineThreadsByFile.get(filePath);
       for (const dl of diffLines) {
         lines.push(dl);
 
-        if (!hasInlineThreads) continue;
-        const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
+        if (!fileThreads) continue;
+        const matchingEntries = findMatchingThreadEntries(fileThreads, dl);
         for (const { thread, index: threadIdx } of matchingEntries) {
           appendThreadLines(
             lines,

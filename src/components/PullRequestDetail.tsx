@@ -258,9 +258,15 @@ export function PullRequestDetail({
   const [fileListCursor, setFileListCursor] = useState(0);
   const [pendingBracket, setPendingBracket] = useState<"[" | "]" | null>(null);
   const diffCacheRef = useRef<Map<string, DisplayLine[]>>(new Map());
+  const prevDifferencesRef = useRef(differences);
 
   useEffect(() => {
-    setDiffLineLimits(new Map());
+    // Reset only when differences actually change; on mount the limits are
+    // already empty and resetting would discard the cache built by the first
+    // render and trigger a redundant second cold rebuild.
+    if (prevDifferencesRef.current === differences) return;
+    prevDifferencesRef.current = differences;
+    setDiffLineLimits((prev) => (prev.size === 0 ? prev : new Map()));
     diffCacheRef.current = new Map();
   }, [differences]);
 
