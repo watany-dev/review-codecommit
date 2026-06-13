@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-import { render } from "ink";
-import React from "react";
 import packageJson from "../package.json";
-import { App } from "./app.js";
 import { generateCompletion, isValidShellType } from "./completions.js";
-import { createClient } from "./services/codecommit.js";
 
 interface ParsedArgs {
   repoName?: string;
@@ -87,11 +83,18 @@ if (parsed.completions !== undefined) {
   process.exit(0);
 }
 
-const client = createClient({
+// Cache V8 bytecode for the TUI chunk so repeat launches skip re-parsing
+// the bundled ink/React/AWS SDK code (available since Node 22.1).
+const nodeModule: { enableCompileCache?: () => unknown } = await import("node:module");
+/* v8 ignore next -- optional chaining guards older Node versions */
+nodeModule.enableCompileCache?.();
+
+// Loaded dynamically (and code-split in the production bundle) so the fast
+// exits above never evaluate ink, React, or the AWS SDK.
+const { startTui } = await import("./tui.js");
+
+startTui({
   ...(parsed.profile != null ? { profile: parsed.profile } : {}),
   ...(parsed.region != null ? { region: parsed.region } : {}),
+  ...(parsed.repoName != null ? { repoName: parsed.repoName } : {}),
 });
-
-render(
-  <App client={client} {...(parsed.repoName != null ? { initialRepo: parsed.repoName } : {})} />,
-);

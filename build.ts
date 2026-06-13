@@ -19,7 +19,10 @@ const [cliResult, libResult] = await Promise.all([
 		format: "esm",
 		target: "node",
 		minify: true,
-		naming: "cli.mjs",
+		// Split the dynamically imported TUI (ink/React/AWS SDK) into its own
+		// chunk so --help/--version/--completions only parse the small entry
+		splitting: true,
+		naming: { entry: "cli.mjs", chunk: "[name]-[hash].mjs" },
 		plugins: [stubDevtools],
 		// Inline NODE_ENV so react-reconciler/react bundle their production
 		// builds instead of deciding at runtime (users rarely set NODE_ENV)
