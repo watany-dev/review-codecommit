@@ -245,9 +245,11 @@ export function buildDisplayLines(
           afterLines.length,
           displayLimit,
         );
+        // Slicing copies the array; skip it when the whole file is shown
+        // (the common non-truncated case), which is most files
         diffLines = computeSimpleDiff(
-          beforeLines.slice(0, beforeLimit),
-          afterLines.slice(0, afterLimit),
+          beforeLimit < beforeLines.length ? beforeLines.slice(0, beforeLimit) : beforeLines,
+          afterLimit < afterLines.length ? afterLines.slice(0, afterLimit) : afterLines,
         );
         // Enrich once here so the hot loop below can push lines without per-call copies
         for (const dl of diffLines) {
