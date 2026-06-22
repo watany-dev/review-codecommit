@@ -51,16 +51,19 @@ function hasNearbyMatch(lines: string[], start: number, target: string): boolean
  */
 export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): DisplayLine[] {
   const result: DisplayLine[] = [];
+  // Inputs are never mutated, so hoist lengths out of the hot loop.
+  const blen = beforeLines.length;
+  const alen = afterLines.length;
   let bi = 0; // Index for beforeLines
   let ai = 0; // Index for afterLines
 
   // Process both arrays until all lines are consumed
-  while (bi < beforeLines.length || ai < afterLines.length) {
+  while (bi < blen || ai < alen) {
     const beforeLine = beforeLines[bi];
     const afterLine = afterLines[ai];
 
     // Case 1: Lines match at current position - add as context
-    if (bi < beforeLines.length && ai < afterLines.length && beforeLine === afterLine) {
+    if (bi < blen && ai < alen && beforeLine === afterLine) {
       result.push({
         type: "context",
         text: ` ${beforeLine}`,
@@ -75,10 +78,7 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
       const startAi = ai;
 
       // Process deletions: consume lines from 'before' that don't match current 'after'
-      while (
-        bi < beforeLines.length &&
-        (ai >= afterLines.length || beforeLines[bi] !== afterLines[ai])
-      ) {
+      while (bi < blen && (ai >= alen || beforeLines[bi] !== afterLines[ai])) {
         const bl = beforeLines[bi]!;
         // Optimization: stop if this line appears within the lookahead window in 'after'
         if (hasNearbyMatch(afterLines, ai, bl)) break;
@@ -91,10 +91,7 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
       }
 
       // Process additions: consume lines from 'after' that don't match current 'before'
-      while (
-        ai < afterLines.length &&
-        (bi >= beforeLines.length || afterLines[ai] !== beforeLines[bi])
-      ) {
+      while (ai < alen && (bi >= blen || afterLines[ai] !== beforeLines[bi])) {
         const al = afterLines[ai]!;
         // Optimization: stop if this line appears within the lookahead window in 'before'
         if (hasNearbyMatch(beforeLines, bi, al)) break;
@@ -109,7 +106,7 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
       // Safety: if both loops broke without advancing, force progress to prevent infinite loop
       /* v8 ignore start -- defensive guard; the greedy algorithm always advances in normal cases */
       if (bi === startBi && ai === startAi) {
-        if (bi < beforeLines.length) {
+        if (bi < blen) {
           result.push({
             type: "delete",
             text: `-${beforeLines[bi]}`,
@@ -117,7 +114,7 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
           });
           bi++;
         }
-        if (ai < afterLines.length) {
+        if (ai < alen) {
           result.push({
             type: "add",
             text: `+${afterLines[ai]}`,

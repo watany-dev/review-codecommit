@@ -136,37 +136,43 @@ function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: num
 }
 /* v8 ignore stop */
 
-function findMatchingThreadEntries(
-  threadsByKey: Map<string, { thread: CommentThread; index: number }[]>,
-  filePath: string,
-  line: DisplayLine,
-): { thread: CommentThread; index: number }[] {
-  const results: { thread: CommentThread; index: number }[] = [];
+type ThreadEntry = { thread: CommentThread; index: number };
 
-  if (line.type === "delete" && line.beforeLineNumber) {
-    const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
-    results.push(...(threadsByKey.get(key) ?? []));
+/** Inline threads for a single file, bucketed by line number for each version. */
+interface FileThreadIndex {
+  before: Map<number, ThreadEntry[]>;
+  after: Map<number, ThreadEntry[]>;
+}
+
+/**
+ * Returns the inline-thread entries anchored to `line`, or undefined when none.
+ * Uses integer line-number lookups so the hot loop never concatenates keys.
+ */
+function findMatchingThreadEntries(
+  fileThreads: FileThreadIndex,
+  line: DisplayLine,
+): ThreadEntry[] | undefined {
+  if (line.type === "delete") {
+    return line.beforeLineNumber ? fileThreads.before.get(line.beforeLineNumber) : undefined;
   }
 
-  if (line.type === "add" && line.afterLineNumber) {
-    const key = `${filePath}:${line.afterLineNumber}:AFTER`;
-    results.push(...(threadsByKey.get(key) ?? []));
+  if (line.type === "add") {
+    return line.afterLineNumber ? fileThreads.after.get(line.afterLineNumber) : undefined;
   }
 
   /* v8 ignore start -- context lines always have both line numbers in practice */
   if (line.type === "context") {
-    if (line.beforeLineNumber) {
-      const key = `${filePath}:${line.beforeLineNumber}:BEFORE`;
-      results.push(...(threadsByKey.get(key) ?? []));
-    }
-    if (line.afterLineNumber) {
-      const key = `${filePath}:${line.afterLineNumber}:AFTER`;
-      results.push(...(threadsByKey.get(key) ?? []));
-    }
+    const before = line.beforeLineNumber
+      ? fileThreads.before.get(line.beforeLineNumber)
+      : undefined;
+    const after = line.afterLineNumber ? fileThreads.after.get(line.afterLineNumber) : undefined;
+    if (before && after) return [...before, ...after];
+    return before ?? after;
   }
   /* v8 ignore stop */
 
-  return results;
+  /* v8 ignore next -- diff lines are only ever add/delete/context */
+  return undefined;
 }
 
 export function buildDisplayLines(
@@ -181,15 +187,25 @@ export function buildDisplayLines(
 ): DisplayLine[] {
   const lines: DisplayLine[] = [];
 
-  // Index inline comments by file:position:version for efficient lookup
-  const inlineThreadsByKey = new Map<string, { thread: CommentThread; index: number }[]>();
+  // Index inline comments by file, then by line number per version, so the
+  // diff loop below can resolve anchors with integer lookups (no key strings).
+  const inlineThreadsByFile = new Map<string, FileThreadIndex>();
   for (let i = 0; i < commentThreads.length; i++) {
     const thread = commentThreads[i]!;
-    if (thread.location) {
-      const key = `${thread.location.filePath}:${thread.location.filePosition}:${thread.location.relativeFileVersion}`;
-      const existing = inlineThreadsByKey.get(key) ?? [];
+    const location = thread.location;
+    if (!location) continue;
+
+    let fileIndex = inlineThreadsByFile.get(location.filePath);
+    if (!fileIndex) {
+      fileIndex = { before: new Map(), after: new Map() };
+      inlineThreadsByFile.set(location.filePath, fileIndex);
+    }
+    const bucket = location.relativeFileVersion === "BEFORE" ? fileIndex.before : fileIndex.after;
+    const existing = bucket.get(location.filePosition);
+    if (existing) {
       existing.push({ thread, index: i });
-      inlineThreadsByKey.set(key, existing);
+    } else {
+      bucket.set(location.filePosition, [{ thread, index: i }]);
     }
   }
 
@@ -220,10 +236,13 @@ export function buildDisplayLines(
           afterLines.length,
           displayLimit,
         );
-        diffLines = computeSimpleDiff(
-          beforeLines.slice(0, beforeLimit),
-          afterLines.slice(0, afterLimit),
-        );
+        // Skip the slice copy when the limit already covers the whole array
+        // (the common non-truncated case); computeSimpleDiff never mutates its inputs.
+        const beforeSlice =
+          beforeLimit === beforeLines.length ? beforeLines : beforeLines.slice(0, beforeLimit);
+        const afterSlice =
+          afterLimit === afterLines.length ? afterLines : afterLines.slice(0, afterLimit);
+        diffLines = computeSimpleDiff(beforeSlice, afterSlice);
         // Enrich once here so the hot loop below can push lines without per-call copies
         for (const dl of diffLines) {
           dl.filePath = filePath;
@@ -231,12 +250,14 @@ export function buildDisplayLines(
         }
         diffCache?.set(cacheKey, diffLines);
       }
-      const hasInlineThreads = inlineThreadsByKey.size > 0;
+      // Only files that actually have inline threads pay the per-line lookup cost.
+      const fileThreads = inlineThreadsByFile.get(filePath);
       for (const dl of diffLines) {
         lines.push(dl);
 
-        if (!hasInlineThreads) continue;
-        const matchingEntries = findMatchingThreadEntries(inlineThreadsByKey, filePath, dl);
+        if (!fileThreads) continue;
+        const matchingEntries = findMatchingThreadEntries(fileThreads, dl);
+        if (!matchingEntries) continue;
         for (const { thread, index: threadIdx } of matchingEntries) {
           appendThreadLines(
             lines,
