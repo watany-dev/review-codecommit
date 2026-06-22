@@ -10,6 +10,8 @@ permissions: {}
 
 jobs:
   actions-lint:
+    # zizmorはセキュリティ観点のチェックのため、PR時のみ実行する
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,6 +28,8 @@ jobs:
         uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 # v0.5.2
         with:
           min-severity: informational
+          # SARIFをCode Scanningへアップロードしない（security-events: write権限が不要になる）
+          advanced-security: false
   lint:
     runs-on: ubuntu-latest
     permissions:
