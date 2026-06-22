@@ -1,0 +1,55 @@
+diff --git a/node_modules/ink/.bun-tag-d5e25726408cb9c1 b/.bun-tag-d5e25726408cb9c1
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/build/output.js b/build/output.js
+index 59d2c970a51245212ab72def70b556fea95386e4..33d6f3c05fa8eebbad64b34f51a2845293a123f1 100644
+--- a/build/output.js
++++ b/build/output.js
+@@ -1,5 +1,17 @@
+ import sliceAnsi from 'slice-ansi';
+ import stringWidth from 'string-width';
++
++// Width cache for single styled characters; glyphs repeat heavily across
++// frames (ASCII, box-drawing), so this avoids re-segmenting per character.
++const characterWidthCache = new Map();
++const cachedCharacterWidth = (value) => {
++    let width = characterWidthCache.get(value);
++    if (width === undefined) {
++        width = Math.max(1, stringWidth(value));
++        characterWidthCache.set(value, width);
++    }
++    return width;
++};
+ import widestLine from 'widest-line';
+ import { styledCharsFromTokens, styledCharsToString, tokenize, } from '@alcalzone/ansi-tokenize';
+ export default class Output {
+@@ -116,7 +128,7 @@ export default class Output {
+                     for (const character of characters) {
+                         currentLine[offsetX] = character;
+                         // Determine printed width using string-width to align with measurement
+-                        const characterWidth = Math.max(1, stringWidth(character.value));
++                        const characterWidth = cachedCharacterWidth(character.value);
+                         // For multi-column characters, clear following cells to avoid stray spaces/artifacts
+                         if (characterWidth > 1) {
+                             for (let index = 1; index < characterWidth; index++) {
+diff --git a/build/render-node-to-output.js b/build/render-node-to-output.js
+index f00a27842045de18edfc7fbd6c65467a1d6f641c..5d2acc0045a47c87bb2fe70824a3a5008cf186e5 100644
+--- a/build/render-node-to-output.js
++++ b/build/render-node-to-output.js
+@@ -1,4 +1,5 @@
+ import widestLine from 'widest-line';
++import measureText from './measure-text.js';
+ import indentString from 'indent-string';
+ import Yoga from 'yoga-layout';
+ import wrapText from './wrap-text.js';
+@@ -90,7 +91,9 @@ const renderNodeToOutput = (node, output, options) => {
+         if (node.nodeName === 'ink-text') {
+             let text = squashTextNodes(node);
+             if (text.length > 0) {
+-                const currentWidth = widestLine(text);
++                // Use the memoized text measurement to avoid re-segmenting
++                // unchanged text on every frame
++                const currentWidth = measureText(text).width;
+                 const maxWidth = getMaxWidth(yogaNode);
+                 if (currentWidth > maxWidth) {
+                     const textWrap = node.style.textWrap ?? 'wrap';

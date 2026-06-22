@@ -21,6 +21,9 @@ const [cliResult, libResult] = await Promise.all([
 		minify: true,
 		naming: "cli.mjs",
 		plugins: [stubDevtools],
+		// Inline NODE_ENV so react-reconciler/react bundle their production
+		// builds instead of deciding at runtime (users rarely set NODE_ENV)
+		define: { "process.env.NODE_ENV": '"production"' },
 	}),
 	Bun.build({
 		entrypoints: ["./src/index.ts"],
@@ -29,6 +32,7 @@ const [cliResult, libResult] = await Promise.all([
 		target: "node",
 		minify: true,
 		plugins: [stubDevtools],
+		define: { "process.env.NODE_ENV": '"production"' },
 	}),
 ]);
 

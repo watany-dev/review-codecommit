@@ -12,6 +12,7 @@ import type {
 import {
   buildDisplayLines,
   COMMENT_LINE_TYPES,
+  countLines,
   DIFF_CHUNK_SIZE,
   type DisplayLine,
   FOLD_THRESHOLD,
@@ -22,7 +23,7 @@ import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
-import { renderDiffLine } from "./DiffLine.js";
+import { DiffRow } from "./DiffLine.js";
 import { MergeStrategySelector } from "./MergeStrategySelector.js";
 import { ReactionPicker } from "./ReactionPicker.js";
 
@@ -255,6 +256,7 @@ export function PullRequestDetail({
   const [diffLineLimits, setDiffLineLimits] = useState<Map<string, number>>(new Map());
   const [showFileList, setShowFileList] = useState(false);
   const [fileListCursor, setFileListCursor] = useState(0);
+  const [pendingBracket, setPendingBracket] = useState<"[" | "]" | null>(null);
   const diffCacheRef = useRef<Map<string, DisplayLine[]>>(new Map());
 
   useEffect(() => {
@@ -415,6 +417,29 @@ export function PullRequestDetail({
     )
       return;
 
+    // === 2-key sequence: ]c / [c for change navigation ===
+    if (pendingBracket && input === "c") {
+      const isNext = pendingBracket === "]";
+      setPendingBracket(null);
+      if (isNext) {
+        const idx = lines.findIndex(
+          (l, i) => i > cursorIndex && (l.type === "add" || l.type === "delete"),
+        );
+        if (idx !== -1) setCursorIndex(idx);
+      } else {
+        for (let i = cursorIndex - 1; i >= 0; i--) {
+          if (lines[i]!.type === "add" || lines[i]!.type === "delete") {
+            setCursorIndex(i);
+            break;
+          }
+        }
+      }
+      return;
+    }
+    if (pendingBracket) {
+      setPendingBracket(null);
+    }
+
     if (key.tab && (commits.length > 0 || commitsAvailable)) {
       if (commits.length === 0) {
         // Lazy load: trigger first commit load
@@ -464,7 +489,7 @@ export function PullRequestDetail({
       const texts = diffTexts.get(diffKey);
       /* v8 ignore next -- diffKey originates from diffTexts entries */
       if (!texts) return;
-      const totalLines = texts.before.split("\n").length + texts.after.split("\n").length;
+      const totalLines = countLines(texts.before) + countLines(texts.after);
       if (totalLines <= LARGE_DIFF_THRESHOLD) return;
       const currentLimit = diffLineLimits.get(diffKey) ?? DIFF_CHUNK_SIZE;
       /* v8 ignore next -- requires many t-presses to reach full expansion */
@@ -599,6 +624,14 @@ export function PullRequestDetail({
       setReactionTarget(currentLine.commentId);
       return;
     }
+    if (input === "]") {
+      setPendingBracket("]");
+      return;
+    }
+    if (input === "[") {
+      setPendingBracket("[");
+      return;
+    }
   });
 
   const scrollOffset = useMemo(() => {
@@ -696,13 +729,7 @@ export function PullRequestDetail({
       <Box flexDirection="column">
         {visibleLines.map((line, index) => {
           const globalIndex = scrollOffset + index;
-          const isCursor = globalIndex === cursorIndex;
-          return (
-            <Box key={globalIndex}>
-              <Text>{isCursor ? "> " : "  "}</Text>
-              {renderDiffLine(line, isCursor)}
-            </Box>
-          );
+          return <DiffRow key={globalIndex} line={line} isCursor={globalIndex === cursorIndex} />;
         })}
       </Box>
       {isCommenting && (
@@ -901,11 +928,13 @@ export function PullRequestDetail({
           reactionTarget ||
           showFileList
             ? ""
-            : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
-              ? `Tab view ↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`
-              : viewIndex >= 0
-                ? "Tab next Shift+Tab prev ↑↓ e edit d del a/r approve m merge x close q ? help"
-                : `↑↓ n/N file f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`}
+            : pendingBracket
+              ? `${pendingBracket}_ Press c for ${pendingBracket === "]" ? "next" : "previous"} change, other key to cancel`
+              : viewIndex === -1 && (commits.length > 0 || commitsAvailable)
+                ? `Tab view ↑↓ n/N file ]c/[c change f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`
+                : viewIndex >= 0
+                  ? "Tab next Shift+Tab prev ↑↓ ]c/[c change e edit d del a/r approve m merge x close q ? help"
+                  : `↑↓ n/N file ]c/[c change f list c comment C inline R reply o fold e edit d del g react a/r approve m merge x close A activity q ? help${hasTruncation ? " t more" : ""}`}
         </Text>
       </Box>
     </Box>

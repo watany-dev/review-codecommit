@@ -1,0 +1,17 @@
+diff --git a/index.js b/index.js
+index 1140bf61114ff9ca08610c22345af16a2bfc1f53..df74f1832b8210bc0a8dce4498131b0e600fc79b 100644
+--- a/index.js
++++ b/index.js
+@@ -62,6 +62,12 @@ export default function stringWidth(input, options = {}) {
+ 		return 0;
+ 	}
+ 
++	// Fast path: printable ASCII strings are one column per character,
++	// skipping grapheme segmentation and the RGI emoji regex entirely.
++	if (!/[^\x20-\x7E]/.test(string)) {
++		return string.length;
++	}
++
+ 	let width = 0;
+ 	const eastAsianWidthOptions = {ambiguousAsWide: !ambiguousIsNarrow};
+ 

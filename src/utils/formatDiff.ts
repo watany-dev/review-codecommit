@@ -23,6 +23,18 @@ export interface DisplayLine {
   reactionText?: string;
 }
 
+/** Lookahead window for detecting nearby matching lines (reorders/small edits). */
+const LOOKAHEAD_WINDOW = 5;
+
+/** Returns true if `target` appears in `lines` within the lookahead window starting at `start`. */
+function hasNearbyMatch(lines: string[], start: number, target: string): boolean {
+  const end = Math.min(lines.length, start + LOOKAHEAD_WINDOW);
+  for (let i = start; i < end; i++) {
+    if (lines[i] === target) return true;
+  }
+  return false;
+}
+
 /**
  * Computes a simplified line-by-line diff between two sets of lines.
  *
@@ -68,9 +80,8 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
         (ai >= afterLines.length || beforeLines[bi] !== afterLines[ai])
       ) {
         const bl = beforeLines[bi]!;
-        // Optimization: look ahead to see if this line appears soon in 'after'
-        const nextMatch = afterLines.indexOf(bl, ai);
-        if (nextMatch !== -1 && nextMatch - ai < 5) break; // Stop if match found within 5 lines
+        // Optimization: stop if this line appears within the lookahead window in 'after'
+        if (hasNearbyMatch(afterLines, ai, bl)) break;
         result.push({
           type: "delete",
           text: `-${bl}`,
@@ -85,9 +96,8 @@ export function computeSimpleDiff(beforeLines: string[], afterLines: string[]): 
         (bi >= beforeLines.length || afterLines[ai] !== beforeLines[bi])
       ) {
         const al = afterLines[ai]!;
-        // Optimization: look ahead to see if this line appears soon in 'before'
-        const nextMatch = beforeLines.indexOf(al, bi);
-        if (nextMatch !== -1 && nextMatch - bi < 5) break; // Stop if match found within 5 lines
+        // Optimization: stop if this line appears within the lookahead window in 'before'
+        if (hasNearbyMatch(beforeLines, bi, al)) break;
         result.push({
           type: "add",
           text: `+${al}`,
