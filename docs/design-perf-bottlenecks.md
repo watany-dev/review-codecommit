@@ -237,7 +237,54 @@ src/
 
 既存の blob 表示テストは `waitFor` のため 16ms バッチでも成立する。
 
-## 実装順序
+## 計測結果（実装後）
+
+同一マシンで `origin/main`（変更前）とこのブランチ（変更後）を `bun run bench` した。mean。service 系は 1 リクエスト 1ms のフェイク RTT。
+
+### #105 ファンアウト
+
+| 呼び出し | 件数 | main | このブランチ | 比 |
+|---|---|---|---|---|
+| `listPullRequests` | 10 PR | 3.35 ms | 2.34 ms | 1.4x |
+| `listPullRequests` | 25 PR | 6.73 ms | 4.53 ms | 1.5x |
+| `getReactionsForComments` | 20 | 4.49 ms | 2.28 ms | 2.0x |
+| `getReactionsForComments` | 100 | 22.0 ms | 7.96 ms | 2.8x |
+
+25 PR を RTT 100ms に換算すると約 670ms → 約 450ms。ウェーブ数 `ceil(N/limit)+1` と一致する。
+
+### #104 `getCommitsForPR`
+
+| コミット数 | main | このブランチ |
+|---|---|---|
+| 10 | 11.2 ms | 11.3 ms |
+| 50 | 56.3 ms | 55.8 ms |
+| 100 | 112 ms | 113 ms |
+
+関数自体は速くなっていない（直列走査のまま）。改善は Tab を押す前に走らせて待ちを隠すこと。
+
+### #103 blob 再構築
+
+60 ファイル × 300 行。progressive = ファイルごと全再構築（変更前）。windowed = 6 件ずつ（concurrency 相当の窓）。
+
+| | mean |
+|---|---|
+| progressive | 27.7 ms |
+| windowed (6) | 7.90 ms |
+| batched（下限） | 5.44 ms |
+
+80 ファイル（150 行/ファイル）: progressive 22.6 ms → windowed 6.01 ms。
+
+### #102 ActivityTimeline j/k
+
+| イベント数 | main | このブランチ |
+|---|---|---|
+| 50 | 6.72 ms | 3.07 ms |
+| 150 | 19.4 ms | 2.84 ms |
+| 300 | 41.7 ms | 2.91 ms |
+
+件数を増やしてもキーストロークは約 3ms で頭打ち。
+
+---
 
 1. `createBatcher` + テスト
 2. concurrency 定数
