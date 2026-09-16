@@ -300,4 +300,38 @@ describe("ActivityTimeline", () => {
     const output = lastFrame()!;
     expect(output).toContain("> ");
   });
+
+  it("renders only a window of events when the list is long", () => {
+    const events = Array.from({ length: 50 }, (_, i) =>
+      makeEvent({
+        description: `event-${String(i).padStart(2, "0")}`,
+        eventDate: new Date(Date.UTC(2026, 1, 1, 0, i)),
+      }),
+    );
+    const { lastFrame } = render(<ActivityTimeline {...defaultProps} events={events} />);
+    const output = lastFrame()!;
+    expect(output).toContain("event-00");
+    expect(output).not.toContain("event-49");
+  });
+
+  it("scrolls the window so the cursor stays visible", async () => {
+    const events = Array.from({ length: 50 }, (_, i) =>
+      makeEvent({
+        description: `event-${String(i).padStart(2, "0")}`,
+        eventDate: new Date(Date.UTC(2026, 1, 1, 0, i)),
+      }),
+    );
+    const { lastFrame, stdin } = render(<ActivityTimeline {...defaultProps} events={events} />);
+
+    for (let i = 0; i < 20; i++) {
+      stdin.write("j");
+    }
+
+    await vi.waitFor(() => {
+      const output = lastFrame()!;
+      const cursorLine = output.split("\n").find((l) => l.includes("> "));
+      expect(cursorLine).toContain("event-20");
+      expect(output).not.toContain("event-00");
+    });
+  });
 });

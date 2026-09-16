@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+
+- Raise `listPullRequests` fan-out concurrency from 5 to 10, and reaction fetches from 5 to 15 (#105)
+- Prefetch commit history while opening a PR so Tab does not wait on a serial `GetCommit` walk (#104)
+- Batch blob-text state updates on a 16ms window so progressive diff load is no longer O(N²) rebuilds (#103)
+- Window `ActivityTimeline` to 30 visible rows and memoize event rows (#102)
+
 ## [0.4.0] - 2026-02-18
 
 ### Added

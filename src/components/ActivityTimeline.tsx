@@ -1,7 +1,10 @@
 import { Box, Text, useInput } from "ink";
-import React, { useState } from "react";
+import React, { memo, useMemo, useState } from "react";
 import type { PrActivityEvent } from "../services/codecommit.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
+
+/** Match PullRequestDetail's default viewport so j/k cost stays constant. */
+const VISIBLE_EVENT_COUNT = 30;
 
 interface Props {
   pullRequestTitle: string;
@@ -31,7 +34,7 @@ export function ActivityTimeline({
     }
 
     if (input === "j" || key.downArrow) {
-      setCursorIndex((prev) => Math.min(prev + 1, events.length - 1));
+      setCursorIndex((prev) => Math.min(prev + 1, Math.max(events.length - 1, 0)));
       return;
     }
 
@@ -45,6 +48,15 @@ export function ActivityTimeline({
       return;
     }
   });
+
+  const scrollOffset = useMemo(() => {
+    const halfVisible = Math.floor(VISIBLE_EVENT_COUNT / 2);
+    const maxOffset = Math.max(0, events.length - VISIBLE_EVENT_COUNT);
+    const idealOffset = cursorIndex - halfVisible;
+    return Math.max(0, Math.min(idealOffset, maxOffset));
+  }, [cursorIndex, events.length]);
+
+  const visibleEvents = events.slice(scrollOffset, scrollOffset + VISIBLE_EVENT_COUNT);
 
   if (isLoading && events.length === 0) {
     return (
@@ -80,13 +92,16 @@ export function ActivityTimeline({
     <Box flexDirection="column">
       <Text bold>Activity: {pullRequestTitle}</Text>
       <Box flexDirection="column" marginTop={1}>
-        {events.map((event, i) => (
-          <ActivityEventRow
-            key={`${event.eventDate.toISOString()}-${i}`}
-            event={event}
-            isCursor={i === cursorIndex}
-          />
-        ))}
+        {visibleEvents.map((event, i) => {
+          const globalIndex = scrollOffset + i;
+          return (
+            <ActivityEventRow
+              key={globalIndex}
+              event={event}
+              isCursor={globalIndex === cursorIndex}
+            />
+          );
+        })}
       </Box>
       <Box marginTop={1}>
         <Text dimColor>
@@ -101,7 +116,13 @@ export function ActivityTimeline({
   );
 }
 
-function ActivityEventRow({ event, isCursor }: { event: PrActivityEvent; isCursor: boolean }) {
+const ActivityEventRow = memo(function ActivityEventRow({
+  event,
+  isCursor,
+}: {
+  event: PrActivityEvent;
+  isCursor: boolean;
+}) {
   const icon = getEventIcon(event.eventType);
   const timeAgo = formatRelativeDate(event.eventDate);
   const actorName = extractAuthorName(event.actorArn);
@@ -116,7 +137,7 @@ function ActivityEventRow({ event, isCursor }: { event: PrActivityEvent; isCurso
       <Text dimColor>{timeAgo}</Text>
     </Box>
   );
-}
+});
 
 function getEventIcon(eventType: string): string {
   const iconMap: Record<string, string> = {

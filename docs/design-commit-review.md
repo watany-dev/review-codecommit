@@ -3,6 +3,8 @@
 > **✅ 実装完了** (2026-02-14)
 >
 > PR 詳細画面に Tab/Shift+Tab によるビュー切り替え（All changes ↔ 各コミット）を実装。サービス層（getCommit, getCommitsForPR, getCommitDifferences）、PullRequestDetail UI（viewIndex, タブヘッダー、コミット diff 表示）、App 統合（状態管理、diff ロード）、Help 画面更新を含む。
+>
+> **後続の性能改善（2026-09-16）**: `getCommitsForPR` は PR 詳細ロード時にバックグラウンド先行取得する。Tab は in-flight Promise を共有し、直列 GetCommit をその場で始めない。詳細は `docs/design-perf-bottlenecks.md`（#104）。
 
 ## 概要
 

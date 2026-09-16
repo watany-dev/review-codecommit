@@ -43,8 +43,11 @@ import {
   updateApprovalState,
   updateComment,
 } from "./services/codecommit.js";
+import { createBatcher } from "./utils/batchUpdates.js";
 import { blobKey, fetchBlobTexts, streamBlobTexts } from "./utils/blobTexts.js";
 import { formatErrorMessage } from "./utils/formatError.js";
+
+const BLOB_TEXT_BATCH_DELAY_MS = 16;
 
 type Screen = "repos" | "prs" | "detail" | "activity";
 
@@ -147,6 +150,7 @@ export function App({ client, initialRepo }: AppProps) {
 
   const detailLoadRef = useRef(0);
   const commitLoadRef = useRef(0);
+  const commitsPromiseRef = useRef<Promise<CommitInfo[]> | null>(null);
 
   const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
 
@@ -418,18 +422,57 @@ export function App({ client, initialRepo }: AppProps) {
       setCommits([]);
       setCommitDifferences([]);
       setCommitDiffTexts(new Map());
+      commitsPromiseRef.current = null;
 
-      // Background: blob texts
+      // Background: blob texts (batched so each arrival does not rebuild all lines)
+      type BlobUpdate =
+        | { key: string; status: "loaded"; texts: { before: string; after: string } }
+        | { key: string; status: "error" };
+      const blobBatcher = createBatcher<BlobUpdate>((updates) => {
+        if (isDetailLoadStale(loadId)) return;
+        const loaded = updates.filter(
+          (u): u is Extract<BlobUpdate, { status: "loaded" }> => u.status === "loaded",
+        );
+        if (loaded.length > 0) {
+          setDiffTexts((prev) => {
+            const next = new Map(prev);
+            for (const update of loaded) next.set(update.key, update.texts);
+            return next;
+          });
+        }
+        setDiffTextStatus((prev) => {
+          const next = new Map(prev);
+          for (const update of updates) next.set(update.key, update.status);
+          return next;
+        });
+      }, BLOB_TEXT_BATCH_DELAY_MS);
+
       void streamBlobTexts(client, selectedRepo, detail.differences, {
         isStale: () => isDetailLoadStale(loadId),
         onLoaded: (key, texts) => {
-          setDiffTexts((prev) => new Map(prev).set(key, texts));
-          setDiffTextStatus((prev) => new Map(prev).set(key, "loaded"));
+          blobBatcher.enqueue({ key, status: "loaded", texts });
         },
         onError: (key) => {
-          setDiffTextStatus((prev) => new Map(prev).set(key, "error"));
+          blobBatcher.enqueue({ key, status: "error" });
         },
-      });
+      }).then(() => blobBatcher.flush());
+
+      // Background: commits (parent-chain walk cannot be parallelized)
+      const sourceCommit = detail.pullRequest.pullRequestTargets?.[0]?.sourceCommit;
+      const mergeBase = detail.pullRequest.pullRequestTargets?.[0]?.mergeBase;
+      if (sourceCommit && mergeBase) {
+        const promise = getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+        commitsPromiseRef.current = promise;
+        void promise.then(
+          (loaded) => {
+            if (isDetailLoadStale(loadId)) return;
+            setCommits(loaded);
+          },
+          () => {
+            /* Tab path awaits the same promise and surfaces the failure */
+          },
+        );
+      }
 
       // Background: approvals
       const revisionId = detail.pullRequest.revisionId;
@@ -557,13 +600,8 @@ export function App({ client, initialRepo }: AppProps) {
     setCommitDiffTexts(new Map());
     try {
       let currentCommits = commits;
-      if (currentCommits.length === 0) {
-        const sourceCommit = prDetail?.pullRequestTargets?.[0]?.sourceCommit;
-        const mergeBase = prDetail?.pullRequestTargets?.[0]?.mergeBase;
-        /* v8 ignore start -- UI prevents calling without sourceCommit/mergeBase */
-        if (!sourceCommit || !mergeBase) return;
-        /* v8 ignore stop */
-        currentCommits = await getCommitsForPR(client, selectedRepo, sourceCommit, mergeBase);
+      if (commitsPromiseRef.current) {
+        currentCommits = await commitsPromiseRef.current;
         if (isCommitLoadStale(loadId)) return;
         setCommits(currentCommits);
       }

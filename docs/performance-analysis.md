@@ -18,14 +18,16 @@
 ```
 ListPullRequests → [id1, id2, ..., id25]
   → GetPullRequest(id1)  ──┐
-  → GetPullRequest(id2)    │ 5並列 × 5バッチ = 直列5回分の遅延
+  → GetPullRequest(id2)    │ 10並列 × 3バッチ = 直列3回分の遅延
   → ...                    │
   → GetPullRequest(id25) ──┘
 ```
 
-CodeCommit API にはバッチ取得がないため API の制約ではあるが、concurrency を 5→10 程度に上げることで改善可能。
+CodeCommit API にはバッチ取得がないため API の制約ではあるが、concurrency を 5→10 に上げることで改善可能。
 
 > **改修影響度: 🟢 低** — concurrency 数値の変更だけなら `mapWithLimit` の第2引数を変えるだけ。`codecommit.test.ts` では `mockSend` のコール回数は検証しているがコール**順序**は `mapWithLimit` 内部の並列度に依存しないため壊れにくい。ただし concurrency を大きく上げると CodeCommit API のスロットリング（1秒あたりのリクエスト上限）に引っかかる可能性がある。本番環境で 429 エラーが出た場合のリトライ処理は未実装。
+>
+> **対応済み（#105）**: `LIST_PULL_REQUEST_CONCURRENCY = 10`。リアクション側は `REACTION_FETCH_CONCURRENCY = 15`。
 
 ### 2. `getCommitsForPR` の完全直列処理
 
@@ -34,12 +36,14 @@ CodeCommit API にはバッチ取得がないため API の制約ではあるが
 コミット履歴を1件ずつ直列に `GetCommitCommand` で辿っている。10コミットのPRなら10回の直列APIコール。コミットグラフが線形であるため並列化は構造上難しい。
 
 > **改修影響度: 🟡 中** — while ループの構造を変えると `codecommit.test.ts` の `getCommitsForPR` テスト群（`mockSend` の呼び出し回数・順序を検証）が壊れる。また、コミットチェーンの順序（`commits.reverse()` で時系列順にする）に依存する `app.test.tsx` のコミットビューテストにも影響する。現実的な改善は「最初の N 件だけ取得して残りを遅延ロード」だが、UI のロード状態管理と `app.test.tsx` の `handleLoadCommitDiff` テストの書き換えが必要。
+>
+> **対応済み（#104）**: 走査自体は直列のまま、`loadPullRequestDetail` でバックグラウンド先行取得し、Tab は in-flight Promise を共有する。
 
 ### 3. `getReactionsForComments` — コメント数に比例したAPIコール
 
 **場所**: `src/services/codecommit.ts:576-595`
 
-全コメントの reaction を1件ずつ個別に取得。50コメントあるPRなら50回のAPIコール（concurrency=5で直列10バッチ分）。
+全コメントの reaction を1件ずつ個別に取得。50コメントあるPRなら50回のAPIコール（concurrency=15 で直列4バッチ分）。
 
 > **改修影響度: 🟡 中** — CodeCommit API にバッチ取得がないためAPIレベルでの改善は不可。concurrency を上げるか、reaction 取得を遅延（表示時に lazy load）する方法がある。後者の場合、`app.test.tsx` の `reloadReactions` に関するテスト群と `PullRequestDetail.test.tsx` の reaction 表示テストの書き換えが必要。reaction は表示のみに使われるため、表示が一瞬遅れても操作に影響しない点は有利。
 
@@ -119,6 +123,8 @@ for (const dl of diffLines) {
 blob が1件ロードされるたびに `setDiffTexts` と `setDiffTextStatus` の両方で `new Map(prev)` を実行する。50ファイルのPRなら100回の Map コピー（各コピーが O(n)）。バッチ化するか `useRef` + 単一 `setState` で更新回数を減らすことで改善可能。
 
 > **改修影響度: 🟠 高** — `diffTexts` と `diffTextStatus` は `App` コンポーネントの state として管理され、`PullRequestDetail` に props として渡されている。`useRef` ベースに変えると、**React のリレンダリングが自動でトリガーされなくなる**ため、別途 `forceUpdate` 相当の仕組みが必要。`app.test.tsx` は `vi.waitFor(() => expect(lastFrame()).toContain(...))` で diff テキストの描画完了を検証しており、更新タイミングが変わるとテストのタイミング前提が壊れる。バッチ化（例：5件ごとにまとめて state 更新）の方が安全だが、プログレッシブローディングの UX が変わる。
+>
+> **対応済み（#103）**: `createBatcher` で 16ms 窓にまとめてから setState する。ストリーム完了時に flush。
 
 ### 10. `diffTextStatus` のデフォルト値が毎レンダー新オブジェクト
 
@@ -193,12 +199,12 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 | ✅ 完了 | 16 | extractAuthorName 繰返し | 小 | 🟢 非常に低 | 対応済み（v0.1.1） |
 | ✅ 完了 | 7 | header index 再計算 | 小 | 🟢 低 | 対応済み（v0.1.1） |
 | ✅ 完了 | 8 | キャッシュ mutation | — | 🟢 低 | 対応済み（v0.1.1） |
-| ★★☆ | 1 | listPullRequests N+1 | 大 | 🟢 低 | concurrency 増加のみ。スロットリング監視を追加 |
-| ★★☆ | 3 | reaction 全件取得 | 中 | 🟡 中 | 遅延ロード化。テスト書き換え中程度 |
+| ✅ 完了 | 1 | listPullRequests N+1 | 大 | 🟢 低 | concurrency 5→10（#105） |
+| ✅ 完了 | 3 | reaction 全件取得 | 中 | 🟡 中 | concurrency 5→15（#105）。遅延ロードは未実施 |
+| ✅ 完了 | 9 | Map 高頻度コピー | 中 | 🟠 高 | 16ms バッチ化（#103） |
+| ✅ 完了 | 2 | getCommitsForPR 直列 | 大 | 🟡 中 | 詳細ロード時に先行取得（#104） |
 | ★★☆ | 14 | blob キャッシュなし | 中 | 🟡 中 | app 層でキャッシュ。寿命管理に注意 |
 | ★☆☆ | 6 | computeSimpleDiff O(n×m) | 中 | 🟠 高 | diff 出力が変わりうるため要スナップショットテスト |
-| ★☆☆ | 9 | Map 高頻度コピー | 中 | 🟠 高 | バッチ化推奨。UX 変化に注意 |
-| ★☆☆ | 2 | getCommitsForPR 直列 | 大 | 🟡 中 | 遅延ロードUI。テスト書き換え必要 |
 | ★☆☆ | 15 | loadDiffTexts 再実装 | — | 🟠 高 | ステイルガード喪失リスク。現状維持推奨 |
 | ★☆☆ | 12 | visibleLines key | 小 | 🟡 中 | Ink 環境では効果限定的。要プロファイリング |
 | ☆☆☆ | 4 | reloadReactions 全件 | 中 | 🟠 高 | 差分マージの整合性リスク |
@@ -208,6 +214,7 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 ### 推奨アプローチ
 
 1. ~~**#10, #13, #16, #7, #8 を対応**（リスクなし、即効性あり）~~ → v0.1.1 で対応済み
-2. **次に #1 の concurrency 増加**（低リスクで最大の体感改善）
-3. **#6, #9 は十分なテスト追加後に着手**（スナップショットテスト必須）
-4. **#5, #15 は現状維持**（壊れるリスクが改善幅に見合わない）
+2. ~~**次に #1 の concurrency 増加**（低リスクで最大の体感改善）~~ → #105 で 10 / 15 に引き上げ済み
+3. ~~**#2 の先行取得 / #9 のバッチ化**~~ → #104 / #103 で対応済み。ActivityTimeline の全件描画は #102 でウィンドウ化
+4. **#6 は十分なテスト追加後に着手**（スナップショットテスト必須）
+5. **#5, #15 は現状維持**（壊れるリスクが改善幅に見合わない）
