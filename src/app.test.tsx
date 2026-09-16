@@ -3467,6 +3467,9 @@ describe("App", () => {
     });
     expect(getCommitsForPR).toHaveBeenCalledTimes(1);
 
+    stdin.write("\t");
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+
     commitsDeferred.resolve([
       {
         commitId: "src123",
@@ -3482,6 +3485,49 @@ describe("App", () => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
     expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps PR detail usable when commit prefetch fails", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockRejectedValue(new Error("GetCommit failed"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalled();
+    });
+    expect(lastFrame()).toContain("[All changes]");
   });
 
   it("does not show commits when mergeBase is missing", async () => {

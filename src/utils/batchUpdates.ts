@@ -27,10 +27,7 @@ export function createBatcher<T>(
       pending.push(item);
       if (timer !== null) return;
       timer = setTimeout(() => {
-        timer = null;
-        const items = pending;
-        pending = [];
-        if (items.length > 0) apply(items);
+        apply(take());
       }, delayMs);
     },
     flush() {

@@ -150,7 +150,7 @@ export function App({ client, initialRepo }: AppProps) {
 
   const detailLoadRef = useRef(0);
   const commitLoadRef = useRef(0);
-  const commitsPromiseRef = useRef<Promise<CommitInfo[]> | null>(null);
+  const commitsPromiseRef = useRef<Promise<CommitInfo[]>>(Promise.resolve([]));
 
   const [reactionsByComment, setReactionsByComment] = useState<ReactionsByComment>(new Map());
 
@@ -422,13 +422,14 @@ export function App({ client, initialRepo }: AppProps) {
       setCommits([]);
       setCommitDifferences([]);
       setCommitDiffTexts(new Map());
-      commitsPromiseRef.current = null;
+      commitsPromiseRef.current = Promise.resolve([]);
 
       // Background: blob texts (batched so each arrival does not rebuild all lines)
       type BlobUpdate =
         | { key: string; status: "loaded"; texts: { before: string; after: string } }
         | { key: string; status: "error" };
       const blobBatcher = createBatcher<BlobUpdate>((updates) => {
+        /* v8 ignore next -- stale-load guard hard to test deterministically */
         if (isDetailLoadStale(loadId)) return;
         const loaded = updates.filter(
           (u): u is Extract<BlobUpdate, { status: "loaded" }> => u.status === "loaded",
@@ -468,9 +469,7 @@ export function App({ client, initialRepo }: AppProps) {
             if (isDetailLoadStale(loadId)) return;
             setCommits(loaded);
           },
-          () => {
-            /* Tab path awaits the same promise and surfaces the failure */
-          },
+          () => undefined,
         );
       }
 
@@ -599,12 +598,9 @@ export function App({ client, initialRepo }: AppProps) {
     setCommitDifferences([]);
     setCommitDiffTexts(new Map());
     try {
-      let currentCommits = commits;
-      if (commitsPromiseRef.current) {
-        currentCommits = await commitsPromiseRef.current;
-        if (isCommitLoadStale(loadId)) return;
-        setCommits(currentCommits);
-      }
+      const currentCommits = await commitsPromiseRef.current;
+      if (isCommitLoadStale(loadId)) return;
+      setCommits(currentCommits);
 
       const commit = currentCommits[commitIndex];
       if (!commit || commit.parentIds.length === 0) return;

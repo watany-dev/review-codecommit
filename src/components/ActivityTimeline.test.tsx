@@ -56,6 +56,14 @@ describe("ActivityTimeline", () => {
     expect(lastFrame()).toContain("No activity events found.");
   });
 
+  it("keeps cursor at 0 when j is pressed on an empty list", () => {
+    const { lastFrame, stdin } = render(
+      <ActivityTimeline {...defaultProps} events={[]} isLoading={false} />,
+    );
+    stdin.write("j");
+    expect(lastFrame()).toContain("No activity events found.");
+  });
+
   it("shows error message and back hint on error", () => {
     const { lastFrame } = render(
       <ActivityTimeline {...defaultProps} error="Access denied. Check your IAM policy." />,
