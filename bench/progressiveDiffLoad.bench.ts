@@ -8,8 +8,9 @@
  * display-line array — for every file, not just the one that arrived.
  *
  * "progressive" replays that: N map copies + N full rebuilds.
- * "batched" is the same total work delivered in one update, as a reference
- * point for how much of the cost is the per-file fan-out.
+ * "windowed" applies arrivals in waves of 6 (streamBlobTexts concurrency) —
+ * the pattern `createBatcher` produces when a 16ms window covers one RTT wave.
+ * "batched" is the same total work delivered in one update, as a lower bound.
  */
 import type { Difference } from "@aws-sdk/client-codecommit";
 import { bench, describe } from "vitest";
@@ -71,6 +72,39 @@ function replayProgressive(
   return lastLineCount;
 }
 
+/** Arrivals flushed in waves matching streamBlobTexts concurrency (6). */
+function replayWindowed(
+  differences: Difference[],
+  arrivals: Array<{ key: string; texts: { before: string; after: string } }>,
+  windowSize = 6,
+): number {
+  let diffTexts = new Map<string, { before: string; after: string }>();
+  let diffTextStatus = new Map<string, "loading" | "loaded" | "error">();
+  const diffCache = new Map<string, DisplayLine[]>();
+  let lastLineCount = 0;
+
+  for (let i = 0; i < arrivals.length; i += windowSize) {
+    const batch = arrivals.slice(i, i + windowSize);
+    diffTexts = new Map(diffTexts);
+    diffTextStatus = new Map(diffTextStatus);
+    for (const { key, texts } of batch) {
+      diffTexts.set(key, texts);
+      diffTextStatus.set(key, "loaded");
+    }
+    lastLineCount = buildDisplayLines(
+      differences,
+      diffTexts,
+      diffTextStatus,
+      new Map(),
+      [],
+      new Map(),
+      new Map(),
+      diffCache,
+    ).length;
+  }
+  return lastLineCount;
+}
+
 /** Same end state, delivered in a single update. */
 function replayBatched(
   differences: Difference[],
@@ -108,12 +142,18 @@ describe("progressive diff load (blob texts streaming in)", () => {
   bench("10 files x 100 lines — progressive", () => {
     replayProgressive(small.differences, small.arrivals);
   });
+  bench("10 files x 100 lines — windowed (6)", () => {
+    replayWindowed(small.differences, small.arrivals);
+  });
   bench("10 files x 100 lines — batched", () => {
     replayBatched(small.differences, small.arrivals);
   });
 
   bench("30 files x 200 lines — progressive", () => {
     replayProgressive(medium.differences, medium.arrivals);
+  });
+  bench("30 files x 200 lines — windowed (6)", () => {
+    replayWindowed(medium.differences, medium.arrivals);
   });
   bench("30 files x 200 lines — batched", () => {
     replayBatched(medium.differences, medium.arrivals);
@@ -122,19 +162,31 @@ describe("progressive diff load (blob texts streaming in)", () => {
   bench("60 files x 300 lines — progressive", () => {
     replayProgressive(large.differences, large.arrivals);
   });
+  bench("60 files x 300 lines — windowed (6)", () => {
+    replayWindowed(large.differences, large.arrivals);
+  });
   bench("60 files x 300 lines — batched", () => {
     replayBatched(large.differences, large.arrivals);
   });
 });
 
 describe("progressive load scaling (150 lines/file, file count varies)", () => {
-  bench("20 files", () => {
+  bench("20 files — progressive", () => {
     replayProgressive(scale20.differences, scale20.arrivals);
   });
-  bench("40 files", () => {
+  bench("20 files — windowed (6)", () => {
+    replayWindowed(scale20.differences, scale20.arrivals);
+  });
+  bench("40 files — progressive", () => {
     replayProgressive(scale40.differences, scale40.arrivals);
   });
-  bench("80 files", () => {
+  bench("40 files — windowed (6)", () => {
+    replayWindowed(scale40.differences, scale40.arrivals);
+  });
+  bench("80 files — progressive", () => {
     replayProgressive(scale80.differences, scale80.arrivals);
+  });
+  bench("80 files — windowed (6)", () => {
+    replayWindowed(scale80.differences, scale80.arrivals);
   });
 });

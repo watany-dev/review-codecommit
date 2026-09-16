@@ -1,10 +1,8 @@
 /**
- * Rendering cost of the two unwindowed list screens.
+ * Rendering cost of list screens.
  *
- * PullRequestDetail slices its display lines to ~30 visible rows before
- * rendering. ActivityTimeline and PullRequestList do not: both map over the
- * whole array, so every keystroke re-renders every row. These benches measure
- * how the per-keystroke cost grows with list length.
+ * PullRequestDetail and ActivityTimeline slice to ~30 visible rows before
+ * rendering. PullRequestList does not, but listPullRequests caps a page at 25.
  */
 import { render } from "ink-testing-library";
 import React from "react";
