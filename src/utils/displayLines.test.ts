@@ -54,3 +54,70 @@ describe("buildDisplayLines inline threads", () => {
     expect(inlineTexts).toContain("💬 bob: second");
   });
 });
+
+describe("buildDisplayLines diff cache", () => {
+  it("keeps each file's own filePath when two files share identical blob ids", () => {
+    // Two empty files added in one PR have the same (empty-content) afterBlob id
+    // and no beforeBlob, so their blob keys collide.
+    const differences: Difference[] = [
+      { afterBlob: { blobId: "E", path: "pkg/a/__init__.py" }, changeType: "A" },
+      { afterBlob: { blobId: "E", path: "pkg/b/__init__.py" }, changeType: "A" },
+    ];
+    const diffTexts = new Map([[":E", { before: "", after: "" }]]);
+    const diffTextStatus = new Map<string, "loading" | "loaded" | "error">([[":E", "loaded"]]);
+    const cache = new Map();
+
+    const lines = buildDisplayLines(
+      differences,
+      diffTexts,
+      diffTextStatus,
+      new Map(),
+      [],
+      new Map(),
+      NO_REACTIONS,
+      cache,
+    );
+
+    // Every diff line must carry the path of the header it is rendered under
+    let currentHeader = "";
+    let checked = 0;
+    for (const line of lines) {
+      if (line.type === "header") {
+        currentHeader = line.text;
+      } else if (line.type === "context") {
+        expect(line.filePath).toBe(currentHeader);
+        checked++;
+      }
+    }
+    expect(checked).toBe(2);
+  });
+
+  it("returns stable filePath across cached rebuilds", () => {
+    const differences: Difference[] = [
+      { afterBlob: { blobId: "E", path: "a.txt" }, changeType: "A" },
+      { afterBlob: { blobId: "E", path: "b.txt" }, changeType: "A" },
+    ];
+    const diffTexts = new Map([[":E", { before: "x", after: "x" }]]);
+    const diffTextStatus = new Map<string, "loading" | "loaded" | "error">([[":E", "loaded"]]);
+    const cache = new Map();
+    const build = () =>
+      buildDisplayLines(
+        differences,
+        diffTexts,
+        diffTextStatus,
+        new Map(),
+        [],
+        new Map(),
+        NO_REACTIONS,
+        cache,
+      );
+    const first = build()
+      .filter((l) => l.type === "context")
+      .map((l) => l.filePath);
+    const second = build()
+      .filter((l) => l.type === "context")
+      .map((l) => l.filePath);
+    expect(first).toEqual(["a.txt", "b.txt"]);
+    expect(second).toEqual(["a.txt", "b.txt"]);
+  });
+});

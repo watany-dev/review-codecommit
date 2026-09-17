@@ -225,7 +225,9 @@ export function buildDisplayLines(
       const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
       const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
       const displayLimit = Math.min(currentLimit, totalLines);
-      const cacheKey = `${blobKey}:${displayLimit}`;
+      // Two files can share a blob key (e.g. two empty files added in one PR), so the
+      // key must include the path: cached lines carry `filePath` for inline comments.
+      const cacheKey = `${filePath}\0${blobKey}:${displayLimit}`;
       let diffLines = diffCache?.get(cacheKey);
       if (!diffLines) {
         // Split only on cache miss; the warm path never needs the line arrays
