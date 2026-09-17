@@ -21,10 +21,6 @@ async function loadBlobPair(
   return { key, before, after };
 }
 
-/**
- * Fetches before/after blob content for a list of diff entries.
- * Returns a Map keyed by `${beforeBlobId}:${afterBlobId}`.
- */
 export async function fetchBlobTexts(
   client: CodeCommitClient,
   repoName: string,
@@ -40,9 +36,6 @@ interface StreamCallbacks {
   onError: (key: string) => void;
 }
 
-/**
- * Streams blob text fetches with incremental callbacks and a stale-load guard.
- */
 export async function streamBlobTexts(
   client: CodeCommitClient,
   repoName: string,
