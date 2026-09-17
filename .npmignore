@@ -6,6 +6,8 @@ src/
 # Development files
 .github/
 .claude/
+.agents/
+.cursor/
 docs/
 coverage/
 .oxlintrc.json

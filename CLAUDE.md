@@ -89,3 +89,20 @@ AWS CodeCommitのプルリクエストをターミナル上で快適にレビュ
 
 ## イテレーション単位
 機能を最小単位に分割し、各イテレーションで1つの機能を完成させます。各イテレーションでコミットを行います。
+
+## Agent Skills
+
+このリポジトリのスキルは `.claude/skills/` に 1 本だけ置き、`.agents/skills`
+と `.cursor/skills`（Codex / Cursor が参照）は同ディレクトリへのシンボリックリンクとする。
+
+作業完了時は `wrapup` スキル（レビュー2本 → 取り込み → コメント掃除）を通す。
+
+`ponytail-review`（差分の過剰設計レビュー）は
+[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) (MIT)
+から vendoring したもの。wrapup が依存する。
+
+既存スキル:
+- `update-plan` — プラン完了直前の横断検証
+- `update-design` — 設計書の 100 点評価と改善
+- `update-docs` — README / 設計書 / 要件定義の最新化
+- `cleanup-comments` — コードから復元できるコメントの削除（wrapup が依存）
