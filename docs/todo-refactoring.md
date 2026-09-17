@@ -2,34 +2,6 @@
 
 コードレビューにより抽出された冗長処理・不要処理・リファクタリング対象の一覧。
 
-## 未対応（優先度順）
-
-### 高優先度
-
-#### 1. `PullRequestDetail.tsx` が巨大すぎる（~1,200行）
-- **場所**: `src/components/PullRequestDetail.tsx`
-- **分割候補**:
-  - `buildDisplayLines`, `findMatchingThreadEntries`, `appendThreadLines` → `utils/displayLines.ts`
-  - `computeSimpleDiff` → `utils/formatDiff.ts` に統合
-  - `renderDiffLine` → `components/DiffLine.tsx`
-  - `ConflictDisplay` → 別ファイル
-  - `formatStrategyName`, `formatReactionBadge` → ユーティリティ
-  - `getLocationFromLine`, `getReplyTargetFromLine` → ヘルパーファイル
-
-#### 2. `App` の useState 爆発（30+個）
-- **場所**: `src/app.tsx:69-123`
-- **対策**: `useReducer` でグループ化、または `useAsyncAction()` カスタムフック
-
-#### 3. 9つの同一パターン `useEffect`（~100行）
-- **場所**: `src/components/PullRequestDetail.tsx:185-287`
-- **対策**: `useAsyncDismiss(isProcessing, error, onDismiss)` カスタムフックに抽出
-
-#### 4. Blob取得ロジックの重複（~18行 x 2箇所）
-- **場所**: `src/app.tsx:220-238`, `src/app.tsx:515-533`
-- **対策**: `fetchBlobTexts(client, repo, diffs)` ヘルパー関数に抽出
-
----
-
 ## 完了済み
 
 | 項目 | 内容 |
@@ -46,3 +18,7 @@
 | `withLoadingState` 一貫使用 | `loadPullRequests` でも利用 |
 | エラーラッパーインライン化 | `formatErrorMessage` を直接呼び出し |
 | `createClient` 簡素化 | オプション構築をシンプルに |
+| `PullRequestDetail` の diff 行構築 | `buildDisplayLines` / `findMatchingThreadEntries` / `appendThreadLines` を `src/utils/displayLines.ts` に分割済み |
+| `App` の非同期アクション | `useAsyncAction` でローディング・エラー処理を共通化済み |
+| 同一パターンの dismiss `useEffect` | `useAsyncDismiss` に抽出済み |
+| Blob 取得ロジックの重複 | `fetchBlobTexts`（および `streamBlobTexts`）に抽出済み |
