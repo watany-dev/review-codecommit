@@ -38,7 +38,7 @@
 | `commentTypes` 定数化 | `COMMENT_LINE_TYPES` として一箇所に定義 |
 | リアクション再取得ロジック統合 | `reloadReactions(threads)` ヘルパーに抽出 |
 | `handleApprove` / `handleRevoke` 統合 | `handleApprovalAction(state)` に統合 |
-| Props グループ化 | 機能グループごとにオブジェクトにまとめた（AsyncAction パターン） |
+| Props グループ化 | 機能グループごとにオブジェクトにまとめた。`useAsyncAction` の戻り値型 `AsyncActionState` を共有し、`app.tsx` からそのまま渡す（#110） |
 | `formatDiff.ts` 整理 | デッドコード削除・`computeSimpleDiff` と統合 |
 | 型定義統一 | `StatusFilter` と `PullRequestDisplayStatus` を統一 |
 | `approvals.filter` 二重実行 | `useMemo` で一度だけ計算 |

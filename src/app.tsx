@@ -746,46 +746,12 @@ export function App({ client, initialRepo }: AppProps) {
           onBack={handleBack}
           onHelp={() => setShowHelp(true)}
           onShowActivity={handleShowActivity}
-          comment={{
-            onPost: postCommentAction.execute,
-            isProcessing: postCommentAction.isProcessing,
-            error: postCommentAction.error,
-            onClearError: postCommentAction.clearError,
-          }}
-          inlineComment={{
-            onPost: postInlineCommentAction.execute,
-            isProcessing: postInlineCommentAction.isProcessing,
-            error: postInlineCommentAction.error,
-            onClearError: postInlineCommentAction.clearError,
-          }}
-          reply={{
-            onPost: postReplyAction.execute,
-            isProcessing: postReplyAction.isProcessing,
-            error: postReplyAction.error,
-            onClearError: postReplyAction.clearError,
-          }}
-          approval={{
-            approvals,
-            evaluation: approvalEvaluation,
-            onApprove: () => approvalAction.execute("APPROVE"),
-            onRevoke: () => approvalAction.execute("REVOKE"),
-            isProcessing: approvalAction.isProcessing,
-            error: approvalAction.error,
-            onClearError: approvalAction.clearError,
-          }}
-          merge={{
-            onMerge: mergeAction.execute,
-            onCheckConflicts: handleCheckConflicts,
-            isProcessing: mergeAction.isProcessing,
-            error: mergeAction.error,
-            onClearError: mergeAction.clearError,
-          }}
-          close={{
-            onClose: closePRAction.execute,
-            isProcessing: closePRAction.isProcessing,
-            error: closePRAction.error,
-            onClearError: closePRAction.clearError,
-          }}
+          comment={postCommentAction}
+          inlineComment={postInlineCommentAction}
+          reply={postReplyAction}
+          approval={{ ...approvalAction, approvals, evaluation: approvalEvaluation }}
+          merge={{ ...mergeAction, onCheckConflicts: handleCheckConflicts }}
+          close={closePRAction}
           commitView={{
             commits,
             differences: commitDifferences,
@@ -797,25 +763,9 @@ export function App({ client, initialRepo }: AppProps) {
               prDetail?.pullRequestTargets?.[0]?.mergeBase
             ),
           }}
-          editComment={{
-            onUpdate: updateCommentAction.execute,
-            isProcessing: updateCommentAction.isProcessing,
-            error: updateCommentAction.error,
-            onClearError: updateCommentAction.clearError,
-          }}
-          deleteComment={{
-            onDelete: deleteCommentAction.execute,
-            isProcessing: deleteCommentAction.isProcessing,
-            error: deleteCommentAction.error,
-            onClearError: deleteCommentAction.clearError,
-          }}
-          reaction={{
-            byComment: reactionsByComment,
-            onReact: reactAction.execute,
-            isProcessing: reactAction.isProcessing,
-            error: reactAction.error,
-            onClearError: reactAction.clearError,
-          }}
+          editComment={updateCommentAction}
+          deleteComment={deleteCommentAction}
+          reaction={{ ...reactAction, byComment: reactionsByComment }}
         />
       );
     case "activity":

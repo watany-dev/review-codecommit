@@ -1,7 +1,21 @@
 import { render } from "ink-testing-library";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { AsyncActionState } from "../hooks/useAsyncAction.js";
+import type { MergeStrategy } from "../services/codecommit.js";
 import { PullRequestDetail } from "./PullRequestDetail.js";
+
+function asyncAction<T extends unknown[]>(
+  overrides: Partial<AsyncActionState<T>> = {},
+): AsyncActionState<T> {
+  return {
+    isProcessing: false,
+    error: null,
+    execute: vi.fn(),
+    clearError: vi.fn(),
+    ...overrides,
+  };
+}
 
 describe("PullRequestDetail", () => {
   const pullRequest = {
@@ -47,46 +61,36 @@ describe("PullRequestDetail", () => {
     },
   ];
 
-  const defaultInlineCommentProps = {
-    onPost: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
-  };
+  const defaultCommentProps = asyncAction<[content: string]>();
 
-  const defaultReplyProps = {
-    onPost: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
-  };
+  const defaultInlineCommentProps =
+    asyncAction<
+      [
+        content: string,
+        location: {
+          filePath: string;
+          filePosition: number;
+          relativeFileVersion: "BEFORE" | "AFTER";
+        },
+      ]
+    >();
+
+  const defaultReplyProps = asyncAction<[inReplyTo: string, content: string]>();
 
   const defaultApprovalProps = {
+    ...asyncAction<["APPROVE" | "REVOKE"]>(),
     approvals: [] as any[],
     evaluation: null,
-    onApprove: vi.fn(),
-    onRevoke: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
   };
 
   const defaultMergeProps = {
-    onMerge: vi.fn(),
+    ...asyncAction<[strategy: MergeStrategy]>(),
     onCheckConflicts: vi
       .fn()
       .mockResolvedValue({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
   };
 
-  const defaultCloseProps = {
-    onClose: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
-  };
+  const defaultCloseProps = asyncAction<[]>();
 
   const defaultCommitProps = {
     commits: [] as any[],
@@ -97,26 +101,13 @@ describe("PullRequestDetail", () => {
     commitsAvailable: false,
   };
 
-  const defaultEditCommentProps = {
-    onUpdate: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
-  };
+  const defaultEditCommentProps = asyncAction<[commentId: string, content: string]>();
 
-  const defaultDeleteCommentProps = {
-    onDelete: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
-  };
+  const defaultDeleteCommentProps = asyncAction<[commentId: string]>();
 
   const defaultReactionProps = {
+    ...asyncAction<[commentId: string, reactionValue: string]>(),
     byComment: new Map() as any,
-    onReact: vi.fn(),
-    isProcessing: false,
-    error: null as string | null,
-    onClearError: vi.fn(),
   };
 
   it("renders PR title and ID", () => {
@@ -129,7 +120,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -156,7 +147,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -183,7 +174,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -210,7 +201,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -235,7 +226,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -261,7 +252,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -293,7 +284,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -321,7 +312,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -346,7 +337,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -379,7 +370,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -404,7 +395,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -436,7 +427,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -461,7 +452,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -489,7 +480,7 @@ describe("PullRequestDetail", () => {
         onBack={onBack}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -516,7 +507,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={onHelp}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -543,7 +534,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={onShowActivity}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -569,7 +560,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -594,7 +585,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -623,7 +614,7 @@ describe("PullRequestDetail", () => {
         onBack={onBack}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -655,7 +646,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -680,7 +671,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        comment={asyncAction({ isProcessing: true })}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -702,7 +693,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -729,7 +720,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -757,7 +748,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        comment={asyncAction({ isProcessing: true })}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -781,12 +772,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{
-          onPost: vi.fn(),
-          isProcessing: false,
-          error: "Comment exceeds the 10,240 character limit.",
-          onClearError: vi.fn(),
-        }}
+        comment={asyncAction({ error: "Comment exceeds the 10,240 character limit." })}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -813,16 +799,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
+          ...defaultApprovalProps,
           approvals: [{ userArn: "arn:aws:iam::123456789012:user/taro", approvalState: "APPROVE" }],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -849,7 +830,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -875,21 +856,16 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
+          ...defaultApprovalProps,
           evaluation: {
             approved: true,
             overridden: false,
             approvalRulesSatisfied: ["RequireOneApproval"],
             approvalRulesNotSatisfied: [],
           },
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -917,21 +893,16 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
+          ...defaultApprovalProps,
           evaluation: {
             approved: false,
             overridden: false,
             approvalRulesSatisfied: [],
             approvalRulesNotSatisfied: ["RequireOneApproval"],
           },
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -959,7 +930,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -985,7 +956,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1013,7 +984,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1042,7 +1013,7 @@ describe("PullRequestDetail", () => {
         onBack={onBack}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1073,7 +1044,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1098,7 +1069,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1126,16 +1097,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
+          ...defaultApprovalProps,
           isProcessing: true,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1160,18 +1126,13 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
+          ...defaultApprovalProps,
           approvals: [
             { userArn: "arn:aws:iam::123456789012:user/watany", approvalState: "APPROVE" },
           ],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1199,7 +1160,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1224,16 +1185,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
+          ...defaultApprovalProps,
           isProcessing: true,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1255,16 +1211,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
+          ...defaultApprovalProps,
           error: "Access denied. Check your IAM policy.",
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1291,16 +1242,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: onClearApprovalError,
+          ...defaultApprovalProps,
+          clearError: onClearApprovalError,
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1327,16 +1273,12 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
+          ...defaultApprovalProps,
           error: "Some error",
-          onClearError: onClearApprovalError,
+          clearError: onClearApprovalError,
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -1366,7 +1308,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1399,7 +1341,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1446,7 +1388,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1487,7 +1429,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1537,7 +1479,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1566,7 +1508,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1591,7 +1533,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1620,7 +1562,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1649,7 +1591,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1704,7 +1646,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1754,7 +1696,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1785,7 +1727,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1815,7 +1757,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1844,7 +1786,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1882,7 +1824,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1913,7 +1855,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1950,7 +1892,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -1994,7 +1936,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2029,7 +1971,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2068,7 +2010,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2097,7 +2039,7 @@ describe("PullRequestDetail", () => {
         onBack={onBack}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2152,7 +2094,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2177,7 +2119,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2209,8 +2151,8 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
-        inlineComment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
+        inlineComment={asyncAction({ isProcessing: true })}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
@@ -2235,13 +2177,8 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
-        inlineComment={{
-          onPost: vi.fn(),
-          isProcessing: false,
-          error: "Access denied",
-          onClearError: vi.fn(),
-        }}
+        comment={defaultCommentProps}
+        inlineComment={asyncAction({ error: "Access denied" })}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
@@ -2275,7 +2212,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2313,7 +2250,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2338,7 +2275,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2371,8 +2308,8 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
-        inlineComment={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
+        inlineComment={asyncAction({ isProcessing: true })}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
@@ -2399,7 +2336,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2427,20 +2364,15 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
+          ...defaultApprovalProps,
           evaluation: {
             approved: false,
             approvalRulesSatisfied: [],
             approvalRulesNotSatisfied: [],
           } as any,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -2464,16 +2396,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
+          ...defaultApprovalProps,
           approvals: [{ approvalState: "APPROVE" }] as any,
-          evaluation: null,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -2499,20 +2426,15 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         approval={{
-          approvals: [],
+          ...defaultApprovalProps,
           evaluation: {
             approved: true,
             approvalRulesSatisfied: undefined,
             approvalRulesNotSatisfied: [{ approvalRuleName: "rule1" }],
           } as any,
-          onApprove: vi.fn(),
-          onRevoke: vi.fn(),
-          isProcessing: false,
-          error: null,
-          onClearError: vi.fn(),
         }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -2550,7 +2472,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2600,7 +2522,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2645,7 +2567,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2711,7 +2633,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2752,7 +2674,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2797,7 +2719,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2846,7 +2768,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2900,7 +2822,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -2948,7 +2870,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3003,7 +2925,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3074,7 +2996,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3145,7 +3067,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3192,7 +3114,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3258,7 +3180,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3283,7 +3205,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3326,7 +3248,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3360,7 +3282,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3400,7 +3322,7 @@ describe("PullRequestDetail", () => {
         onBack={onBack}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3449,7 +3371,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3499,7 +3421,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3531,9 +3453,9 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
-        reply={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        reply={asyncAction({ isProcessing: true })}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
         close={defaultCloseProps}
@@ -3557,7 +3479,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3596,7 +3518,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3628,9 +3550,9 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
-        reply={{ onPost: vi.fn(), isProcessing: true, error: null, onClearError: vi.fn() }}
+        reply={asyncAction({ isProcessing: true })}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
         close={defaultCloseProps}
@@ -3650,14 +3572,9 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
-        reply={{
-          onPost: vi.fn(),
-          isProcessing: false,
-          error: "Reply exceeds the 10,240 character limit.",
-          onClearError: vi.fn(),
-        }}
+        reply={asyncAction({ error: "Reply exceeds the 10,240 character limit." })}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
         close={defaultCloseProps}
@@ -3683,7 +3600,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3709,7 +3626,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3756,7 +3673,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3795,7 +3712,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3832,7 +3749,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3860,7 +3777,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3885,7 +3802,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3912,7 +3829,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3945,7 +3862,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -3972,7 +3889,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4008,7 +3925,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4047,11 +3964,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
-        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        merge={{ ...defaultMergeProps, execute: onMerge, onCheckConflicts: onCheckConflicts }}
         close={defaultCloseProps}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -4086,7 +4003,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4126,7 +4043,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4163,7 +4080,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4202,7 +4119,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4244,7 +4161,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4286,11 +4203,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
-        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        merge={{ ...defaultMergeProps, execute: onMerge, onCheckConflicts: onCheckConflicts }}
         close={defaultCloseProps}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -4331,11 +4248,11 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
-        merge={{ ...defaultMergeProps, onMerge: onMerge, onCheckConflicts: onCheckConflicts }}
+        merge={{ ...defaultMergeProps, execute: onMerge, onCheckConflicts: onCheckConflicts }}
         close={defaultCloseProps}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
@@ -4372,7 +4289,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4401,12 +4318,12 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
-        close={{ ...defaultCloseProps, onClose: onClosePR }}
+        close={{ ...defaultCloseProps, execute: onClosePR }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
         deleteComment={defaultDeleteCommentProps}
@@ -4431,7 +4348,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4464,7 +4381,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4492,7 +4409,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4524,7 +4441,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4556,7 +4473,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4584,7 +4501,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4606,7 +4523,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4632,7 +4549,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4654,7 +4571,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4680,7 +4597,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4712,7 +4629,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4747,8 +4664,8 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
-        inlineComment={{ ...defaultInlineCommentProps, onClearError: onClearInlineCommentError }}
+        comment={defaultCommentProps}
+        inlineComment={{ ...defaultInlineCommentProps, clearError: onClearInlineCommentError }}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
@@ -4800,9 +4717,9 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
-        reply={{ ...defaultReplyProps, onClearError: onClearReplyError }}
+        reply={{ ...defaultReplyProps, clearError: onClearReplyError }}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
         close={defaultCloseProps}
@@ -4847,12 +4764,12 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={defaultMergeProps}
-        close={{ ...defaultCloseProps, error: "Some error", onClearError: onClearClosePRError }}
+        close={{ ...defaultCloseProps, error: "Some error", clearError: onClearClosePRError }}
         commitView={defaultCommitProps}
         editComment={defaultEditCommentProps}
         deleteComment={defaultDeleteCommentProps}
@@ -4882,13 +4799,13 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={{
           ...defaultApprovalProps,
           error: "Cannot approve own PR",
-          onClearError: onClearApprovalError,
+          clearError: onClearApprovalError,
         }}
         merge={defaultMergeProps}
         close={defaultCloseProps}
@@ -4920,7 +4837,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -4962,13 +4879,13 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={{
           ...defaultMergeProps,
-          onClearError: onClearMergeError,
+          clearError: onClearMergeError,
           onCheckConflicts: onCheckConflicts,
         }}
         close={defaultCloseProps}
@@ -5011,14 +4928,14 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={{
           ...defaultMergeProps,
           error: null,
-          onClearError: onClearMergeError,
+          clearError: onClearMergeError,
           onCheckConflicts: onCheckConflicts,
         }}
         close={defaultCloseProps}
@@ -5045,14 +4962,14 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
         merge={{
           ...defaultMergeProps,
           error: "Merge failed",
-          onClearError: onClearMergeError,
+          clearError: onClearMergeError,
           onCheckConflicts: onCheckConflicts,
         }}
         close={defaultCloseProps}
@@ -5109,7 +5026,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5135,7 +5052,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5164,7 +5081,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5201,7 +5118,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5249,7 +5166,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5285,7 +5202,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5329,7 +5246,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5359,7 +5276,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5389,7 +5306,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5419,7 +5336,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5449,7 +5366,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5485,7 +5402,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5518,7 +5435,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5550,7 +5467,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5575,7 +5492,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5604,7 +5521,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5648,7 +5565,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5685,7 +5602,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5719,7 +5636,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5766,7 +5683,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5802,7 +5719,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5829,14 +5746,14 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
           commitView={defaultCommitProps}
-          editComment={{ ...defaultEditCommentProps, onUpdate: onUpdateComment }}
+          editComment={{ ...defaultEditCommentProps, execute: onUpdateComment }}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
         />,
@@ -5865,7 +5782,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5901,7 +5818,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5934,7 +5851,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5962,7 +5879,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -5994,7 +5911,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6021,7 +5938,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6029,7 +5946,7 @@ describe("PullRequestDetail", () => {
           close={defaultCloseProps}
           commitView={defaultCommitProps}
           editComment={defaultEditCommentProps}
-          deleteComment={{ ...defaultDeleteCommentProps, onDelete: onDeleteComment }}
+          deleteComment={{ ...defaultDeleteCommentProps, execute: onDeleteComment }}
           reaction={defaultReactionProps}
         />,
       );
@@ -6055,7 +5972,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6091,7 +6008,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6124,7 +6041,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6153,7 +6070,7 @@ describe("PullRequestDetail", () => {
           onBack={onBack}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6187,7 +6104,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6221,7 +6138,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6258,7 +6175,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6295,14 +6212,14 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
           merge={defaultMergeProps}
           close={defaultCloseProps}
           commitView={defaultCommitProps}
-          editComment={{ ...defaultEditCommentProps, onClearError: onClearUpdateCommentError }}
+          editComment={{ ...defaultEditCommentProps, clearError: onClearUpdateCommentError }}
           deleteComment={defaultDeleteCommentProps}
           reaction={defaultReactionProps}
         />,
@@ -6336,7 +6253,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6344,7 +6261,7 @@ describe("PullRequestDetail", () => {
           close={defaultCloseProps}
           commitView={defaultCommitProps}
           editComment={defaultEditCommentProps}
-          deleteComment={{ ...defaultDeleteCommentProps, onClearError: onClearDeleteCommentError }}
+          deleteComment={{ ...defaultDeleteCommentProps, clearError: onClearDeleteCommentError }}
           reaction={defaultReactionProps}
         />,
       );
@@ -6377,7 +6294,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6385,7 +6302,7 @@ describe("PullRequestDetail", () => {
           close={defaultCloseProps}
           commitView={defaultCommitProps}
           editComment={defaultEditCommentProps}
-          deleteComment={{ ...defaultDeleteCommentProps, onClearError: onClearDeleteCommentError }}
+          deleteComment={{ ...defaultDeleteCommentProps, clearError: onClearDeleteCommentError }}
           reaction={defaultReactionProps}
         />,
       );
@@ -6411,7 +6328,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6421,7 +6338,7 @@ describe("PullRequestDetail", () => {
           editComment={defaultEditCommentProps}
           deleteComment={{
             ...defaultDeleteCommentProps,
-            onClearError: onClearDeleteCommentError,
+            clearError: onClearDeleteCommentError,
             error: "Some error",
           }}
           reaction={defaultReactionProps}
@@ -6445,7 +6362,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6474,7 +6391,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6495,7 +6412,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6522,7 +6439,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6551,7 +6468,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6572,7 +6489,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6630,7 +6547,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6661,7 +6578,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6687,7 +6604,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6713,7 +6630,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6754,7 +6671,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6783,7 +6700,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6792,7 +6709,7 @@ describe("PullRequestDetail", () => {
           commitView={defaultCommitProps}
           editComment={defaultEditCommentProps}
           deleteComment={defaultDeleteCommentProps}
-          reaction={{ ...defaultReactionProps, onReact: onReact }}
+          reaction={{ ...defaultReactionProps, execute: onReact }}
         />,
       );
       stdin.write("G");
@@ -6824,7 +6741,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6867,7 +6784,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6904,7 +6821,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6926,7 +6843,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6954,7 +6871,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -6966,7 +6883,7 @@ describe("PullRequestDetail", () => {
           reaction={{
             ...defaultReactionProps,
             error: "Comment deleted.",
-            onClearError: onClearReactionError,
+            clearError: onClearReactionError,
           }}
         />,
       );
@@ -7008,7 +6925,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7043,7 +6960,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7074,7 +6991,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7116,7 +7033,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7151,7 +7068,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7184,7 +7101,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7217,7 +7134,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7266,7 +7183,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7298,7 +7215,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7345,7 +7262,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7378,7 +7295,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7414,7 +7331,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7450,7 +7367,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7498,7 +7415,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7524,7 +7441,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7572,7 +7489,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7604,7 +7521,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7647,7 +7564,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7691,7 +7608,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7725,7 +7642,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7760,7 +7677,7 @@ describe("PullRequestDetail", () => {
           onBack={onBack}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7798,7 +7715,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7835,7 +7752,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7873,7 +7790,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -7903,7 +7820,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -7965,7 +7882,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -7997,7 +7914,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -8033,7 +7950,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -8075,7 +7992,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -8112,7 +8029,7 @@ describe("PullRequestDetail", () => {
         onBack={vi.fn()}
         onHelp={vi.fn()}
         onShowActivity={vi.fn()}
-        comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+        comment={defaultCommentProps}
         inlineComment={defaultInlineCommentProps}
         reply={defaultReplyProps}
         approval={defaultApprovalProps}
@@ -8154,7 +8071,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}
@@ -8181,7 +8098,7 @@ describe("PullRequestDetail", () => {
           onBack={vi.fn()}
           onHelp={vi.fn()}
           onShowActivity={vi.fn()}
-          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          comment={defaultCommentProps}
           inlineComment={defaultInlineCommentProps}
           reply={defaultReplyProps}
           approval={defaultApprovalProps}

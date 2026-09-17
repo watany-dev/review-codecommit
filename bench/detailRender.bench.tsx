@@ -51,10 +51,10 @@ const pullRequest = {
 };
 
 const asyncActionProps = {
-  onPost: noop,
   isProcessing: false,
   error: null,
-  onClearError: noop,
+  execute: noop,
+  clearError: noop,
 };
 
 const fixture = makeFixture(10, 200);
@@ -74,23 +74,16 @@ function renderDetail() {
       inlineComment={asyncActionProps}
       reply={asyncActionProps}
       approval={{
+        ...asyncActionProps,
         approvals: [],
         evaluation: null,
-        onApprove: noop,
-        onRevoke: noop,
-        isProcessing: false,
-        error: null,
-        onClearError: noop,
       }}
       merge={{
-        onMerge: noop,
+        ...asyncActionProps,
         onCheckConflicts: () =>
           Promise.resolve({ mergeable: true, conflictCount: 0, conflictFiles: [] }),
-        isProcessing: false,
-        error: null,
-        onClearError: noop,
       }}
-      close={{ onClose: noop, isProcessing: false, error: null, onClearError: noop }}
+      close={asyncActionProps}
       commitView={{
         commits: [],
         differences: [],
@@ -99,14 +92,11 @@ function renderDetail() {
         onLoad: noop,
         commitsAvailable: false,
       }}
-      editComment={{ onUpdate: noop, isProcessing: false, error: null, onClearError: noop }}
-      deleteComment={{ onDelete: noop, isProcessing: false, error: null, onClearError: noop }}
+      editComment={asyncActionProps}
+      deleteComment={asyncActionProps}
       reaction={{
+        ...asyncActionProps,
         byComment: new Map(),
-        onReact: noop,
-        isProcessing: false,
-        error: null,
-        onClearError: noop,
       }}
     />,
   );
