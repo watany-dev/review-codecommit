@@ -303,6 +303,12 @@ describe("formatErrorMessage", () => {
         );
       }
     });
+
+    it("resolves PullRequestDoesNotExistException without a context argument", () => {
+      expect(formatErrorMessage(makeError("PullRequestDoesNotExistException"))).toBe(
+        "Pull request not found.",
+      );
+    });
   });
 
   describe("general AWS errors", () => {
