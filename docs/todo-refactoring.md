@@ -43,6 +43,7 @@
 | 型定義統一 | `StatusFilter` と `PullRequestDisplayStatus` を統一 |
 | `approvals.filter` 二重実行 | `useMemo` で一度だけ計算 |
 | `getComments` パススルー削除 | `fetchCommentThreads` を直接エクスポート |
-| `withLoadingState` 一貫使用 | `loadPullRequests` でも利用 |
+| `withLoadingState` 一貫使用 | 画面全体の loading/error は `loadRepositories` / `loadPullRequests` / PR 詳細で利用。`loadActivity` は対象外だったが #112 で `useAsyncAction` に寄せた |
+| `loadActivity` を `useAsyncAction` 化 | 手書きの `isLoadingActivity` / `activityError` を削除（#112）。`withLoadingState` は画面全体用として残す |
 | エラーラッパーインライン化 | `formatErrorMessage` を直接呼び出し |
 | `createClient` 簡素化 | オプション構築をシンプルに |

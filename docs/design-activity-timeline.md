@@ -23,7 +23,9 @@
 >
 > **後続の性能改善（2026-09-16）**: 全件レンダリングをやめ、カーソル周辺 30 行だけ描画する。`ActivityEventRow` は `React.memo`。詳細は `docs/design-perf-bottlenecks.md`（#102）。
 >
-> **設計との主な差異**: なし。設計書どおりに実装された。
+> **後続のリファクタ（#112）**: `loadActivity` の手書き `isLoadingActivity` / `activityError` を `useAsyncAction` に寄せた。`ActivityTimeline` には `activityAction.isProcessing` / `activityAction.error` を渡す。画面全体の `withLoadingState` とは統合していない。
+>
+> **設計との主な差異**: 非同期状態は当初の専用 `useState` 2 つから `useAsyncAction` に変更（#112）。それ以外は設計書どおり。
 
 ---
 

@@ -258,8 +258,36 @@ export function App({ client, initialRepo }: AppProps) {
   // v0.4: activity timeline
   const [activityEvents, setActivityEvents] = useState<PrActivityEvent[]>([]);
   const [activityNextToken, setActivityNextToken] = useState<string | undefined>(undefined);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
+  const activityAction = useAsyncAction(
+    async (pullRequestId: string, nextToken?: string) => {
+      try {
+        const result = await getPullRequestActivity(client, {
+          pullRequestId,
+          ...(nextToken !== undefined ? { nextToken } : {}),
+          maxResults: 50,
+        });
+        if (nextToken) {
+          setActivityEvents((prev) => [...prev, ...result.events]);
+        } else {
+          setActivityEvents(result.events);
+        }
+        setActivityNextToken(result.nextToken);
+      } catch (err) {
+        if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
+          setActivityEvents([]);
+          setActivityNextToken(undefined);
+          // Retry from the start inside this action so execute() is not re-entered
+          // (that would flicker loading / risk a retry loop).
+          const retry = await getPullRequestActivity(client, { pullRequestId, maxResults: 50 });
+          setActivityEvents(retry.events);
+          setActivityNextToken(retry.nextToken);
+          return;
+        }
+        throw err;
+      }
+    },
+    (err) => formatErrorMessage(err, "activity"),
+  );
 
   // v0.8: filter, search, pagination
   const [statusFilter, setStatusFilter] = useState<PullRequestDisplayStatus>("OPEN");
@@ -620,48 +648,17 @@ export function App({ client, initialRepo }: AppProps) {
     }
   }
 
-  async function loadActivity(pullRequestId: string, nextToken?: string) {
-    setIsLoadingActivity(true);
-    setActivityError(null);
-    try {
-      const result = await getPullRequestActivity(client, {
-        pullRequestId,
-        ...(nextToken !== undefined ? { nextToken } : {}),
-        maxResults: 50,
-      });
-      if (nextToken) {
-        setActivityEvents((prev) => [...prev, ...result.events]);
-      } else {
-        setActivityEvents(result.events);
-      }
-      setActivityNextToken(result.nextToken);
-    } catch (err) {
-      /* v8 ignore start -- defensive: retry on stale continuation token */
-      if (err instanceof Error && err.name === "InvalidContinuationTokenException") {
-        setActivityEvents([]);
-        setActivityNextToken(undefined);
-        void loadActivity(pullRequestId);
-        return;
-      }
-      /* v8 ignore stop */
-      setActivityError(formatErrorMessage(err, "activity"));
-    } finally {
-      setIsLoadingActivity(false);
-    }
-  }
-
   function handleShowActivity() {
     if (!prDetail?.pullRequestId) return;
     setScreen("activity");
     setActivityEvents([]);
     setActivityNextToken(undefined);
-    setActivityError(null);
-    void loadActivity(prDetail.pullRequestId);
+    activityAction.execute(prDetail.pullRequestId);
   }
 
   function handleLoadNextActivityPage() {
-    if (!prDetail?.pullRequestId || !activityNextToken || isLoadingActivity) return;
-    void loadActivity(prDetail.pullRequestId, activityNextToken);
+    if (!prDetail?.pullRequestId || !activityNextToken || activityAction.isProcessing) return;
+    activityAction.execute(prDetail.pullRequestId, activityNextToken);
   }
 
   function handleBack() {
@@ -826,8 +823,8 @@ export function App({ client, initialRepo }: AppProps) {
         <ActivityTimeline
           pullRequestTitle={prDetail?.title ?? ""}
           events={activityEvents}
-          isLoading={isLoadingActivity}
-          error={activityError}
+          isLoading={activityAction.isProcessing}
+          error={activityAction.error}
           hasNextPage={!!activityNextToken}
           onLoadNextPage={handleLoadNextActivityPage}
           onBack={() => setScreen("detail")}
