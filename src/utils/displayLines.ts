@@ -4,8 +4,6 @@ import { blobKey } from "./blobTexts.js";
 import { extractAuthorName } from "./formatDate.js";
 import { computeSimpleDiff, type DisplayLine } from "./formatDiff.js";
 
-export type { DisplayLine };
-
 export const LARGE_DIFF_THRESHOLD = 1500;
 export const DIFF_CHUNK_SIZE = 300;
 
@@ -117,25 +115,15 @@ function appendThreadLines(
   }
 }
 
-/* v8 ignore start -- defensive clamp and proportional split; all call sites use valid inputs */
 function getSliceLimits(beforeCount: number, afterCount: number, totalLimit: number) {
   if (totalLimit <= 0) return { beforeLimit: 0, afterLimit: 0 };
   const total = beforeCount + afterCount;
   if (total <= totalLimit) return { beforeLimit: beforeCount, afterLimit: afterCount };
-
-  const beforeRatio = total === 0 ? 0.5 : beforeCount / total;
-  let beforeLimit = Math.round(totalLimit * beforeRatio);
-  beforeLimit = Math.min(beforeCount, Math.max(0, beforeLimit));
+  let beforeLimit = Math.min(beforeCount, Math.round((totalLimit * beforeCount) / total));
   let afterLimit = Math.min(afterCount, totalLimit - beforeLimit);
-
-  if (afterLimit < totalLimit - beforeLimit) {
-    const remaining = totalLimit - (beforeLimit + afterLimit);
-    beforeLimit = Math.min(beforeCount, beforeLimit + remaining);
-  }
-
+  beforeLimit = Math.min(beforeCount, totalLimit - afterLimit);
   return { beforeLimit, afterLimit };
 }
-/* v8 ignore stop */
 
 type ThreadEntry = { thread: CommentThread; index: number };
 

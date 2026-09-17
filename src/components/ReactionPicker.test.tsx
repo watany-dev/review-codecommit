@@ -1,7 +1,18 @@
 import { render } from "ink-testing-library";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { REACTIONS, ReactionPicker } from "./ReactionPicker.js";
+import { ReactionPicker } from "./ReactionPicker.js";
+
+const REACTIONS = [
+  { emoji: "👍", shortCode: ":thumbsup:" },
+  { emoji: "👎", shortCode: ":thumbsdown:" },
+  { emoji: "😄", shortCode: ":laugh:" },
+  { emoji: "🎉", shortCode: ":hooray:" },
+  { emoji: "😕", shortCode: ":confused:" },
+  { emoji: "❤️", shortCode: ":heart:" },
+  { emoji: "🚀", shortCode: ":rocket:" },
+  { emoji: "👀", shortCode: ":eyes:" },
+] as const;
 
 const defaultProps = {
   onSelect: vi.fn(),

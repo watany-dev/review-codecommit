@@ -1,7 +1,8 @@
 import type { Difference } from "@aws-sdk/client-codecommit";
 import { bench, describe } from "vitest";
 import type { CommentThread } from "../src/services/codecommit.js";
-import { buildDisplayLines, type DisplayLine } from "../src/utils/displayLines.js";
+import { buildDisplayLines } from "../src/utils/displayLines.js";
+import type { DisplayLine } from "../src/utils/formatDiff.js";
 
 function makeLines(count: number, prefix: string): string {
   return Array.from({ length: count }, (_, i) => `${prefix} line ${i} with some content`).join(

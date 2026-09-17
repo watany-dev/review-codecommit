@@ -15,12 +15,12 @@ import {
   COMMENT_LINE_TYPES,
   countLines,
   DIFF_CHUNK_SIZE,
-  type DisplayLine,
   FOLD_THRESHOLD,
   getThreadKey,
   LARGE_DIFF_THRESHOLD,
 } from "../utils/displayLines.js";
 import { extractAuthorName, formatRelativeDate } from "../utils/formatDate.js";
+import type { DisplayLine } from "../utils/formatDiff.js";
 import { CommentInput } from "./CommentInput.js";
 import { ConfirmPrompt } from "./ConfirmPrompt.js";
 import { ConflictDisplay } from "./ConflictDisplay.js";
