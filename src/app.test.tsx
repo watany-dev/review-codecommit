@@ -3725,7 +3725,6 @@ describe("App", () => {
     });
     // getCommitsForPR should NOT be called again
     expect(getCommitsForPR).toHaveBeenCalledTimes(1);
-    // But getAllDifferences should be called for the second commit
     await vi.waitFor(() => {
       expect(getAllDifferences).toHaveBeenCalledTimes(2);
     });
