@@ -21,6 +21,8 @@
 > - `src/components/Help.tsx` — `A - Activity timeline` キーバインド追加
 > - `src/utils/formatError.ts` — `"activity"` コンテキスト追加
 >
+> **後続の性能改善（2026-09-16）**: 全件レンダリングをやめ、カーソル周辺 30 行だけ描画する。`ActivityEventRow` は `React.memo`。詳細は `docs/design-perf-bottlenecks.md`（#102）。
+>
 > **設計との主な差異**: なし。設計書どおりに実装された。
 
 ---

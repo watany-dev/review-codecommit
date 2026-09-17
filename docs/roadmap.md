@@ -2,6 +2,14 @@
 
 ## リリース履歴
 
+### Unreleased — ボトルネック解消 ✅ (2026-09-16)
+
+- `listPullRequests` の GetPullRequest 同時実行を 5→10、リアクション取得を 5→15（#105）
+- PR 詳細ロード時に `getCommitsForPR` を先行取得（#104）
+- blob テキスト到着を 16ms 窓でバッチし、display line の O(N²) 再構築を抑制（#103）
+- ActivityTimeline を 30 行ウィンドウ + 行 memo 化（#102）
+- 詳細は `docs/design-perf-bottlenecks.md`
+
 ### v0.1.1 — パフォーマンス改善・セキュリティ修正 ✅ (2026-02-18)
 
 - セキュリティ脆弱性の修正

@@ -198,6 +198,39 @@ describe("listPullRequests", () => {
     expect(result.pullRequests).toHaveLength(1);
     expect(result.pullRequests[0].status).toBe("CLOSED");
   });
+
+  it("limits GetPullRequest concurrency to 10 workers", async () => {
+    let activeCalls = 0;
+    let maxConcurrent = 0;
+    const ids = Array.from({ length: 25 }, (_, i) => String(i));
+    let listed = false;
+
+    mockSend.mockImplementation(() => {
+      if (!listed) {
+        listed = true;
+        return Promise.resolve({ pullRequestIds: ids });
+      }
+      return new Promise((resolve) => {
+        activeCalls++;
+        maxConcurrent = Math.max(maxConcurrent, activeCalls);
+        setTimeout(() => {
+          activeCalls--;
+          resolve({
+            pullRequest: {
+              pullRequestId: "1",
+              title: "pr",
+              authorArn: "arn:aws:iam::1:user/a",
+              pullRequestStatus: "OPEN",
+              creationDate: new Date(),
+            },
+          });
+        }, 10);
+      });
+    });
+
+    await listPullRequests(mockClient, "my-service");
+    expect(maxConcurrent).toBe(10);
+  });
 });
 
 describe("getPullRequestDetail", () => {
@@ -1900,10 +1933,10 @@ describe("getReactionsForComments", () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it("limits concurrency to 6 workers", async () => {
+  it("limits concurrency to 15 workers", async () => {
     let activeCalls = 0;
     let maxConcurrent = 0;
-    const ids = Array.from({ length: 12 }, (_, i) => `c${i}`);
+    const ids = Array.from({ length: 30 }, (_, i) => `c${i}`);
 
     mockSend.mockImplementation(
       () =>
@@ -1918,8 +1951,8 @@ describe("getReactionsForComments", () => {
     );
 
     await getReactionsForComments(mockClient, ids);
-    expect(maxConcurrent).toBeLessThanOrEqual(6);
-    expect(mockSend).toHaveBeenCalledTimes(12);
+    expect(maxConcurrent).toBe(15);
+    expect(mockSend).toHaveBeenCalledTimes(30);
   });
 });
 

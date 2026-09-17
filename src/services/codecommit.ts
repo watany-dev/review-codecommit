@@ -34,6 +34,11 @@ import { mapWithLimit } from "../utils/mapWithLimit.js";
 
 const textDecoder = new TextDecoder();
 
+/** Foreground list fetch: 25 IDs at 10-wide is 3 waves instead of 5. */
+const LIST_PULL_REQUEST_CONCURRENCY = 10;
+/** Background reaction fetch: 100 comments at 15-wide is ~7 waves instead of 20. */
+const REACTION_FETCH_CONCURRENCY = 15;
+
 export interface CodeCommitConfig {
   profile?: string;
   region?: string;
@@ -109,7 +114,7 @@ export async function listPullRequests(
   const pullRequestIds = listResponse.pullRequestIds ?? [];
 
   const pullRequests: PullRequestSummary[] = (
-    await mapWithLimit(pullRequestIds, 5, async (id) => {
+    await mapWithLimit(pullRequestIds, LIST_PULL_REQUEST_CONCURRENCY, async (id) => {
       const getCommand = new GetPullRequestCommand({ pullRequestId: id });
       const getResponse = await client.send(getCommand);
       const pr = getResponse.pullRequest;
@@ -596,7 +601,7 @@ export async function getReactionsForComments(
   commentIds: string[],
 ): Promise<ReactionsByComment> {
   const results: ReactionsByComment = new Map();
-  const settled = await mapWithLimit(commentIds, 5, async (commentId) => {
+  const settled = await mapWithLimit(commentIds, REACTION_FETCH_CONCURRENCY, async (commentId) => {
     try {
       const reactions = await getReactionsForComment(client, commentId);
       return { commentId, reactions };

@@ -3347,7 +3347,7 @@ describe("App", () => {
     });
   });
 
-  it("lazy loads commits on Tab press when mergeBase exists", async () => {
+  it("prefetches commits when opening a PR with mergeBase", async () => {
     vi.mocked(listPullRequests).mockResolvedValue({
       pullRequests: [
         {
@@ -3394,19 +3394,140 @@ describe("App", () => {
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("PR #42");
     });
-    // Commits not loaded yet during initial detail load
-    expect(getCommitsForPR).not.toHaveBeenCalled();
-    // Tab header should show [All changes] because commitsAvailable is true
-    expect(lastFrame()).toContain("[All changes]");
-
-    // Tab triggers lazy load
-    stdin.write("\t");
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
     });
+    // Tab header should show [All changes] because commitsAvailable is true
+    expect(lastFrame()).toContain("[All changes]");
+
+    // Tab reuses the prefetched commits instead of fetching again
+    stdin.write("\t");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses an in-flight commit prefetch when Tab is pressed early", async () => {
+    const commitsDeferred =
+      createDeferred<
+        Array<{
+          commitId: string;
+          shortId: string;
+          message: string;
+          authorName: string;
+          authorDate: Date;
+          parentIds: string[];
+        }>
+      >();
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockReturnValue(commitsDeferred.promise);
+    vi.mocked(getCommitDifferences).mockResolvedValue([]);
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+    });
+
+    stdin.write("\t");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("Loading commits...");
+    });
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+
+    stdin.write("\t");
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+
+    commitsDeferred.resolve([
+      {
+        commitId: "src123",
+        shortId: "src1234",
+        message: "Fix bug",
+        authorName: "watany",
+        authorDate: new Date("2026-02-13T10:00:00Z"),
+        parentIds: ["base789"],
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("[Commit 1/1]");
+    });
+    expect(getCommitsForPR).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps PR detail usable when commit prefetch fails", async () => {
+    vi.mocked(listPullRequests).mockResolvedValue({
+      pullRequests: [
+        {
+          pullRequestId: "42",
+          title: "fix: login",
+          authorArn: "arn:aws:iam::123456789012:user/watany",
+          creationDate: new Date("2026-02-13T10:00:00Z"),
+          status: "OPEN" as const,
+        },
+      ],
+    });
+    vi.mocked(getPullRequestDetail).mockResolvedValue({
+      pullRequest: {
+        pullRequestId: "42",
+        title: "fix: login",
+        pullRequestTargets: [
+          {
+            sourceCommit: "src123",
+            destinationCommit: "dest456",
+            mergeBase: "base789",
+          },
+        ],
+      },
+      differences: [],
+      commentThreads: [],
+    });
+    vi.mocked(getCommitsForPR).mockRejectedValue(new Error("GetCommit failed"));
+
+    const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("fix: login");
+    });
+    stdin.write("\r");
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain("PR #42");
+    });
+    await vi.waitFor(() => {
+      expect(getCommitsForPR).toHaveBeenCalled();
+    });
+    expect(lastFrame()).toContain("[All changes]");
   });
 
   it("does not show commits when mergeBase is missing", async () => {
@@ -3502,10 +3623,11 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
 
-    stdin.write("\t"); // switch to commit view (triggers lazy load)
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledWith(mockClient, "my-service", "src123", "base789");
     });
+
+    stdin.write("\t"); // switch to commit view (commits already prefetched)
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
@@ -3591,11 +3713,12 @@ describe("App", () => {
       expect(lastFrame()).toContain("PR #42");
     });
 
-    // Switch to commit view (triggers lazy load of commits)
-    stdin.write("\t");
     await vi.waitFor(() => {
       expect(getCommitsForPR).toHaveBeenCalledTimes(1);
     });
+
+    // Switch to commit view (commits already prefetched)
+    stdin.write("\t");
     await vi.waitFor(() => {
       expect(lastFrame()).toContain("[Commit 1/2]");
     });

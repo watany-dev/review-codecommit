@@ -77,7 +77,7 @@ function makeFakeClient(config: FakeResponses) {
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `pr-${i}`);
 
-describe("listPullRequests (1 List + N GetPullRequest, concurrency 5)", () => {
+describe("listPullRequests (1 List + N GetPullRequest, concurrency 10)", () => {
   for (const count of [10, 25]) {
     bench(`${count} PRs on the page`, async () => {
       const client = makeFakeClient({ pullRequestIds: ids(count) });
@@ -95,7 +95,7 @@ describe("getCommitsForPR (sequential parent-chain walk)", () => {
   }
 });
 
-describe("getReactionsForComments (1 call per comment, concurrency 5)", () => {
+describe("getReactionsForComments (1 call per comment, concurrency 15)", () => {
   for (const count of [20, 100]) {
     const commentIds = Array.from({ length: count }, (_, i) => `comment-${i}`);
     bench(`${count} comments`, async () => {
