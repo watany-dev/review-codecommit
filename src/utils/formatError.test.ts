@@ -426,8 +426,6 @@ describe("formatErrorMessage", () => {
   });
 });
 
-// --- Property-Based Tests ---
-
 // Creates an Error that falls through to the default sanitization path.
 // Uses a name not matched by any known error handler, and a message
 // that avoids ECONNREFUSED/ETIMEDOUT to prevent network error branching.

@@ -17,7 +17,6 @@ const commonErrors: Record<string, string> = {
   EncryptionKeyAccessDeniedException: "Encryption key access denied.",
 };
 
-/** Context-specific error name → user-friendly message */
 const contextErrors: Record<string, Record<string, string>> = {
   reply: {
     CommentContentRequiredException: "Reply cannot be empty.",
@@ -66,13 +65,6 @@ function sanitizeMessage(message: string): string {
     .replace(/vpce-[a-z0-9]+/gi, "[VPC_ENDPOINT]");
 }
 
-/**
- * Unified error formatter with context-specific messages.
- *
- * @param err - The error to format
- * @param context - Optional context for specific error messages
- * @returns User-friendly error message
- */
 export function formatErrorMessage(
   err: unknown,
   context?: ErrorContext,
@@ -94,7 +86,6 @@ export function formatErrorMessage(
   const message = (context && contextErrors[context]?.[name]) ?? commonErrors[name];
   if (message) return message;
 
-  // General AWS errors
   if (name === "CredentialsProviderError" || name === "CredentialError") {
     return "AWS authentication failed. Run `aws configure` to set up credentials.";
   }
@@ -102,7 +93,6 @@ export function formatErrorMessage(
     return "Repository not found.";
   }
 
-  // Access control errors (context-aware message)
   if (name === "AccessDeniedException" || name === "UnauthorizedException") {
     if (context === "comment") {
       return "Access denied. Check your IAM policy allows CodeCommit write access.";
@@ -110,7 +100,6 @@ export function formatErrorMessage(
     return "Access denied. Check your IAM policy.";
   }
 
-  // Network errors
   if (
     name === "NetworkingError" ||
     err.message.includes("ECONNREFUSED") ||
@@ -119,6 +108,5 @@ export function formatErrorMessage(
     return "Network error. Check your connection.";
   }
 
-  // Default: sanitize and return original message
   return sanitizeMessage(err.message);
 }
