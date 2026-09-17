@@ -329,6 +329,12 @@ export function PullRequestDetail({
     commitDiffTexts,
   ]);
 
+  // Keep 0 <= cursorIndex < max(lines.length, 1) when lines shrink (thread fold,
+  // comment deletion) or are replaced (view switch), so a row is always highlighted.
+  useEffect(() => {
+    setCursorIndex((prev) => Math.max(0, Math.min(prev, lines.length - 1)));
+  }, [lines.length]);
+
   const hasTruncation = useMemo(() => lines.some((line) => line.type === "truncation"), [lines]);
 
   const headerIndices = useMemo(
@@ -474,7 +480,7 @@ export function PullRequestDetail({
       return;
     }
     if (input === "j" || key.downArrow) {
-      setCursorIndex((prev) => Math.min(prev + 1, lines.length - 1));
+      setCursorIndex((prev) => Math.max(0, Math.min(prev + 1, lines.length - 1)));
       return;
     }
     if (input === "k" || key.upArrow) {

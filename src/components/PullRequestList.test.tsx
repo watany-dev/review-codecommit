@@ -436,4 +436,17 @@ describe("PullRequestList", () => {
     stdin.write("\r");
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  it("highlights the first row after pressing j on an empty list and items arrive", async () => {
+    const onSelect = vi.fn();
+    const { stdin, lastFrame, rerender } = render(
+      <PullRequestList {...defaultProps} pullRequests={[]} onSelect={onSelect} />,
+    );
+    stdin.write("j");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    rerender(<PullRequestList {...defaultProps} onSelect={onSelect} />);
+    await vi.waitFor(() => expect(lastFrame()).toContain("> #42"));
+    stdin.write("\r");
+    await vi.waitFor(() => expect(onSelect).toHaveBeenCalledWith("42"));
+  });
 });
