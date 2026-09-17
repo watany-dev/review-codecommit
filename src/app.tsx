@@ -66,19 +66,13 @@ interface PaginationCursor {
 }
 
 const PAGE_SIZE = 25;
-
-function createPaginationCursor(
-  apiToken: string | undefined = undefined,
-  pending: PullRequestSummary[] = [],
-): PaginationCursor {
-  return { apiToken, pending };
-}
+const EMPTY_CURSOR: PaginationCursor = { apiToken: undefined, pending: [] };
 
 function createInitialPagination(): PaginationState {
   return {
     currentPage: 1,
-    currentCursor: createPaginationCursor(),
-    nextCursor: createPaginationCursor(),
+    currentCursor: EMPTY_CURSOR,
+    nextCursor: EMPTY_CURSOR,
     previousCursors: [],
     hasNextPage: false,
     hasPreviousPage: false,
@@ -89,14 +83,7 @@ function filterPullRequestsByStatus(
   pullRequests: PullRequestSummary[],
   status: PullRequestDisplayStatus,
 ): PullRequestSummary[] {
-  switch (status) {
-    case "OPEN":
-      return pullRequests;
-    case "CLOSED":
-      return pullRequests.filter((pr) => pr.status === "CLOSED");
-    case "MERGED":
-      return pullRequests.filter((pr) => pr.status === "MERGED");
-  }
+  return pullRequests.filter((pr) => pr.status === status);
 }
 
 interface AppProps {
@@ -347,7 +334,7 @@ export function App({ client, initialRepo }: AppProps) {
       const result = await listPullRequests(client, repoName, cursor.apiToken, "OPEN");
       return {
         pullRequests: result.pullRequests,
-        nextCursor: createPaginationCursor(result.nextToken),
+        nextCursor: { apiToken: result.nextToken, pending: [] },
         hasNextPage: result.nextToken != null,
       };
     }
@@ -368,7 +355,7 @@ export function App({ client, initialRepo }: AppProps) {
 
     return {
       pullRequests,
-      nextCursor: createPaginationCursor(nextToken, remaining),
+      nextCursor: { apiToken: nextToken, pending: remaining },
       hasNextPage: remaining.length > 0 || nextToken !== undefined,
     };
   }
@@ -376,7 +363,7 @@ export function App({ client, initialRepo }: AppProps) {
   async function loadPullRequests(
     repoName: string,
     status: PullRequestDisplayStatus = "OPEN",
-    cursor: PaginationCursor = createPaginationCursor(),
+    cursor: PaginationCursor = EMPTY_CURSOR,
   ) {
     await withLoadingState(
       async () => {
@@ -497,7 +484,7 @@ export function App({ client, initialRepo }: AppProps) {
     setStatusFilter("OPEN");
     setSearchQuery("");
     setPagination(createInitialPagination());
-    void loadPullRequests(repoName, "OPEN", createPaginationCursor());
+    void loadPullRequests(repoName, "OPEN", EMPTY_CURSOR);
   }
 
   function handleSelectPR(pullRequestId: string) {
@@ -509,7 +496,7 @@ export function App({ client, initialRepo }: AppProps) {
     setStatusFilter(filter);
     setSearchQuery("");
     setPagination(createInitialPagination());
-    void loadPullRequests(selectedRepo, filter, createPaginationCursor());
+    void loadPullRequests(selectedRepo, filter, EMPTY_CURSOR);
   }
 
   function handleNextPage() {
