@@ -9,6 +9,14 @@ type ErrorContext =
   | "reaction"
   | "activity";
 
+const commonErrors: Record<string, string> = {
+  PullRequestDoesNotExistException: "Pull request not found.",
+  CommentDoesNotExistException: "Comment no longer exists.",
+  CommentDeletedException: "Comment has already been deleted.",
+  PullRequestAlreadyClosedException: "Pull request is already closed.",
+  EncryptionKeyAccessDeniedException: "Encryption key access denied.",
+};
+
 /** Context-specific error name → user-friendly message */
 const contextErrors: Record<string, Record<string, string>> = {
   reply: {
@@ -20,26 +28,16 @@ const contextErrors: Record<string, Record<string, string>> = {
   edit: {
     CommentNotCreatedByCallerException: "You can only edit your own comments.",
     CommentContentSizeLimitExceededException: "Comment exceeds the 10,240 character limit.",
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
-  },
-  delete: {
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
   },
   comment: {
     CommentContentRequiredException: "Comment cannot be empty.",
     CommentContentSizeLimitExceededException: "Comment exceeds the 10,240 character limit.",
-    PullRequestDoesNotExistException: "Pull request not found.",
   },
   approval: {
-    PullRequestDoesNotExistException: "Pull request not found.",
     RevisionIdRequiredException:
       "Invalid revision. The PR may have been updated. Go back and reopen.",
     InvalidRevisionIdException:
       "Invalid revision. The PR may have been updated. Go back and reopen.",
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    EncryptionKeyAccessDeniedException: "Encryption key access denied.",
   },
   merge: {
     ManualMergeRequiredException:
@@ -50,22 +48,10 @@ const contextErrors: Record<string, Record<string, string>> = {
       "Source branch has been updated. Go back and reopen the PR.",
     ConcurrentReferenceUpdateException: "Branch was updated concurrently. Try again.",
     TipsDivergenceExceededException: "Branches have diverged too much. Merge manually.",
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    PullRequestDoesNotExistException: "Pull request not found.",
-    EncryptionKeyAccessDeniedException: "Encryption key access denied.",
   },
   reaction: {
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
     ReactionValueRequiredException: "Reaction value is required.",
     InvalidReactionValueException: "Invalid reaction value.",
-  },
-  close: {
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    PullRequestDoesNotExistException: "Pull request not found.",
-  },
-  activity: {
-    PullRequestDoesNotExistException: "Pull request not found.",
   },
 };
 
@@ -98,18 +84,15 @@ export function formatErrorMessage(
 
   const name = err.name;
 
-  // Context-specific lookup
-  if (context) {
-    // Special case: approval action depends on approve/revoke
-    if (context === "approval" && name === "PullRequestCannotBeApprovedByAuthorException") {
-      return approvalAction === "revoke"
-        ? "Cannot revoke approval on your own pull request."
-        : "Cannot approve your own pull request.";
-    }
-
-    const message = contextErrors[context]?.[name];
-    if (message) return message;
+  // Special case: approval action depends on approve/revoke
+  if (context === "approval" && name === "PullRequestCannotBeApprovedByAuthorException") {
+    return approvalAction === "revoke"
+      ? "Cannot revoke approval on your own pull request."
+      : "Cannot approve your own pull request.";
   }
+
+  const message = (context && contextErrors[context]?.[name]) ?? commonErrors[name];
+  if (message) return message;
 
   // General AWS errors
   if (name === "CredentialsProviderError" || name === "CredentialError") {

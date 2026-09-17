@@ -295,6 +295,16 @@ describe("formatErrorMessage", () => {
     });
   });
 
+  describe("common errors without context-specific entries", () => {
+    it("resolves PullRequestDoesNotExistException from close, activity, and comment", () => {
+      for (const context of ["close", "activity", "comment"] as const) {
+        expect(formatErrorMessage(makeError("PullRequestDoesNotExistException"), context)).toBe(
+          "Pull request not found.",
+        );
+      }
+    });
+  });
+
   describe("general AWS errors", () => {
     it("returns auth message for CredentialsProviderError", () => {
       expect(formatErrorMessage(makeError("CredentialsProviderError"))).toBe(
