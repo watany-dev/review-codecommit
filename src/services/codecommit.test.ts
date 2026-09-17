@@ -8,7 +8,7 @@ import {
   getBlobContent,
   getComments,
   getCommit,
-  getCommitDifferences,
+  getAllDifferences,
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestActivity,
@@ -1605,7 +1605,7 @@ describe("getCommitsForPR", () => {
   });
 });
 
-describe("getCommitDifferences", () => {
+describe("getAllDifferences", () => {
   it("returns differences between two commits", async () => {
     mockSend.mockResolvedValueOnce({
       differences: [
@@ -1616,7 +1616,7 @@ describe("getCommitDifferences", () => {
       ],
     });
 
-    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    const result = await getAllDifferences(mockClient, "my-service", "parent1", "commit1");
     expect(result).toHaveLength(1);
     expect(result[0].afterBlob?.path).toBe("src/auth.ts");
   });
@@ -1624,14 +1624,14 @@ describe("getCommitDifferences", () => {
   it("returns empty array when no differences", async () => {
     mockSend.mockResolvedValueOnce({ differences: undefined });
 
-    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    const result = await getAllDifferences(mockClient, "my-service", "parent1", "commit1");
     expect(result).toHaveLength(0);
   });
 
   it("passes correct commit specifiers", async () => {
     mockSend.mockResolvedValueOnce({ differences: [] });
 
-    await getCommitDifferences(mockClient, "my-service", "parentABC", "commitDEF");
+    await getAllDifferences(mockClient, "my-service", "parentABC", "commitDEF");
 
     const sentCommand = mockSend.mock.calls[0][0];
     expect(sentCommand.input).toEqual(
@@ -1653,7 +1653,7 @@ describe("getCommitDifferences", () => {
       NextToken: undefined,
     });
 
-    const result = await getCommitDifferences(mockClient, "my-service", "parent1", "commit1");
+    const result = await getAllDifferences(mockClient, "my-service", "parent1", "commit1");
     expect(result).toHaveLength(2);
     expect(mockSend).toHaveBeenCalledTimes(2);
   });

@@ -17,7 +17,7 @@ vi.mock("./services/codecommit.js", () => ({
   getMergeConflicts: vi.fn(),
   closePullRequest: vi.fn(),
   getCommitsForPR: vi.fn(),
-  getCommitDifferences: vi.fn(),
+  getAllDifferences: vi.fn(),
   updateComment: vi.fn(),
   deleteComment: vi.fn(),
   getReactionsForComments: vi.fn(),
@@ -33,7 +33,7 @@ import {
   getApprovalStates,
   getBlobContent,
   getComments,
-  getCommitDifferences,
+  getAllDifferences,
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestActivity,
@@ -71,7 +71,7 @@ describe("App", () => {
     vi.mocked(getPullRequestActivity).mockResolvedValue({ events: [], nextToken: undefined });
     // Default: no commits
     vi.mocked(getCommitsForPR).mockResolvedValue([]);
-    vi.mocked(getCommitDifferences).mockResolvedValue([]);
+    vi.mocked(getAllDifferences).mockResolvedValue([]);
     // Default: no approvals, no rules
     vi.mocked(getApprovalStates).mockResolvedValue([]);
     vi.mocked(evaluateApprovalRules).mockResolvedValue(null);
@@ -3384,7 +3384,7 @@ describe("App", () => {
         parentIds: ["base789"],
       },
     ]);
-    vi.mocked(getCommitDifferences).mockResolvedValue([]);
+    vi.mocked(getAllDifferences).mockResolvedValue([]);
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
@@ -3447,7 +3447,7 @@ describe("App", () => {
       commentThreads: [],
     });
     vi.mocked(getCommitsForPR).mockReturnValue(commitsDeferred.promise);
-    vi.mocked(getCommitDifferences).mockResolvedValue([]);
+    vi.mocked(getAllDifferences).mockResolvedValue([]);
 
     const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
     await vi.waitFor(() => {
@@ -3606,7 +3606,7 @@ describe("App", () => {
         parentIds: ["base789"],
       },
     ]);
-    vi.mocked(getCommitDifferences).mockResolvedValue([
+    vi.mocked(getAllDifferences).mockResolvedValue([
       {
         beforeBlob: { blobId: "cb1", path: "src/auth.ts" },
         afterBlob: { blobId: "cb2", path: "src/auth.ts" },
@@ -3632,7 +3632,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
     await vi.waitFor(() => {
-      expect(getCommitDifferences).toHaveBeenCalledWith(
+      expect(getAllDifferences).toHaveBeenCalledWith(
         mockClient,
         "my-service",
         "base789",
@@ -3687,7 +3687,7 @@ describe("App", () => {
       },
     ]);
     // First commit: new file + deleted file (covers both missing blob branches)
-    vi.mocked(getCommitDifferences)
+    vi.mocked(getAllDifferences)
       .mockResolvedValueOnce([
         {
           afterBlob: { blobId: "newfile1", path: "src/new.ts" },
@@ -3730,9 +3730,9 @@ describe("App", () => {
     });
     // getCommitsForPR should NOT be called again
     expect(getCommitsForPR).toHaveBeenCalledTimes(1);
-    // But getCommitDifferences should be called for the second commit
+    // But getAllDifferences should be called for the second commit
     await vi.waitFor(() => {
-      expect(getCommitDifferences).toHaveBeenCalledTimes(2);
+      expect(getAllDifferences).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -3783,7 +3783,7 @@ describe("App", () => {
         parentIds: ["c1"],
       },
     ]);
-    vi.mocked(getCommitDifferences)
+    vi.mocked(getAllDifferences)
       .mockImplementationOnce(() => firstCommitDeferred.promise as Promise<any[]>)
       .mockResolvedValueOnce([
         {

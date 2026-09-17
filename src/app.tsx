@@ -23,7 +23,7 @@ import {
   evaluateApprovalRules,
   getApprovalStates,
   getComments,
-  getCommitDifferences,
+  getAllDifferences,
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestActivity,
@@ -606,7 +606,7 @@ export function App({ client, initialRepo }: AppProps) {
       if (!commit || commit.parentIds.length === 0) return;
 
       const parentId = commit.parentIds[0]!;
-      const diffs = await getCommitDifferences(client, selectedRepo, parentId, commit.commitId);
+      const diffs = await getAllDifferences(client, selectedRepo, parentId, commit.commitId);
       if (isCommitLoadStale(loadId)) return;
       setCommitDifferences(diffs);
 

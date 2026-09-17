@@ -140,7 +140,7 @@ export async function listPullRequests(
   return result;
 }
 
-async function getAllDifferences(
+export async function getAllDifferences(
   client: CodeCommitClient,
   repositoryName: string,
   beforeCommitSpecifier: string,
@@ -513,15 +513,6 @@ export async function getCommitsForPR(
   }
 
   return commits.reverse();
-}
-
-export async function getCommitDifferences(
-  client: CodeCommitClient,
-  repositoryName: string,
-  beforeCommitId: string,
-  afterCommitId: string,
-): Promise<Difference[]> {
-  return getAllDifferences(client, repositoryName, beforeCommitId, afterCommitId);
 }
 
 export async function updateComment(
