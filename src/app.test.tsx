@@ -30,10 +30,10 @@ import {
   closePullRequest,
   deleteComment,
   evaluateApprovalRules,
+  getAllDifferences,
   getApprovalStates,
   getBlobContent,
   getComments,
-  getAllDifferences,
   getCommitsForPR,
   getMergeConflicts,
   getPullRequestActivity,
@@ -3632,12 +3632,7 @@ describe("App", () => {
       expect(lastFrame()).toContain("[Commit 1/1]");
     });
     await vi.waitFor(() => {
-      expect(getAllDifferences).toHaveBeenCalledWith(
-        mockClient,
-        "my-service",
-        "base789",
-        "src123",
-      );
+      expect(getAllDifferences).toHaveBeenCalledWith(mockClient, "my-service", "base789", "src123");
     });
   });
 

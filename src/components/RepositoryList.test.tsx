@@ -171,12 +171,7 @@ describe("RepositoryList", () => {
     const onQuit = vi.fn();
     const onHelp = vi.fn();
     const { lastFrame, stdin } = render(
-      <RepositoryList
-        repositories={repos}
-        onSelect={onSelect}
-        onQuit={onQuit}
-        onHelp={onHelp}
-      />,
+      <RepositoryList repositories={repos} onSelect={onSelect} onQuit={onQuit} onHelp={onHelp} />,
     );
     stdin.write("x");
     expect(onSelect).not.toHaveBeenCalled();
