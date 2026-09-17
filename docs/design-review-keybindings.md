@@ -12,11 +12,11 @@
 
 | キー | アクション | 実装 |
 |------|-----------|------|
-| `j` / `↓` | カーソル下移動 | `useListNavigation` |
-| `k` / `↑` | カーソル上移動 | `useListNavigation` |
-| `Enter` | リポジトリ選択 | `useListNavigation` |
-| `q` / `Esc` | 終了 | `useListNavigation` |
-| `?` | ヘルプ表示 | `useListNavigation` |
+| `j` / `↓` | カーソル下移動 | `RepositoryList` |
+| `k` / `↑` | カーソル上移動 | `RepositoryList` |
+| `Enter` | リポジトリ選択 | `RepositoryList` |
+| `q` / `Esc` | 終了 | `RepositoryList` |
+| `?` | ヘルプ表示 | `RepositoryList` |
 
 フッターヒント: `↑↓ navigate Enter select q quit ? help`
 
@@ -149,9 +149,9 @@
 
 `a`（承認）、`r`（取消）、`m`（マージ）、`x`（クローズ）、`d`（削除）はすべて確認プロンプト（y/n）を経由する。
 
-### 4. useListNavigation による共通化
+### 4. リポジトリ一覧のキー入力
 
-リポジトリ選択画面は `useListNavigation` フックを使い、ナビゲーションロジックを共通化している。
+リポジトリ選択画面は `RepositoryList` 内で `useInput` を直接使い、`j` / `k` / Enter / `q` / `?` を処理する。`PullRequestList` と `ActivityTimeline` は検索・ページ送りなど画面固有のキーを持つため、共通フックにはしていない。
 
 ---
 
