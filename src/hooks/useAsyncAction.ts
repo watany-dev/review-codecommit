@@ -1,6 +1,13 @@
 import { useRef, useState } from "react";
 import { formatErrorMessage } from "../utils/formatError.js";
 
+export interface AsyncActionState<T extends unknown[] = unknown[]> {
+  isProcessing: boolean;
+  error: string | null;
+  execute: (...args: T) => void;
+  clearError: () => void;
+}
+
 /**
  * Manages isProcessing / error state for an async operation.
  *
@@ -9,12 +16,7 @@ import { formatErrorMessage } from "../utils/formatError.js";
 export function useAsyncAction<T extends unknown[]>(
   action: (...args: T) => Promise<void>,
   formatError: (err: unknown, ...args: T) => string = (err, ..._args) => formatErrorMessage(err),
-): {
-  isProcessing: boolean;
-  error: string | null;
-  execute: (...args: T) => void;
-  clearError: () => void;
-} {
+): AsyncActionState<T> {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const actionRef = useRef(action);

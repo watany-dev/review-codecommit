@@ -1,6 +1,7 @@
 import type { Approval, Difference, Evaluation, PullRequest } from "@aws-sdk/client-codecommit";
 import { Box, Text, useInput } from "ink";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { AsyncActionState } from "../hooks/useAsyncAction.js";
 import { useAsyncDismiss } from "../hooks/useAsyncDismiss.js";
 import type {
   CommentThread,
@@ -35,52 +36,6 @@ type InlineLocation = {
 
 const EMPTY_STATUS_MAP = new Map<string, "loading" | "loaded" | "error">();
 
-interface CommentAction {
-  onPost: (content: string) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface InlineCommentAction {
-  onPost: (content: string, location: InlineLocation) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface ReplyAction {
-  onPost: (inReplyTo: string, content: string) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface ApprovalProps {
-  approvals: Approval[];
-  evaluation: Evaluation | null;
-  onApprove: () => void;
-  onRevoke: () => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface MergeAction {
-  onMerge: (strategy: MergeStrategy) => void;
-  onCheckConflicts: (strategy: MergeStrategy) => Promise<ConflictSummary>;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface CloseAction {
-  onClose: () => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
 interface CommitViewProps {
   commits: CommitInfo[];
   differences: Difference[];
@@ -88,28 +43,6 @@ interface CommitViewProps {
   isLoading: boolean;
   onLoad: (commitIndex: number) => void;
   commitsAvailable: boolean;
-}
-
-interface EditCommentAction {
-  onUpdate: (commentId: string, content: string) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface DeleteCommentAction {
-  onDelete: (commentId: string) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
-}
-
-interface ReactionProps {
-  byComment: ReactionsByComment;
-  onReact: (commentId: string, reactionValue: string) => void;
-  isProcessing: boolean;
-  error: string | null;
-  onClearError: () => void;
 }
 
 interface Props {
@@ -121,16 +54,23 @@ interface Props {
   onBack: () => void;
   onHelp: () => void;
   onShowActivity: () => void;
-  comment: CommentAction;
-  inlineComment: InlineCommentAction;
-  reply: ReplyAction;
-  approval: ApprovalProps;
-  merge: MergeAction;
-  close: CloseAction;
+  comment: AsyncActionState<[content: string]>;
+  inlineComment: AsyncActionState<[content: string, location: InlineLocation]>;
+  reply: AsyncActionState<[inReplyTo: string, content: string]>;
+  approval: AsyncActionState<["APPROVE" | "REVOKE"]> & {
+    approvals: Approval[];
+    evaluation: Evaluation | null;
+  };
+  merge: AsyncActionState<[strategy: MergeStrategy]> & {
+    onCheckConflicts: (strategy: MergeStrategy) => Promise<ConflictSummary>;
+  };
+  close: AsyncActionState<[]>;
   commitView: CommitViewProps;
-  editComment: EditCommentAction;
-  deleteComment: DeleteCommentAction;
-  reaction: ReactionProps;
+  editComment: AsyncActionState<[commentId: string, content: string]>;
+  deleteComment: AsyncActionState<[commentId: string]>;
+  reaction: AsyncActionState<[commentId: string, reactionValue: string]> & {
+    byComment: ReactionsByComment;
+  };
 }
 
 export function PullRequestDetail({
@@ -142,46 +82,12 @@ export function PullRequestDetail({
   onBack,
   onHelp,
   onShowActivity,
-  comment: {
-    onPost: onPostComment,
-    isProcessing: isPostingComment,
-    error: commentError,
-    onClearError: onClearCommentError,
-  },
-  inlineComment: {
-    onPost: onPostInlineComment,
-    isProcessing: isPostingInlineComment,
-    error: inlineCommentError,
-    onClearError: onClearInlineCommentError,
-  },
-  reply: {
-    onPost: onPostReply,
-    isProcessing: isPostingReply,
-    error: replyError,
-    onClearError: onClearReplyError,
-  },
-  approval: {
-    approvals,
-    evaluation: approvalEvaluation,
-    onApprove,
-    onRevoke,
-    isProcessing: isApproving,
-    error: approvalError,
-    onClearError: onClearApprovalError,
-  },
-  merge: {
-    onMerge,
-    onCheckConflicts,
-    isProcessing: isMerging,
-    error: mergeError,
-    onClearError: onClearMergeError,
-  },
-  close: {
-    onClose: onClosePR,
-    isProcessing: isClosingPR,
-    error: closePRError,
-    onClearError: onClearClosePRError,
-  },
+  comment,
+  inlineComment,
+  reply,
+  approval,
+  merge,
+  close,
   commitView: {
     commits,
     differences: commitDifferences,
@@ -190,25 +96,9 @@ export function PullRequestDetail({
     onLoad: onLoadCommitDiff,
     commitsAvailable,
   },
-  editComment: {
-    onUpdate: onUpdateComment,
-    isProcessing: isUpdatingComment,
-    error: updateCommentError,
-    onClearError: onClearUpdateCommentError,
-  },
-  deleteComment: {
-    onDelete: onDeleteComment,
-    isProcessing: isDeletingComment,
-    error: deleteCommentError,
-    onClearError: onClearDeleteCommentError,
-  },
-  reaction: {
-    byComment: reactionsByComment,
-    onReact,
-    isProcessing: isReacting,
-    error: reactionError,
-    onClearError: onClearReactionError,
-  },
+  editComment,
+  deleteComment,
+  reaction,
 }: Props) {
   function buildCollapsedThreadState(
     threads: CommentThread[],
@@ -268,17 +158,19 @@ export function PullRequestDetail({
     setCollapsedThreads((prev) => buildCollapsedThreadState(commentThreads, prev));
   }, [commentThreads]);
 
-  useAsyncDismiss(isPostingComment, commentError, () => setIsCommenting(false));
-  useAsyncDismiss(isPostingInlineComment, inlineCommentError, () => setInlineCommentLocation(null));
-  useAsyncDismiss(isPostingReply, replyError, () => setReplyTarget(null));
-  useAsyncDismiss(isApproving, approvalError, () => setApprovalAction(null));
+  useAsyncDismiss(comment.isProcessing, comment.error, () => setIsCommenting(false));
+  useAsyncDismiss(inlineComment.isProcessing, inlineComment.error, () =>
+    setInlineCommentLocation(null),
+  );
+  useAsyncDismiss(reply.isProcessing, reply.error, () => setReplyTarget(null));
+  useAsyncDismiss(approval.isProcessing, approval.error, () => setApprovalAction(null));
   /* v8 ignore next -- merge success auto-close tested in app.test.tsx */
-  useAsyncDismiss(isMerging, mergeError, () => setMergeStep(null));
+  useAsyncDismiss(merge.isProcessing, merge.error, () => setMergeStep(null));
   /* v8 ignore next -- close success auto-close tested in app.test.tsx */
-  useAsyncDismiss(isClosingPR, closePRError, () => setIsClosing(false));
-  useAsyncDismiss(isUpdatingComment, updateCommentError, () => setEditTarget(null));
-  useAsyncDismiss(isDeletingComment, deleteCommentError, () => setDeleteTarget(null));
-  useAsyncDismiss(isReacting, reactionError, () => setReactionTarget(null));
+  useAsyncDismiss(close.isProcessing, close.error, () => setIsClosing(false));
+  useAsyncDismiss(editComment.isProcessing, editComment.error, () => setEditTarget(null));
+  useAsyncDismiss(deleteComment.isProcessing, deleteComment.error, () => setDeleteTarget(null));
+  useAsyncDismiss(reaction.isProcessing, reaction.error, () => setReactionTarget(null));
 
   const target = pullRequest.pullRequestTargets?.[0];
   const title = pullRequest.title ?? "(no title)";
@@ -290,8 +182,8 @@ export function PullRequestDetail({
   const sourceRef = target?.sourceReference?.replace("refs/heads/", "") ?? "";
 
   const approvedUsers = useMemo(
-    () => approvals.filter((a) => a.approvalState === "APPROVE"),
-    [approvals],
+    () => approval.approvals.filter((a) => a.approvalState === "APPROVE"),
+    [approval.approvals],
   );
 
   const lines = useMemo(() => {
@@ -303,7 +195,7 @@ export function PullRequestDetail({
         diffLineLimits,
         commentThreads,
         collapsedThreads,
-        reactionsByComment,
+        reaction.byComment,
         diffCacheRef.current,
       );
     }
@@ -324,7 +216,7 @@ export function PullRequestDetail({
     diffLineLimits,
     commentThreads,
     collapsedThreads,
-    reactionsByComment,
+    reaction.byComment,
     commitDifferences,
     commitDiffTexts,
   ]);
@@ -366,7 +258,7 @@ export function PullRequestDetail({
     setConflictSummary(null);
 
     try {
-      const summary = await onCheckConflicts(strategy);
+      const summary = await merge.onCheckConflicts(strategy);
       setConflictSummary(summary);
       setIsCheckingConflicts(false);
 
@@ -679,17 +571,17 @@ export function PullRequestDetail({
             : "(none)"}
         </Text>
       </Box>
-      {approvalEvaluation &&
-        (approvalEvaluation.approvalRulesSatisfied?.length ?? 0) +
-          (approvalEvaluation.approvalRulesNotSatisfied?.length ?? 0) >
+      {approval.evaluation &&
+        (approval.evaluation.approvalRulesSatisfied?.length ?? 0) +
+          (approval.evaluation.approvalRulesNotSatisfied?.length ?? 0) >
           0 && (
           <Box marginBottom={1}>
             <Text>
-              Rules: {approvalEvaluation.approved ? "✓" : "✗"}{" "}
-              {approvalEvaluation.approved ? "Approved" : "Not approved"} (
-              {approvalEvaluation.approvalRulesSatisfied?.length ?? 0}/
-              {(approvalEvaluation.approvalRulesSatisfied?.length ?? 0) +
-                (approvalEvaluation.approvalRulesNotSatisfied?.length ?? 0)}{" "}
+              Rules: {approval.evaluation.approved ? "✓" : "✗"}{" "}
+              {approval.evaluation.approved ? "Approved" : "Not approved"} (
+              {approval.evaluation.approvalRulesSatisfied?.length ?? 0}/
+              {(approval.evaluation.approvalRulesSatisfied?.length ?? 0) +
+                (approval.evaluation.approvalRulesNotSatisfied?.length ?? 0)}{" "}
               rules satisfied)
             </Text>
           </Box>
@@ -740,11 +632,11 @@ export function PullRequestDetail({
       </Box>
       {isCommenting && (
         <CommentInput
-          onSubmit={onPostComment}
+          onSubmit={comment.execute}
           onCancel={() => setIsCommenting(false)}
-          isPosting={isPostingComment}
-          error={commentError}
-          onClearError={onClearCommentError}
+          isPosting={comment.isProcessing}
+          error={comment.error}
+          onClearError={comment.clearError}
         />
       )}
       {inlineCommentLocation && (
@@ -753,11 +645,11 @@ export function PullRequestDetail({
             Inline comment on {inlineCommentLocation.filePath}:{inlineCommentLocation.filePosition}
           </Text>
           <CommentInput
-            onSubmit={(content) => onPostInlineComment(content, inlineCommentLocation)}
+            onSubmit={(content) => inlineComment.execute(content, inlineCommentLocation)}
             onCancel={() => setInlineCommentLocation(null)}
-            isPosting={isPostingInlineComment}
-            error={inlineCommentError}
-            onClearError={onClearInlineCommentError}
+            isPosting={inlineComment.isProcessing}
+            error={inlineComment.error}
+            onClearError={inlineComment.clearError}
           />
         </Box>
       )}
@@ -768,14 +660,14 @@ export function PullRequestDetail({
             {replyTarget.content.length > 50 ? "..." : ""}
           </Text>
           <CommentInput
-            onSubmit={(content) => onPostReply(replyTarget.commentId, content)}
+            onSubmit={(content) => reply.execute(replyTarget.commentId, content)}
             onCancel={() => {
               setReplyTarget(null);
-              onClearReplyError();
+              reply.clearError();
             }}
-            isPosting={isPostingReply}
-            error={replyError}
-            onClearError={onClearReplyError}
+            isPosting={reply.isProcessing}
+            error={reply.error}
+            onClearError={reply.clearError}
           />
         </Box>
       )}
@@ -784,16 +676,20 @@ export function PullRequestDetail({
           message={
             approvalAction === "approve" ? "Approve this pull request?" : "Revoke your approval?"
           }
-          onConfirm={approvalAction === "approve" ? onApprove : onRevoke}
+          onConfirm={
+            approvalAction === "approve"
+              ? () => approval.execute("APPROVE")
+              : () => approval.execute("REVOKE")
+          }
           onCancel={() => {
             setApprovalAction(null);
-            onClearApprovalError();
+            approval.clearError();
           }}
-          isProcessing={isApproving}
+          isProcessing={approval.isProcessing}
           processingMessage={approvalAction === "approve" ? "Approving..." : "Revoking approval..."}
-          error={approvalError}
+          error={approval.error}
           onClearError={() => {
-            onClearApprovalError();
+            approval.clearError();
             setApprovalAction(null);
           }}
         />
@@ -826,17 +722,17 @@ export function PullRequestDetail({
       {mergeStep === "confirm" && (
         <ConfirmPrompt
           message={`Merge ${sourceRef} into ${destRef} using ${formatStrategyName(selectedStrategy)}?`}
-          onConfirm={() => onMerge(selectedStrategy)}
+          onConfirm={() => merge.execute(selectedStrategy)}
           onCancel={() => {
             setMergeStep(null);
             setConflictSummary(null);
-            onClearMergeError();
+            merge.clearError();
           }}
-          isProcessing={isMerging}
+          isProcessing={merge.isProcessing}
           processingMessage="Merging..."
-          error={mergeError}
+          error={merge.error}
           onClearError={() => {
-            onClearMergeError();
+            merge.clearError();
             setMergeStep(null);
           }}
         />
@@ -844,16 +740,16 @@ export function PullRequestDetail({
       {isClosing && (
         <ConfirmPrompt
           message="Close this pull request without merging?"
-          onConfirm={onClosePR}
+          onConfirm={() => close.execute()}
           onCancel={() => {
             setIsClosing(false);
-            onClearClosePRError();
+            close.clearError();
           }}
-          isProcessing={isClosingPR}
+          isProcessing={close.isProcessing}
           processingMessage="Closing..."
-          error={closePRError}
+          error={close.error}
           onClearError={() => {
-            onClearClosePRError();
+            close.clearError();
             setIsClosing(false);
           }}
         />
@@ -861,14 +757,14 @@ export function PullRequestDetail({
       {editTarget && (
         <Box flexDirection="column">
           <CommentInput
-            onSubmit={(content) => onUpdateComment(editTarget.commentId, content)}
+            onSubmit={(content) => editComment.execute(editTarget.commentId, content)}
             onCancel={() => {
               setEditTarget(null);
-              onClearUpdateCommentError();
+              editComment.clearError();
             }}
-            isPosting={isUpdatingComment}
-            error={updateCommentError}
-            onClearError={onClearUpdateCommentError}
+            isPosting={editComment.isProcessing}
+            error={editComment.error}
+            onClearError={editComment.clearError}
             initialValue={editTarget.content}
             label="Edit Comment:"
             postingMessage="Updating comment..."
@@ -879,34 +775,34 @@ export function PullRequestDetail({
       {deleteTarget && (
         <ConfirmPrompt
           message="Delete this comment?"
-          onConfirm={() => onDeleteComment(deleteTarget.commentId)}
+          onConfirm={() => deleteComment.execute(deleteTarget.commentId)}
           onCancel={() => {
             setDeleteTarget(null);
-            onClearDeleteCommentError();
+            deleteComment.clearError();
           }}
-          isProcessing={isDeletingComment}
+          isProcessing={deleteComment.isProcessing}
           processingMessage="Deleting comment..."
-          error={deleteCommentError}
+          error={deleteComment.error}
           onClearError={() => {
-            onClearDeleteCommentError();
+            deleteComment.clearError();
             setDeleteTarget(null);
           }}
         />
       )}
       {reactionTarget && (
         <ReactionPicker
-          onSelect={(shortCode) => onReact(reactionTarget, shortCode)}
+          onSelect={(shortCode) => reaction.execute(reactionTarget, shortCode)}
           onCancel={() => {
             setReactionTarget(null);
-            onClearReactionError();
+            reaction.clearError();
           }}
-          isProcessing={isReacting}
-          error={reactionError}
+          isProcessing={reaction.isProcessing}
+          error={reaction.error}
           onClearError={() => {
-            onClearReactionError();
+            reaction.clearError();
             setReactionTarget(null);
           }}
-          currentReactions={reactionsByComment.get(reactionTarget) ?? []}
+          currentReactions={reaction.byComment.get(reactionTarget) ?? []}
         />
       )}
       {showFileList && (
