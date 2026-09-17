@@ -570,7 +570,7 @@ export async function putReaction(
   await client.send(command);
 }
 
-export async function getReactionsForComment(
+async function getReactionsForComment(
   client: CodeCommitClient,
   commentId: string,
 ): Promise<ReactionSummary[]> {

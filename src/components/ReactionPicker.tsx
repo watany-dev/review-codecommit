@@ -13,8 +13,6 @@ const REACTIONS = [
   { emoji: "👀", shortCode: ":eyes:" },
 ] as const;
 
-export { REACTIONS };
-
 interface Props {
   onSelect: (shortCode: string) => void;
   onCancel: () => void;

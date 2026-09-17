@@ -3,8 +3,6 @@ import type { CommentThread, ReactionSummary, ReactionsByComment } from "../serv
 import { extractAuthorName } from "./formatDate.js";
 import { computeSimpleDiff, type DisplayLine } from "./formatDiff.js";
 
-export type { DisplayLine };
-
 export const LARGE_DIFF_THRESHOLD = 1500;
 export const DIFF_CHUNK_SIZE = 300;
 

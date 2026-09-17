@@ -13,7 +13,6 @@ import {
   getMergeConflicts,
   getPullRequestActivity,
   getPullRequestDetail,
-  getReactionsForComment,
   getReactionsForComments,
   listPullRequests,
   listRepositories,
@@ -1790,8 +1789,8 @@ describe("putReaction", () => {
   });
 });
 
-describe("getReactionsForComment", () => {
-  it("returns ReactionSummary array with correct aggregation", async () => {
+describe("getReactionsForComments", () => {
+  it("aggregates reaction users and deleted-user counts per comment", async () => {
     mockSend.mockResolvedValueOnce({
       reactionsForComment: [
         {
@@ -1810,29 +1809,30 @@ describe("getReactionsForComment", () => {
       ],
     });
 
-    const result = await getReactionsForComment(mockClient, "comment-1");
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
-      emoji: "👍",
-      shortCode: ":thumbsup:",
-      count: 2,
-      userArns: ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/bob"],
-    });
-    expect(result[1]).toEqual({
-      emoji: "🎉",
-      shortCode: ":hooray:",
-      count: 2,
-      userArns: ["arn:aws:iam::123456789012:user/alice"],
-    });
+    const result = await getReactionsForComments(mockClient, ["comment-1"]);
+    expect(result.get("comment-1")).toEqual([
+      {
+        emoji: "👍",
+        shortCode: ":thumbsup:",
+        count: 2,
+        userArns: ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/bob"],
+      },
+      {
+        emoji: "🎉",
+        shortCode: ":hooray:",
+        count: 2,
+        userArns: ["arn:aws:iam::123456789012:user/alice"],
+      },
+    ]);
   });
 
-  it("returns empty array when no reactions", async () => {
+  it("omits comments that have no reactions", async () => {
     mockSend.mockResolvedValueOnce({
       reactionsForComment: undefined,
     });
 
-    const result = await getReactionsForComment(mockClient, "comment-1");
-    expect(result).toHaveLength(0);
+    const result = await getReactionsForComments(mockClient, ["comment-1"]);
+    expect(result.size).toBe(0);
   });
 
   it("includes deleted users in count", async () => {
@@ -1846,8 +1846,8 @@ describe("getReactionsForComment", () => {
       ],
     });
 
-    const result = await getReactionsForComment(mockClient, "comment-1");
-    expect(result[0].count).toBe(4);
+    const result = await getReactionsForComments(mockClient, ["comment-1"]);
+    expect(result.get("comment-1")?.[0].count).toBe(4);
   });
 
   it("handles missing reaction fields gracefully", async () => {
@@ -1861,28 +1861,17 @@ describe("getReactionsForComment", () => {
       ],
     });
 
-    const result = await getReactionsForComment(mockClient, "comment-1");
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
-      emoji: "",
-      shortCode: "",
-      count: 0,
-      userArns: [],
-    });
+    const result = await getReactionsForComments(mockClient, ["comment-1"]);
+    expect(result.get("comment-1")).toEqual([
+      {
+        emoji: "",
+        shortCode: "",
+        count: 0,
+        userArns: [],
+      },
+    ]);
   });
 
-  it("propagates API errors", async () => {
-    const error = new Error("comment not found");
-    error.name = "CommentDoesNotExistException";
-    mockSend.mockRejectedValueOnce(error);
-
-    await expect(getReactionsForComment(mockClient, "comment-1")).rejects.toThrow(
-      "comment not found",
-    );
-  });
-});
-
-describe("getReactionsForComments", () => {
   it("returns Map of commentId to ReactionSummary arrays", async () => {
     mockSend.mockResolvedValueOnce({
       reactionsForComment: [
