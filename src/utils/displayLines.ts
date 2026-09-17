@@ -1,5 +1,6 @@
 import type { Difference } from "@aws-sdk/client-codecommit";
 import type { CommentThread, ReactionSummary, ReactionsByComment } from "../services/codecommit.js";
+import { blobKey } from "./blobTexts.js";
 import { extractAuthorName } from "./formatDate.js";
 import { computeSimpleDiff, type DisplayLine } from "./formatDiff.js";
 
@@ -214,20 +215,20 @@ export function buildDisplayLines(
     lines.push({ type: "header", text: filePath });
     lines.push({ type: "separator", text: SEPARATOR_TEXT });
 
-    const blobKey = `${diff.beforeBlob?.blobId ?? ""}:${diff.afterBlob?.blobId ?? ""}`;
-    const texts = diffTexts.get(blobKey);
-    const status = diffTextStatus.get(blobKey) ?? "loading";
+    const key = blobKey(diff);
+    const texts = diffTexts.get(key);
+    const status = diffTextStatus.get(key) ?? "loading";
 
     if (texts) {
       const beforeCount = countLines(texts.before);
       const afterCount = countLines(texts.after);
       const totalLines = beforeCount + afterCount;
       const defaultLimit = totalLines > LARGE_DIFF_THRESHOLD ? DIFF_CHUNK_SIZE : totalLines;
-      const currentLimit = diffLineLimits.get(blobKey) ?? defaultLimit;
+      const currentLimit = diffLineLimits.get(key) ?? defaultLimit;
       const displayLimit = Math.min(currentLimit, totalLines);
       // Two files can share a blob key (e.g. two empty files added in one PR), so the
       // key must include the path: cached lines carry `filePath` for inline comments.
-      const cacheKey = `${filePath}\0${blobKey}:${displayLimit}`;
+      const cacheKey = `${filePath}\0${key}:${displayLimit}`;
       let diffLines = diffCache?.get(cacheKey);
       if (!diffLines) {
         // Split only on cache miss; the warm path never needs the line arrays
@@ -248,7 +249,7 @@ export function buildDisplayLines(
         // Enrich once here so the hot loop below can push lines without per-call copies
         for (const dl of diffLines) {
           dl.filePath = filePath;
-          dl.diffKey = blobKey;
+          dl.diffKey = key;
         }
         diffCache?.set(cacheKey, diffLines);
       }
@@ -278,13 +279,13 @@ export function buildDisplayLines(
           type: "truncate-context",
           text: `... truncated ${displayLimit}/${totalLines} lines`,
           filePath,
-          diffKey: blobKey,
+          diffKey: key,
         });
         lines.push({
           type: "truncation",
           text: `[t] show next ${moreCount} lines`,
           filePath,
-          diffKey: blobKey,
+          diffKey: key,
         });
       }
     } else if (status === "error") {
@@ -292,18 +293,18 @@ export function buildDisplayLines(
         type: "context",
         text: "(Failed to load file content)",
         filePath,
-        diffKey: blobKey,
+        diffKey: key,
       });
     } else {
       lines.push({
         type: "context",
         text: "(Loading file content...)",
         filePath,
-        diffKey: blobKey,
+        diffKey: key,
       });
     }
 
-    lines.push({ type: "separator", text: "", diffKey: blobKey, filePath });
+    lines.push({ type: "separator", text: "", diffKey: key, filePath });
   }
 
   const generalThreads = commentThreads
