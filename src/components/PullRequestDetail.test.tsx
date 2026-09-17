@@ -8141,4 +8141,94 @@ describe("PullRequestDetail", () => {
       expect(cursorLine).not.toContain("src/auth.ts");
     });
   });
+
+  describe("cursor range invariant", () => {
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+    const renderDetail = (extra: Record<string, unknown>) =>
+      render(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={[] as any}
+          commentThreads={[]}
+          diffTexts={new Map()}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+          {...(extra as any)}
+        />,
+      );
+
+    it("highlights the first line after pressing j on empty content and lines arrive", async () => {
+      const { stdin, lastFrame, rerender } = renderDetail({});
+      stdin.write("j");
+      await tick();
+      rerender(
+        <PullRequestDetail
+          pullRequest={pullRequest as any}
+          differences={differences as any}
+          commentThreads={[]}
+          diffTexts={diffTexts}
+          onBack={vi.fn()}
+          onHelp={vi.fn()}
+          onShowActivity={vi.fn()}
+          comment={{ onPost: vi.fn(), isProcessing: false, error: null, onClearError: vi.fn() }}
+          inlineComment={defaultInlineCommentProps}
+          reply={defaultReplyProps}
+          approval={defaultApprovalProps}
+          merge={defaultMergeProps}
+          close={defaultCloseProps}
+          commitView={defaultCommitProps}
+          editComment={defaultEditCommentProps}
+          deleteComment={defaultDeleteCommentProps}
+          reaction={defaultReactionProps}
+        />,
+      );
+      await vi.waitFor(() => expect(lastFrame()).toMatch(/> +src\/auth\.ts/));
+    });
+
+    it("keeps the cursor on a visible row after collapsing a thread from its last reply", async () => {
+      const foldDifferences = [
+        { beforeBlob: { blobId: "b1", path: "f.ts" }, afterBlob: { blobId: "b2", path: "f.ts" } },
+      ];
+      const foldTexts = new Map([["b1:b2", { before: "l1\nl2", after: "l1\nl2x" }]]);
+      const user = "arn:aws:iam::1:user/u";
+      const foldThreads = [
+        {
+          location: null,
+          comments: [
+            { commentId: "root", authorArn: user, content: "root" },
+            { commentId: "r1", authorArn: user, content: "r1", inReplyTo: "root" },
+            { commentId: "r2", authorArn: user, content: "r2", inReplyTo: "root" },
+            { commentId: "r3", authorArn: user, content: "r3", inReplyTo: "root" },
+            { commentId: "r4", authorArn: user, content: "r4", inReplyTo: "root" },
+          ],
+        },
+      ];
+      const { stdin, lastFrame } = renderDetail({
+        differences: foldDifferences,
+        diffTexts: foldTexts,
+        commentThreads: foldThreads,
+      });
+      for (let i = 0; i < 8; i++) stdin.write("j");
+      await vi.waitFor(() => expect(lastFrame()).toMatch(/> +u: root/));
+      stdin.write("o");
+      await vi.waitFor(() => expect(lastFrame()).toContain("u: r4"));
+      for (let i = 0; i < 4; i++) stdin.write("j");
+      await vi.waitFor(() => expect(lastFrame()).toMatch(/> +└ u: r4/));
+      stdin.write("o");
+      await vi.waitFor(() => expect(lastFrame()).toContain("[+4 replies]"));
+      await tick();
+      expect(lastFrame()).toMatch(/> +\[\+4 replies\]/);
+    });
+  });
 });

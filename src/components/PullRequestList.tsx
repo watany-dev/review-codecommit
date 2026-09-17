@@ -119,7 +119,7 @@ export function PullRequestList({
       return;
     }
     if (input === "j" || key.downArrow) {
-      setCursor((prev) => Math.min(prev + 1, filteredPullRequests.length - 1));
+      setCursor((prev) => Math.max(0, Math.min(prev + 1, filteredPullRequests.length - 1)));
       return;
     }
     if (input === "k" || key.upArrow) {

@@ -17,7 +17,10 @@ export async function mapWithLimit<T, R>(
     }
   }
 
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  // A limit below 1 (or NaN) would spawn no workers and silently resolve to
+  // an array of undefined, so always run at least one worker when there is work.
+  const safeLimit = limit >= 1 ? limit : 1;
+  const workers = Array.from({ length: Math.min(safeLimit, items.length) }, () => worker());
   await Promise.all(workers);
   return results;
 }

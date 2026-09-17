@@ -1,5 +1,5 @@
 import { useInput } from "ink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface UseListNavigationOptions<T> {
   items: T[];
@@ -26,6 +26,11 @@ export function useListNavigation<T>({
 }: UseListNavigationOptions<T>) {
   const [cursor, setCursor] = useState(0);
 
+  // Keep 0 <= cursor < max(items.length, 1) when items shrink or are replaced
+  useEffect(() => {
+    setCursor((prev) => Math.max(0, Math.min(prev, items.length - 1)));
+  }, [items.length]);
+
   useInput((input, key) => {
     if (input === "q" || key.escape) {
       onBack();
@@ -36,7 +41,7 @@ export function useListNavigation<T>({
       return;
     }
     if (input === "j" || key.downArrow) {
-      setCursor((prev) => Math.min(prev + 1, items.length - 1));
+      setCursor((prev) => Math.max(0, Math.min(prev + 1, items.length - 1)));
       return;
     }
     if (input === "k" || key.upArrow) {

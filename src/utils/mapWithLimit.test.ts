@@ -89,4 +89,22 @@ describe("mapWithLimit (property-based)", () => {
       }),
     );
   });
+
+  it("maps every item even when limit is 0 or negative", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.integer(), { minLength: 1, maxLength: 10 }),
+        fc.integer({ min: -5, max: 0 }),
+        async (items, limit) => {
+          const result = await mapWithLimit(items, limit, async (x) => x * 2);
+          expect(result).toEqual(items.map((x) => x * 2));
+        },
+      ),
+    );
+  });
+
+  it("maps every item when limit is NaN", async () => {
+    const result = await mapWithLimit([1, 2, 3], Number.NaN, async (x) => x + 1);
+    expect(result).toEqual([2, 3, 4]);
+  });
 });

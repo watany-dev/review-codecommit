@@ -164,4 +164,47 @@ describe("useListNavigation", () => {
     expect(onHelp).not.toHaveBeenCalled();
     expect(lastFrame()).toBe("cursor: 0");
   });
+
+  it("keeps cursor at 0 after pressing j on an empty list and items arrive", async () => {
+    const { stdin, lastFrame, rerender } = render(
+      <TestComponent items={[]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    stdin.write("j");
+    await vi.waitFor(() => expect(lastFrame()).toBe("cursor: 0"));
+    rerender(
+      <TestComponent items={["a", "b"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    await vi.waitFor(() => expect(lastFrame()).toBe("cursor: 0"));
+  });
+
+  it("selects the first item with enter after j on an empty list and items arrive", async () => {
+    const onSelect = vi.fn();
+    const { stdin, rerender } = render(
+      <TestComponent items={[]} onSelect={onSelect} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    stdin.write("j");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    rerender(
+      <TestComponent items={["a", "b"]} onSelect={onSelect} onBack={vi.fn()} onHelp={vi.fn()} />,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    stdin.write("\r");
+    await vi.waitFor(() => expect(onSelect).toHaveBeenCalledWith("a"));
+  });
+
+  it("clamps cursor when items shrink below the cursor position", async () => {
+    const { stdin, lastFrame, rerender } = render(
+      <TestComponent
+        items={["a", "b", "c"]}
+        onSelect={vi.fn()}
+        onBack={vi.fn()}
+        onHelp={vi.fn()}
+      />,
+    );
+    stdin.write("j");
+    stdin.write("j");
+    await vi.waitFor(() => expect(lastFrame()).toBe("cursor: 2"));
+    rerender(<TestComponent items={["a"]} onSelect={vi.fn()} onBack={vi.fn()} onHelp={vi.fn()} />);
+    await vi.waitFor(() => expect(lastFrame()).toBe("cursor: 0"));
+  });
 });
