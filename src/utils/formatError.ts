@@ -9,7 +9,14 @@ type ErrorContext =
   | "reaction"
   | "activity";
 
-/** Context-specific error name → user-friendly message */
+const commonErrors: Record<string, string> = {
+  PullRequestDoesNotExistException: "Pull request not found.",
+  CommentDoesNotExistException: "Comment no longer exists.",
+  CommentDeletedException: "Comment has already been deleted.",
+  PullRequestAlreadyClosedException: "Pull request is already closed.",
+  EncryptionKeyAccessDeniedException: "Encryption key access denied.",
+};
+
 const contextErrors: Record<string, Record<string, string>> = {
   reply: {
     CommentContentRequiredException: "Reply cannot be empty.",
@@ -20,26 +27,16 @@ const contextErrors: Record<string, Record<string, string>> = {
   edit: {
     CommentNotCreatedByCallerException: "You can only edit your own comments.",
     CommentContentSizeLimitExceededException: "Comment exceeds the 10,240 character limit.",
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
-  },
-  delete: {
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
   },
   comment: {
     CommentContentRequiredException: "Comment cannot be empty.",
     CommentContentSizeLimitExceededException: "Comment exceeds the 10,240 character limit.",
-    PullRequestDoesNotExistException: "Pull request not found.",
   },
   approval: {
-    PullRequestDoesNotExistException: "Pull request not found.",
     RevisionIdRequiredException:
       "Invalid revision. The PR may have been updated. Go back and reopen.",
     InvalidRevisionIdException:
       "Invalid revision. The PR may have been updated. Go back and reopen.",
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    EncryptionKeyAccessDeniedException: "Encryption key access denied.",
   },
   merge: {
     ManualMergeRequiredException:
@@ -50,22 +47,10 @@ const contextErrors: Record<string, Record<string, string>> = {
       "Source branch has been updated. Go back and reopen the PR.",
     ConcurrentReferenceUpdateException: "Branch was updated concurrently. Try again.",
     TipsDivergenceExceededException: "Branches have diverged too much. Merge manually.",
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    PullRequestDoesNotExistException: "Pull request not found.",
-    EncryptionKeyAccessDeniedException: "Encryption key access denied.",
   },
   reaction: {
-    CommentDeletedException: "Comment has already been deleted.",
-    CommentDoesNotExistException: "Comment no longer exists.",
     ReactionValueRequiredException: "Reaction value is required.",
     InvalidReactionValueException: "Invalid reaction value.",
-  },
-  close: {
-    PullRequestAlreadyClosedException: "Pull request is already closed.",
-    PullRequestDoesNotExistException: "Pull request not found.",
-  },
-  activity: {
-    PullRequestDoesNotExistException: "Pull request not found.",
   },
 };
 
@@ -80,13 +65,6 @@ function sanitizeMessage(message: string): string {
     .replace(/vpce-[a-z0-9]+/gi, "[VPC_ENDPOINT]");
 }
 
-/**
- * Unified error formatter with context-specific messages.
- *
- * @param err - The error to format
- * @param context - Optional context for specific error messages
- * @returns User-friendly error message
- */
 export function formatErrorMessage(
   err: unknown,
   context?: ErrorContext,
@@ -98,20 +76,16 @@ export function formatErrorMessage(
 
   const name = err.name;
 
-  // Context-specific lookup
-  if (context) {
-    // Special case: approval action depends on approve/revoke
-    if (context === "approval" && name === "PullRequestCannotBeApprovedByAuthorException") {
-      return approvalAction === "revoke"
-        ? "Cannot revoke approval on your own pull request."
-        : "Cannot approve your own pull request.";
-    }
-
-    const message = contextErrors[context]?.[name];
-    if (message) return message;
+  // Special case: approval action depends on approve/revoke
+  if (context === "approval" && name === "PullRequestCannotBeApprovedByAuthorException") {
+    return approvalAction === "revoke"
+      ? "Cannot revoke approval on your own pull request."
+      : "Cannot approve your own pull request.";
   }
 
-  // General AWS errors
+  const message = (context && contextErrors[context]?.[name]) ?? commonErrors[name];
+  if (message) return message;
+
   if (name === "CredentialsProviderError" || name === "CredentialError") {
     return "AWS authentication failed. Run `aws configure` to set up credentials.";
   }
@@ -119,7 +93,6 @@ export function formatErrorMessage(
     return "Repository not found.";
   }
 
-  // Access control errors (context-aware message)
   if (name === "AccessDeniedException" || name === "UnauthorizedException") {
     if (context === "comment") {
       return "Access denied. Check your IAM policy allows CodeCommit write access.";
@@ -127,7 +100,6 @@ export function formatErrorMessage(
     return "Access denied. Check your IAM policy.";
   }
 
-  // Network errors
   if (
     name === "NetworkingError" ||
     err.message.includes("ECONNREFUSED") ||
@@ -136,6 +108,5 @@ export function formatErrorMessage(
     return "Network error. Check your connection.";
   }
 
-  // Default: sanitize and return original message
   return sanitizeMessage(err.message);
 }
