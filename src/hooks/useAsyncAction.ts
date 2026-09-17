@@ -9,8 +9,6 @@ export interface AsyncActionState<T extends unknown[] = unknown[]> {
 }
 
 /**
- * Manages isProcessing / error state for an async operation.
- *
  * Eliminates repetitive `setIsXxx(true); try { ... } catch { setXxxError(...) } finally { setIsXxx(false) }` patterns.
  */
 export function useAsyncAction<T extends unknown[]>(
