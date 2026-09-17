@@ -176,11 +176,9 @@ prop が渡されない場合、毎レンダーで新しい `Map` が生成さ�
 
 ### 15. `loadDiffTextsInBackground` が `mapWithLimit` を再実装
 
-**場所**: `src/app.tsx:261-335`
+**場所**: `src/utils/blobTexts.ts`（旧 `src/app.tsx` のバックグラウンド blob 取得）
 
-`mapWithLimit` ユーティリティが存在するのに独自ワーカープールを実装（concurrency 6 vs 他は 5）。
-
-> **改修影響度: 🟠 高** — 現在の手動実装には `mapWithLimit` にない重要な機能がある: **`diffLoadRef.current === loadId` によるステイルロードガード**。PR を素早く切り替えた場合、前の PR のバックグラウンドロードが新しい PR の state を汚染しないようにしている。`mapWithLimit` に書き換える場合、このガードを維持する仕組みが必要（例: AbortController / キャンセルトークン）。見た目の簡素化とは裏腹に、**ステイルガードの喪失によるレースコンディション**のリスクがある。
+> **対応済み（#111）**: `fetchBlobTexts` と `streamBlobTexts` の blob 取得を `loadBlobPair` に一本化し、並列制御はどちらも `mapWithLimit` を使う。`streamBlobTexts` の `isStale` ガードはコールバック前に残しており、PR 切り替え時の state 汚染は防げる。concurrency は従来どおり fetch=5 / stream=6。fetch はエラーを伝播し、stream は要素ごとに `onError` する。
 
 ### 16. `extractAuthorName` の繰り返し呼び出し
 
@@ -203,9 +201,9 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 | ✅ 完了 | 3 | reaction 全件取得 | 中 | 🟡 中 | concurrency 5→15（#105）。遅延ロードは未実施 |
 | ✅ 完了 | 9 | Map 高頻度コピー | 中 | 🟠 高 | 16ms バッチ化（#103） |
 | ✅ 完了 | 2 | getCommitsForPR 直列 | 大 | 🟡 中 | 詳細ロード時に先行取得（#104） |
+| ✅ 完了 | 15 | loadDiffTexts 再実装 | — | 🟠 高 | mapWithLimit に統合。isStale は維持（#111） |
 | ★★☆ | 14 | blob キャッシュなし | 中 | 🟡 中 | app 層でキャッシュ。寿命管理に注意 |
 | ★☆☆ | 6 | computeSimpleDiff O(n×m) | 中 | 🟠 高 | diff 出力が変わりうるため要スナップショットテスト |
-| ★☆☆ | 15 | loadDiffTexts 再実装 | — | 🟠 高 | ステイルガード喪失リスク。現状維持推奨 |
 | ★☆☆ | 12 | visibleLines key | 小 | 🟡 中 | Ink 環境では効果限定的。要プロファイリング |
 | ☆☆☆ | 4 | reloadReactions 全件 | 中 | 🟠 高 | 差分マージの整合性リスク |
 | ☆☆☆ | 5 | reloadComments 全件 | 中 | 🔴 非常に高 | 楽観的更新は複雑。現状維持推奨 |
@@ -217,4 +215,4 @@ ARN 文字列の `split("/")` が毎レンダーで複数箇所から呼ばれ�
 2. ~~**次に #1 の concurrency 増加**（低リスクで最大の体感改善）~~ → #105 で 10 / 15 に引き上げ済み
 3. ~~**#2 の先行取得 / #9 のバッチ化**~~ → #104 / #103 で対応済み。ActivityTimeline の全件描画は #102 でウィンドウ化
 4. **#6 は十分なテスト追加後に着手**（スナップショットテスト必須）
-5. **#5, #15 は現状維持**（壊れるリスクが改善幅に見合わない）
+5. **#5 は現状維持**（壊れるリスクが改善幅に見合わない）。~~#15 は現状維持~~ → #111 で `mapWithLimit` に統合済み
