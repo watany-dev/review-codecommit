@@ -5292,6 +5292,109 @@ describe("App", () => {
       );
     });
 
+    it("retries activity from the start when continuation token is stale", async () => {
+      setupPRListAndDetail();
+      const tokenError = new Error("Invalid token");
+      tokenError.name = "InvalidContinuationTokenException";
+      vi.mocked(getPullRequestActivity)
+        .mockResolvedValueOnce({
+          events: [
+            {
+              eventDate: new Date("2026-02-13T10:00:00Z"),
+              eventType: "PULL_REQUEST_CREATED",
+              actorArn: "arn:aws:iam::123456789012:user/watany",
+              description: "created this PR",
+            },
+          ],
+          nextToken: "stale-token",
+        })
+        .mockRejectedValueOnce(tokenError)
+        .mockResolvedValueOnce({
+          events: [
+            {
+              eventDate: new Date("2026-02-15T10:00:00Z"),
+              eventType: "PULL_REQUEST_STATUS_CHANGED",
+              actorArn: "arn:aws:iam::123456789012:user/hanako",
+              description: "closed this PR",
+            },
+          ],
+          nextToken: undefined,
+        });
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("created this PR");
+        expect(lastFrame()).toContain("n next page");
+      });
+
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("closed this PR");
+      });
+
+      expect(lastFrame()).not.toContain("Failed to load activity:");
+      expect(lastFrame()).not.toContain("created this PR");
+      expect(getPullRequestActivity).toHaveBeenCalledTimes(3);
+      expect(getPullRequestActivity).toHaveBeenNthCalledWith(3, mockClient, {
+        pullRequestId: "42",
+        maxResults: 50,
+      });
+    });
+
+    it("shows activity error when stale-token retry fails", async () => {
+      setupPRListAndDetail();
+      const tokenError = new Error("Invalid token");
+      tokenError.name = "InvalidContinuationTokenException";
+      const denied = new Error("denied");
+      denied.name = "AccessDeniedException";
+      vi.mocked(getPullRequestActivity)
+        .mockResolvedValueOnce({
+          events: [
+            {
+              eventDate: new Date("2026-02-13T10:00:00Z"),
+              eventType: "PULL_REQUEST_CREATED",
+              actorArn: "arn:aws:iam::123456789012:user/watany",
+              description: "created this PR",
+            },
+          ],
+          nextToken: "stale-token",
+        })
+        .mockRejectedValueOnce(tokenError)
+        .mockRejectedValueOnce(denied);
+
+      const { lastFrame, stdin } = render(<App client={mockClient} initialRepo="my-service" />);
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("fix: login timeout");
+      });
+
+      stdin.write("\r");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("PR #42");
+      });
+
+      stdin.write("A");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("created this PR");
+        expect(lastFrame()).toContain("n next page");
+      });
+
+      stdin.write("n");
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain("Failed to load activity:");
+        expect(lastFrame()).toContain("Access denied. Check your IAM policy.");
+      });
+    });
+
     it("shows PR not found error for PullRequestDoesNotExistException", async () => {
       setupPRListAndDetail();
       const err = new Error("not found");
