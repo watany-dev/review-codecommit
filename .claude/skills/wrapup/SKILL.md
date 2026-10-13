@@ -15,8 +15,8 @@ description: >
 
 ## 手順
 
-1. **CI**: `bun run ci`
-   が通っていること。落ちていたらここで直す
+1. **CI**: `bun run ci` (lint → format:check → check → dead-code → audit →
+   test:coverage → build) が通っていること。落ちていたらここで直す
 2. **正しさのレビュー**: Claude Code なら `/code-review`。それ以外のエージェント
    （Codex / Cursor）は同等のレビューを自分で行う —
    `git diff <base>...HEAD` を読み、バグ・エラー処理漏れ・境界条件・
@@ -34,6 +34,8 @@ description: >
 - 動作が変わる欠陥（誤動作・クラッシュ・リーク・境界条件）
 - 差分が短くなる指摘（`delete:` / `stdlib:` / `yagni:` / `shrink:`）
 - テストが無い分岐の追加
+- Ink / AWS SDK 以外の依存の追加、テストでの AWS SDK の実呼び出し
+  （review-codecommit の方針違反）
 
 見送る:
 
@@ -42,3 +44,11 @@ description: >
 - 既存コードの様式に反する提案（周囲に合わせる）
 
 見送った指摘は理由を 1 行で報告する。黙って捨てない。
+
+## 注意
+
+- ドキュメント同期は wrapup の手順に含めない。`README.md` /
+  `docs/requirements.md` / `docs/design-*.md` / `CLAUDE.md` を更新する必要が
+  あるときは `update-docs` を個別に呼ぶ。
+- レビューや検証のために、実在の CodeCommit の PR へコメント投稿・Approve・
+  Merge などの書き込みを行わない。書き込み系の確認はモックで行う。

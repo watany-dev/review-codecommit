@@ -97,11 +97,18 @@ AWS CodeCommitのプルリクエストをターミナル上で快適にレビュ
 
 作業完了時は `wrapup` スキル（レビュー2本 → 取り込み → コメント掃除）を通す。
 
-`ponytail-review`（差分の過剰設計レビュー）は
+`ponytail` 系スキルは
 [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) (MIT)
-から vendoring したもの。wrapup が依存する。
+から vendoring したもの（取得元は `skills-lock.json`）。
+
+- `ponytail` — 最小の実装を選ばせるモード。自動発動しないよう改変し、`/ponytail` でのみ動く
+- `ponytail-review` — 差分の過剰設計レビュー（wrapup が依存）
+- `ponytail-audit` — リポジトリ全体の過剰設計監査
+- `ponytail-debt` — `ponytail:` コメントを負債台帳にまとめる
+- `ponytail-gain` / `ponytail-help` — 効果の表示 / 早見表
 
 既存スキル:
+- `kick` — issue 修正から PR 作成・追従までを通しで行う（`/kick #123`）
 - `update-plan` — プラン完了直前の横断検証
 - `update-design` — 設計書の 100 点評価と改善
 - `update-docs` — README / 設計書 / 要件定義の最新化
