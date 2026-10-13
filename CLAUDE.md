@@ -102,6 +102,7 @@ AWS CodeCommitのプルリクエストをターミナル上で快適にレビュ
 から vendoring したもの。wrapup が依存する。
 
 既存スキル:
+- `kick` — issue 修正から PR 作成・追従までを通しで行う（`/kick #123`）
 - `update-plan` — プラン完了直前の横断検証
 - `update-design` — 設計書の 100 点評価と改善
 - `update-docs` — README / 設計書 / 要件定義の最新化
