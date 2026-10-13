@@ -101,7 +101,7 @@ AWS CodeCommitのプルリクエストをターミナル上で快適にレビュ
 [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) (MIT)
 から vendoring したもの（取得元は `skills-lock.json`）。
 
-- `ponytail` — 最小の実装を選ばせるモード
+- `ponytail` — 最小の実装を選ばせるモード。自動発動しないよう改変し、`/ponytail` でのみ動く
 - `ponytail-review` — 差分の過剰設計レビュー（wrapup が依存）
 - `ponytail-audit` — リポジトリ全体の過剰設計監査
 - `ponytail-debt` — `ponytail:` コメントを負債台帳にまとめる
